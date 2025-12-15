@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "football-ledger-client",
   "version": 2,
   "framework": "vite",
@@ -9,13 +9,10 @@
   "env": {
     "VITE_APP_NAME": "Football Ledger",
     "VITE_APP_VERSION": "0.1.0",
-    "VITE_APP_ENVIRONMENT": "production"
-  },
-  "build": {
-    "env": {
-      "VITE_API_URL": "@api_url_prod",
-      "VITE_APP_ENV": "prod"
-    }
+    "VITE_APP_ENVIRONMENT": "production",
+    "VITE_API_BASE_URL": "https://pagelle-fc-alpha-v0-1-0.onrender.com/api/v1",
+    "VITE_ENV": "production",
+    "VITE_DEBUG": "false"
   },
   "functions": {
     "app/api/**/*.js": {
