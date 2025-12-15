@@ -1,0 +1,3 @@
+# Backup directory for development
+# These files contain production data and should not be committed
+*.json

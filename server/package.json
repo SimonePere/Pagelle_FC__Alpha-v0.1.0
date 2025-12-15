@@ -10,7 +10,11 @@
     "prod": "set NODE_ENV=production && node server.js",
     "test:env": "set NODE_ENV=test && nodemon server.js",
     "seed": "node src/utils/seedData.js",
-    "seed:test": "set NODE_ENV=test && node src/utils/seedData.js"
+    "seed:test": "set NODE_ENV=test && node src/utils/seedData.js",
+    "db:backup": "set NODE_ENV=test && node migrate-db.js backup",
+    "db:restore": "set NODE_ENV=production && node migrate-db.js restore",
+    "db:migrate": "set NODE_ENV=test && node migrate-db.js migrate",
+    "db:list": "node migrate-db.js list"
   },
   "keywords": [],
   "author": "",
