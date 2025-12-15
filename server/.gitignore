@@ -1,0 +1,175 @@
+# ===============================================
+# 🔐 FILE SENSIBILI E CONFIGURAZIONE
+# ===============================================
+
+# Variabili d'ambiente (CONTIENE PASSWORD E SECRET!)
+.env
+.env.local
+.env.production
+.env.test
+.env.staging
+
+# ===============================================
+# 📦 NODE.JS
+# ===============================================
+
+# Dipendenze
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Cache
+.npm
+.yarn-integrity
+
+# Optional npm cache directory
+.npm
+
+# ===============================================
+# 📝 LOG E DEBUG
+# ===============================================
+
+# Log files
+logs/
+*.log
+lerna-debug.log*
+
+# Debug
+.vscode/settings.json
+.vscode/launch.json
+
+# ===============================================
+# 🏗️ BUILD E DISTRIBUZIONE
+# ===============================================
+
+# Build output
+dist/
+build/
+coverage/
+
+# ===============================================
+# 💾 DATABASE E BACKUP
+# ===============================================
+
+# Database dumps
+*.dump
+*.sql
+*.db
+*.sqlite
+*.sqlite3
+
+# ===============================================
+# 🔑 CHIAVI E CERTIFICATI
+# ===============================================
+
+# SSL certificates
+*.pem
+*.key
+*.crt
+*.csr
+
+# SSH keys
+*.pub
+id_rsa
+id_ed25519
+
+# ===============================================
+# 🖥️ SISTEMA OPERATIVO
+# ===============================================
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+
+# ===============================================
+# 🔧 EDITOR E IDE
+# ===============================================
+
+# VS Code (mantieni solo workspace settings)
+.vscode/
+!.vscode/settings.json
+
+# IntelliJ
+.idea/
+*.iml
+
+# Sublime Text
+*.sublime-*
+
+# ===============================================
+# 📊 ANALYTICS E MONITORING
+# ===============================================
+
+# Coverage reports
+coverage/
+*.lcov
+
+# Nyc test coverage
+.nyc_output
+
+# ===============================================
+# 🚀 DEPLOYMENT E CLOUD
+# ===============================================
+
+# Vercel
+.vercel
+
+# Heroku
+.env.heroku
+
+# Docker
+.dockerignore
+
+# ===============================================
+# 🧪 TEST E SVILUPPO
+# ===============================================
+
+# Test files temporanei
+test-results/
+temp/
+tmp/
+
+# Jest
+coverage/
+
+# ===============================================
+# 📱 MOBILE E APP
+# ===============================================
+
+# React Native
+*.jks
+*.p8
+*.p12
+*.mobileprovision
+
+# ===============================================
+# 🎯 PROGETTO SPECIFICO
+# ===============================================
+
+# File di seed temporanei
+seeds/temp/
+uploads/temp/
+
+# Backup del database
+backup/
+*.backup
+
+# File di configurazione locale dello sviluppatore
+config/local.js
+config/dev.json
+
+# Note personali degli sviluppatori
+TODO.md
+NOTES.md
+.personal/

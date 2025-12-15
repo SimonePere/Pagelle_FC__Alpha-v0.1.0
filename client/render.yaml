@@ -1,0 +1,19 @@
+# ===========================
+# RENDER.COM DEPLOYMENT CONFIG
+# ===========================
+
+# Build Command
+npm install
+
+# Start Command  
+npm start
+
+# Environment
+NODE_ENV=production
+APP_ENV=prod
+
+# Health Check
+RENDER_HEALTH_CHECK_PATH=/api/health
+
+# Auto Deploy
+Auto-Deploy: Yes (from main branch)

@@ -1,0 +1,256 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Sophisticated dark charcoal with subtle warmth */
+    --background: 220 15% 8%;
+    --foreground: 0 0% 95%;
+    /* Sophisticated dark charcoal with subtle warmth */
+    --background: 220 15% 8%;
+    --foreground: 0 0% 95%;
+
+    /* Elevated card surfaces */
+    --card: 220 15% 12%;
+    --card-foreground: 0 0% 95%;
+
+    --popover: 220 15% 12%;
+    --popover-foreground: 0 0% 95%;
+
+    /* Premium gold accent - more saturated for better visibility */
+    --primary: 45 95% 60%;
+    --primary-foreground: 220 20% 10%;
+
+    /* Muted charcoal secondary */
+    --secondary: 220 12% 18%;
+    --secondary-foreground: 0 0% 90%;
+
+    /* Subtle muted areas */
+    --muted: 220 10% 25%;
+    --muted-foreground: 220 5% 60%;
+
+    /* Bright gold highlights */
+    --accent: 42 85% 60%;
+    --accent-foreground: 220 20% 10%;
+
+    /* Success green - only for positive states */
+    --success: 142 45% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Very subtle borders */
+    --border: 220 15% 20%;
+    --input: 220 12% 18%;
+    --ring: 45 90% 55%;
+
+    --radius: 0.75rem;
+
+    /* Sidebar */
+    --sidebar-background: 220 15% 10%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 45 90% 55%;
+    --sidebar-primary-foreground: 220 20% 10%;
+    --sidebar-accent: 220 12% 18%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 220 15% 20%;
+    --sidebar-ring: 45 90% 55%;
+
+    /* Refined gradients - brighter for mobile visibility */
+    --gradient-primary: linear-gradient(135deg, hsl(45 95% 60%), hsl(42 90% 65%));
+    --gradient-card: linear-gradient(145deg, hsl(220 15% 12% / 0.9), hsl(220 12% 15% / 0.8));
+    --gradient-hero: linear-gradient(180deg, hsl(220 15% 8%), hsl(220 15% 11%));
+    --gradient-pitch: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 80px,
+      hsl(142 20% 15% / 0.03) 80px,
+      hsl(142 20% 15% / 0.03) 81px
+    );
+    
+    /* Stronger shadows for better button visibility */
+    --shadow-glow: 0 0 40px hsl(45 95% 60% / 0.25);
+    --shadow-card: 0 4px 24px hsl(220 20% 5% / 0.5);
+    --shadow-elevation: 0 2px 12px hsl(220 20% 5% / 0.4);
+  }
+
+  .light {
+    /* Softer gray background with better contrast */
+    --background: 220 15% 94%;
+    --foreground: 220 25% 12%;
+
+    /* Light gray card surfaces instead of pure white */
+    --card: 0 0% 97%;
+    --card-foreground: 220 25% 12%;
+
+    --popover: 0 0% 97%;
+    --popover-foreground: 220 25% 12%;
+
+    /* Premium gold accent - slightly darker for light mode */
+    --primary: 45 90% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Medium gray secondary with better visibility */
+    --secondary: 220 12% 88%;
+    --secondary-foreground: 220 25% 12%;
+
+    /* Visible muted areas with grays */
+    --muted: 220 12% 90%;
+    --muted-foreground: 220 15% 35%;
+
+    /* Warm gold highlights */
+    --accent: 42 80% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Success green */
+    --success: 142 50% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Defined gray borders */
+    --border: 220 15% 82%;
+    --input: 220 12% 88%;
+    --ring: 45 90% 50%;
+
+    /* Sidebar light theme with grays */
+    --sidebar-background: 0 0% 97%;
+    --sidebar-foreground: 220 25% 12%;
+    --sidebar-primary: 45 90% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 12% 88%;
+    --sidebar-accent-foreground: 220 25% 12%;
+    --sidebar-border: 220 15% 82%;
+    --sidebar-ring: 45 90% 50%;
+
+    /* Light mode gradients with grays */
+    --gradient-primary: linear-gradient(135deg, hsl(45 90% 50%), hsl(42 85% 55%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 97%), hsl(220 12% 92%));
+    --gradient-hero: linear-gradient(180deg, hsl(220 15% 94%), hsl(220 12% 90%));
+    --gradient-pitch: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 80px,
+      hsl(142 20% 75% / 0.4) 80px,
+      hsl(142 20% 75% / 0.4) 81px
+    );
+    
+    /* Stronger shadows for light mode */
+    --shadow-glow: 0 0 40px hsl(45 90% 50% / 0.2);
+    --shadow-card: 0 4px 24px hsl(220 20% 20% / 0.12);
+    --shadow-elevation: 0 2px 12px hsl(220 20% 20% / 0.08);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+}
+
+@layer utilities {
+  /* Gradient utilities */
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+  
+  .gradient-card {
+    background: var(--gradient-card);
+  }
+
+  /* Shadow utilities */
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Mobile-friendly page layouts */
+  @media (max-width: 768px) {
+    .mobile-page-container {
+      padding: 1rem;
+      padding-bottom: calc(80px + 1rem); /* Bottom nav + padding */
+      min-height: calc(100vh - 140px); /* Viewport minus nav heights */
+    }
+    
+    /* Ensure forms don't get cut off */
+    .mobile-form {
+      margin-bottom: 2rem;
+    }
+    
+    /* Better button spacing on mobile */
+    .mobile-buttons {
+      padding: 1rem 0;
+      gap: 0.75rem;
+    }
+  }
+
+  .shadow-elevation {
+    box-shadow: var(--shadow-elevation);
+  }
+
+  /* Animations */
+  .animate-slide-in {
+    animation: slideIn 0.4s ease-out;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.3s ease-out;
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+}
