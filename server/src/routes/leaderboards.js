@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const leaderboardController = require('../controllers/leaderboardController');
+const leaderboardController = require('../controllers/LeaderboardController');
 
 /**
  * LEADERBOARD ROUTES
