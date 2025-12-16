@@ -12,14 +12,14 @@ interface PlayerCardDisplayProps {
 
 export function PlayerCardDisplay({ playerName, attributes, isPreview = false }: PlayerCardDisplayProps) {
   const overall = calculateOverallRating(attributes);
-  
+
   const getOverallColor = (rating: number) => {
-    if (rating >= 85) return "text-green-500";
-    if (rating >= 75) return "text-yellow-500";
-    if (rating >= 65) return "text-orange-500";
+    if (rating >= 80) return "text-green-500";
+    if (rating >= 70) return "text-yellow-500";
+    if (rating >= 60) return "text-orange-500";
     return "text-red-500";
   };
-  
+
   const renderStars = (count: number) => {
     return Array.from({ length: 5 }).map((_, i) => (
       <Star
@@ -29,7 +29,7 @@ export function PlayerCardDisplay({ playerName, attributes, isPreview = false }:
       />
     ));
   };
-  
+
   const AttributeBar = ({ label, value }: { label: string; value: number }) => (
     <div className="space-y-1">
       <div className="flex justify-between text-xs">
@@ -46,7 +46,7 @@ export function PlayerCardDisplay({ playerName, attributes, isPreview = false }:
       </div>
     </div>
   );
-  
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -71,7 +71,7 @@ export function PlayerCardDisplay({ playerName, attributes, isPreview = false }:
             <div className="text-xs text-muted-foreground mt-1">Età: {attributes.age}</div>
           </div>
         </div>
-        
+
         {/* Attributes */}
         <div className="space-y-3 mb-4">
           <AttributeBar label="TIR (Tiro)" value={attributes.shooting} />
@@ -82,7 +82,7 @@ export function PlayerCardDisplay({ playerName, attributes, isPreview = false }:
           <AttributeBar label="RES (Resistenza)" value={attributes.stamina} />
           <AttributeBar label="FOR (Forza)" value={attributes.strength} />
         </div>
-        
+
         {/* Star Ratings */}
         <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
           <div>

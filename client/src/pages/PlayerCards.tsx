@@ -25,6 +25,7 @@ import { motion } from "framer-motion";
 import { Users, CheckCircle2, Clock, Star, X, Info } from "lucide-react";
 import { toast } from "sonner";
 import { apiCall } from "@/lib/api";
+import { calculateAge } from "@/utils/playerCardCalculations";
 
 export default function PlayerCards() {
   const navigate = useNavigate();
@@ -73,7 +74,7 @@ export default function PlayerCards() {
       id: member.id,        // Fix: usa 'id' invece di '_id'
       name: member.name,
       email: member.email,
-      age: 25 // Default age - TODO: aggiungere nel backend se necessario
+      age: member.birthdate ? calculateAge(member.birthdate) : 25 // Calcola età reale da birthdate
     }));
   }, [teamMembers, isLoadingTeamMembers]);
 
@@ -141,9 +142,16 @@ export default function PlayerCards() {
     console.log('📊 Caricamento risultati REALI per playerId:', playerId);
 
     try {
-      // Chiama la vera API
-      const response = await apiCall(`/player-cards/results/user/${playerId}`);
+      // Chiama la vera API con timestamp per bypassare cache
+      const timestamp = Date.now();
+      const response = await apiCall(`/player-cards/results/user/${playerId}?t=${timestamp}`);
       console.log('📊 Risposta API ricevuta:', response);
+
+      // 🐛 DEBUG: Verifica contenuto COMPLETO della risposta  
+      console.log('🔍 DEBUG Frontend API Response:');
+      console.log('📋 response.results[0]:', response?.results?.[0]);
+      console.log('📋 finalAdditionalAttributes:', response?.results?.[0]?.finalAdditionalAttributes);
+      console.log('📋 JSON completo results[0]:', JSON.stringify(response?.results?.[0], null, 2));
 
       if (!response.success || !response.results || response.results.length === 0) {
         console.log('📊 Nessun risultato trovato');
@@ -154,29 +162,21 @@ export default function PlayerCards() {
       const latestResult = response.results[0];
       const summary = response.summary;
 
-      // Trova attributi più forte e più debole
-      const attributes = summary.attributeAverages;
-      const attributeEntries = Object.entries(attributes) as [string, number][];
-      const strongest = attributeEntries.reduce((max, curr) =>
-        curr[1] > max[1] ? { name: curr[0].toUpperCase(), value: curr[1] } : max,
-        { name: attributeEntries[0][0].toUpperCase(), value: attributeEntries[0][1] }
-      );
-      const weakest = attributeEntries.reduce((min, curr) =>
-        curr[1] < min[1] ? { name: curr[0].toUpperCase(), value: curr[1] } : min,
-        { name: attributeEntries[0][0].toUpperCase(), value: attributeEntries[0][1] }
-      );
+      // 📝 Usa gli attributi del singolo giocatore se disponibili, altrimenti usa la media
+      const playerAttributes = latestResult.finalAttributes;
 
       // Mappa la risposta API al formato PlayerCardResult
       return {
-        finalAttributes: {
-          tir: attributes.tir,
-          pas: attributes.pas,
-          dri: attributes.dri,
-          fin: attributes.fin,
-          vis: attributes.vis,
-          res: attributes.res,
-          for: attributes.for
+        finalAttributes: playerAttributes || {
+          tir: summary.attributeAverages.tir,
+          pas: summary.attributeAverages.pas,
+          dri: summary.attributeAverages.dri,
+          fin: summary.attributeAverages.fin,
+          vis: summary.attributeAverages.vis,
+          res: summary.attributeAverages.res,
+          for: summary.attributeAverages.for
         },
+        finalAdditionalAttributes: latestResult.finalAdditionalAttributes, // ⭐ AGGIUNTO: STELLE DAL DATABASE
         finalOverallRating: summary.latestOverallRating,
         grade: summary.latestOverallRating >= 80 ? "A" : summary.latestOverallRating >= 70 ? "B" : "C",
         profile: {
@@ -186,10 +186,6 @@ export default function PlayerCards() {
         metadata: {
           totalVoters: latestResult.sessionMetadata?.totalVoters || 0,
           confidence: latestResult.statistics?.overallStats?.confidence || 0
-        },
-        highlights: {
-          strongest,
-          weakest
         }
       };
 
@@ -370,4 +366,4 @@ export default function PlayerCards() {
       </div>
     </DashboardLayout>
   );
-}
+};

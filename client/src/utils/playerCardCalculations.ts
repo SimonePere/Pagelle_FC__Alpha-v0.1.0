@@ -5,11 +5,11 @@ import { PlayerCard, PlayerAttributes } from '@/types/playerCard';
  */
 export const calculateFinalAttributes = (card: PlayerCard): PlayerAttributes => {
   const submissions = card.submissions;
-  
+
   if (submissions.length === 0) {
     throw new Error('No submissions to calculate from');
   }
-  
+
   const totals = {
     stamina: 0,
     strength: 0,
@@ -22,7 +22,7 @@ export const calculateFinalAttributes = (card: PlayerCard): PlayerAttributes => 
     skillMoves: 0,
     age: 0,
   };
-  
+
   // Sum all attributes
   submissions.forEach(sub => {
     totals.stamina += sub.attributes.stamina;
@@ -36,21 +36,21 @@ export const calculateFinalAttributes = (card: PlayerCard): PlayerAttributes => 
     totals.skillMoves += sub.attributes.skillMoves;
     totals.age += sub.attributes.age;
   });
-  
+
   const count = submissions.length;
-  
+
   // Get most common position and role
   const positionCounts: Record<string, number> = {};
   const roleCounts: Record<string, number> = {};
-  
+
   submissions.forEach(sub => {
     positionCounts[sub.attributes.position] = (positionCounts[sub.attributes.position] || 0) + 1;
     roleCounts[sub.attributes.preferredRole] = (roleCounts[sub.attributes.preferredRole] || 0) + 1;
   });
-  
+
   const mostCommonPosition = Object.entries(positionCounts).sort((a, b) => b[1] - a[1])[0][0] as PlayerAttributes['position'];
   const mostCommonRole = Object.entries(roleCounts).sort((a, b) => b[1] - a[1])[0][0];
-  
+
   return {
     stamina: Math.round(totals.stamina / count),
     strength: Math.round(totals.strength / count),
@@ -99,7 +99,7 @@ export const hasUserSubmitted = (card: PlayerCard, userId: string): boolean => {
  */
 export const calculateOverallRating = (attributes: PlayerAttributes): number => {
   const { position, stamina, strength, shooting, passing, dribbling, finalizzazione, visione } = attributes;
-  
+
   // Weight attributes differently based on position
   const weights: Record<PlayerAttributes['position'], Record<string, number>> = {
     'POR': { strength: 0.25, stamina: 0.2, visione: 0.2, shooting: 0.05, passing: 0.1, dribbling: 0.05, finalizzazione: 0.15 },
@@ -107,9 +107,9 @@ export const calculateOverallRating = (attributes: PlayerAttributes): number => 
     'CEN': { passing: 0.25, stamina: 0.2, dribbling: 0.2, shooting: 0.1, finalizzazione: 0.1, strength: 0.05, visione: 0.1 },
     'ATT': { shooting: 0.25, dribbling: 0.2, finalizzazione: 0.25, passing: 0.15, stamina: 0.05, strength: 0.05, visione: 0.05 }
   };
-  
+
   const w = weights[position];
-  const overall = 
+  const overall =
     stamina * w.stamina +
     strength * w.strength +
     shooting * w.shooting +
@@ -117,6 +117,22 @@ export const calculateOverallRating = (attributes: PlayerAttributes): number => 
     dribbling * w.dribbling +
     finalizzazione * w.finalizzazione +
     visione * w.visione;
-  
+
   return Math.round(overall);
+};
+
+/**
+ * Calcola età da birthdate in formato YYYY-MM-DD
+ */
+export const calculateAge = (birthdate: string): number => {
+  const birth = new Date(birthdate);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+
+  return age;
 };

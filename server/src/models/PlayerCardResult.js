@@ -359,7 +359,7 @@ PlayerCardResultSchema.virtual('weakestAttribute').get(function () {
  * Crea risultato PlayerCard da dati aggregati
  */
 PlayerCardResultSchema.statics.createPlayerCardResult = function (sessionId, targetPlayerId, aggregatedData, totalVoters) {
-    const { attributeStats, overallStats, positionStats } = aggregatedData;
+    const { attributeStats, additionalAttributeStats, overallStats, positionStats } = aggregatedData;
 
     // Costruisce finalAttributes
     const finalAttributes = {};
@@ -394,6 +394,19 @@ PlayerCardResultSchema.statics.createPlayerCardResult = function (sessionId, tar
         };
     });
 
+    // ⭐ COSTRUISCE finalAdditionalAttributes (STELLE)
+    const finalAdditionalAttributes = {};
+    if (additionalAttributeStats) {
+        Object.keys(additionalAttributeStats).forEach(attr => {
+            const stats = additionalAttributeStats[attr];
+            if (stats.count > 0) {
+                finalAdditionalAttributes[attr] = Math.round(stats.total / stats.count);
+            } else {
+                finalAdditionalAttributes[attr] = null;
+            }
+        });
+    }
+
     // Trova posizione più votata
     let mostVotedPosition = null;
     let maxVotes = 0;
@@ -414,6 +427,7 @@ PlayerCardResultSchema.statics.createPlayerCardResult = function (sessionId, tar
         targetPlayerId: targetPlayerId,
 
         finalAttributes,
+        finalAdditionalAttributes,  // ⭐ AGGIUNGO LE STELLE CALCOLATE
         finalOverallRating: Math.round(overallStats.average),
 
         consensusProfile: {
@@ -457,6 +471,7 @@ PlayerCardResultSchema.methods.getPlayerCardResults = function () {
         sessionId: this.votingSessionId,
 
         finalAttributes: this.finalAttributes,
+        finalAdditionalAttributes: this.finalAdditionalAttributes,  // ⭐ AGGIUNGO LE STELLE NELLA RISPOSTA API
         finalOverallRating: this.finalOverallRating,
         grade: this.grade,
 

@@ -410,7 +410,7 @@ export interface VotingState {
   currentSession: VotingSession | null;
 
   // Team Members
-  teamMembers: Array<{ id: string; name: string; email: string }>;
+  teamMembers: Array<{ id: string; name: string; email: string; birthdate?: string }>;
 
   // Loading states
   isLoading: boolean;

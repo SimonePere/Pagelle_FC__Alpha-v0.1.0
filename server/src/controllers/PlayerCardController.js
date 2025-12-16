@@ -886,6 +886,7 @@ const completePlayerCardSession = async (req, res) => {
         // 7. Crea e salva PlayerCardResult
         const aggregatedData = {
             attributeStats,
+            additionalAttributeStats,  // ⭐ AGGIUNGO LE STELLE CALCOLATE
             overallStats,
             positionStats
         };
@@ -935,6 +936,8 @@ const getPlayerCardResults = async (req, res) => {
         console.log('\n🏆 === GET PLAYER CARD RESULTS ===');
         console.log('🎯 Requested User ID:', req.params.userId);
         console.log('👤 Current User:', req.user?.name);
+        console.log('🕐 Timestamp:', new Date().toISOString());
+        console.log('🔄 QUESTO LOG DOVREBBE APPARIRE SEMPRE!');
 
         const { userId } = req.params;
 
@@ -994,6 +997,11 @@ const getPlayerCardResults = async (req, res) => {
             grade: result.grade,
             evaluationDate: result.createdAt
         }));
+
+        // 🐛 DEBUG: Verifica che finalAdditionalAttributes sia incluso
+        console.log('🔍 DEBUG Backend PlayerCard Response for:', targetUser.name);
+        console.log('📊 Raw result.finalAdditionalAttributes:', playerCardResults[0]?.finalAdditionalAttributes);
+        console.log('📊 Formatted result.finalAdditionalAttributes:', formattedResults[0]?.finalAdditionalAttributes);
 
         // Calcola statistiche riassuntive
         const summaryStats = {

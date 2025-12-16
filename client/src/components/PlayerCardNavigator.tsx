@@ -34,6 +34,10 @@ interface PlayerCardResult {
     res: number;
     for: number;
   };
+  finalAdditionalAttributes?: {
+    piedeDebole?: number;
+    skill?: number;
+  };
   finalOverallRating: number;
   grade: string;
   profile: {
@@ -43,10 +47,6 @@ interface PlayerCardResult {
   metadata: {
     totalVoters: number;
     confidence: number;
-  };
-  highlights: {
-    strongest: { name: string; value: number };
-    weakest: { name: string; value: number };
   };
 }
 
@@ -208,8 +208,8 @@ export function PlayerCardNavigator({
               key={index}
               onClick={() => navigateToPlayer(index)}
               className={`w-3 h-3 rounded-full transition-all duration-200 ${index === currentIndex
-                  ? 'bg-primary'
-                  : 'bg-muted hover:bg-muted-foreground/50'
+                ? 'bg-primary'
+                : 'bg-muted hover:bg-muted-foreground/50'
                 }`}
             />
           ))}
@@ -247,6 +247,14 @@ interface PlayerCardProps {
 function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: PlayerCardProps) {
   // Helper per convertire API results in PlayerAttributes format
   const convertToPlayerAttributes = (apiResult: PlayerCardResult): PlayerAttributes => {
+    // 🐛 DEBUG: Verifica che i dati delle stelle arrivino
+    console.log('🔍 DEBUG convertToPlayerAttributes:', {
+      playerId: player.id,
+      finalAdditionalAttributes: apiResult.finalAdditionalAttributes,
+      piedeDebole: apiResult.finalAdditionalAttributes?.piedeDebole,
+      skill: apiResult.finalAdditionalAttributes?.skill
+    });
+
     return {
       shooting: apiResult.finalAttributes.tir,
       passing: apiResult.finalAttributes.pas,
@@ -255,8 +263,8 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
       visione: apiResult.finalAttributes.vis,
       stamina: apiResult.finalAttributes.res,
       strength: apiResult.finalAttributes.for,
-      weakFoot: 3, // TODO: Aggiungere nell'API
-      skillMoves: 3, // TODO: Aggiungere nell'API
+      weakFoot: apiResult.finalAdditionalAttributes?.piedeDebole || 3, // ⭐ STELLE DAL DATABASE
+      skillMoves: apiResult.finalAdditionalAttributes?.skill || 3,     // ⭐ STELLE DAL DATABASE
       position: 'CEN' as any, // TODO: Convertire da mostVotedPosition
       preferredRole: apiResult.profile.preferredRole || 'Non specificato',
       age: player.age || 25
@@ -264,9 +272,9 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
   };
 
   const getOverallColor = (rating: number) => {
-    if (rating >= 85) return "text-green-500";
-    if (rating >= 75) return "text-yellow-500";
-    if (rating >= 65) return "text-orange-500";
+    if (rating >= 80) return "text-green-500";
+    if (rating >= 70) return "text-yellow-500";
+    if (rating >= 60) return "text-orange-500";
     return "text-red-500";
   };
 
@@ -356,7 +364,7 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
                 {result.finalOverallRating}
               </div>
               <div className="text-sm text-muted-foreground font-medium mt-1">
-                {result.profile.mostVotedPosition || 'CEN'}
+                {result.profile.mostVotedPosition || 'N/A'}
               </div>
             </div>
           )}
@@ -364,11 +372,6 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
 
         {/* Basic Info */}
         <div className="space-y-1">
-          {result?.profile.preferredRole && (
-            <div className="text-sm text-muted-foreground">
-              {result.profile.preferredRole}
-            </div>
-          )}
           {player.age && (
             <div className="text-sm text-muted-foreground">
               Età: {player.age}
@@ -396,25 +399,33 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
               <div>
                 <div className="text-xs text-muted-foreground mb-1">Piede Debole</div>
-                <div className="flex gap-0.5">{renderStars(4)}</div>
+                <div className="flex gap-0.5">{renderStars((() => {
+                  const piedeDebole = result.finalAdditionalAttributes?.piedeDebole || 3;
+                  console.log('🔍 DEBUG Piede Debole:', {
+                    playerId: player.id,
+                    playerName: player.name,
+                    finalAdditionalAttributes: result.finalAdditionalAttributes,
+                    piedeDebole: piedeDebole
+                  });
+                  return piedeDebole;
+                })())}</div>
               </div>
               <div>
                 <div className="text-xs text-muted-foreground mb-1">Skill</div>
-                <div className="flex gap-0.5">{renderStars(3)}</div>
+                <div className="flex gap-0.5">{renderStars((() => {
+                  const skill = result.finalAdditionalAttributes?.skill || 3;
+                  console.log('🔍 DEBUG Skill:', {
+                    playerId: player.id,
+                    playerName: player.name,
+                    finalAdditionalAttributes: result.finalAdditionalAttributes,
+                    skill: skill
+                  });
+                  return skill;
+                })())}</div>
               </div>
             </div>
 
-            {/* Statistics */}
-            <div className="pt-4 border-t border-border/50 text-xs text-muted-foreground">
-              <div className="flex justify-between">
-                <span>Votanti: {result.metadata.totalVoters}</span>
-                <span>Fiducia: {Math.round(result.metadata.confidence * 100)}%</span>
-              </div>
-              <div className="flex justify-between mt-1">
-                <span>Miglior: {result.highlights.strongest.name} ({result.highlights.strongest.value})</span>
-                <span>Peggiore: {result.highlights.weakest.name} ({result.highlights.weakest.value})</span>
-              </div>
-            </div>
+
           </div>
         ) : (
           // Modalità Empty/Voting - Placeholder o progress
@@ -443,32 +454,28 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
       </div>
 
       {/* Actions */}
-      <div className="p-6 pt-0 space-y-2">
-        {mode === 'empty' && (
-          <Button
-            className="w-full"
-            onClick={onCreateSession}
-          >
-            Crea Sessione PlayerCard
-          </Button>
-        )}
+      {mode !== 'completed' && (
+        <div className="p-6 pt-0 space-y-2">
+          {mode === 'empty' && (
+            <Button
+              className="w-full"
+              onClick={onCreateSession}
+            >
+              Crea Sessione PlayerCard
+            </Button>
+          )}
 
-        {mode === 'voting' && session?.canVote && (
-          <Button
-            className="w-full"
-            variant={session.hasVoted ? "outline" : "default"}
-            onClick={onVote}
-          >
-            {session.hasVoted ? "Aggiorna la Tua Valutazione" : "Vota Questo Giocatore"}
-          </Button>
-        )}
-
-        {mode === 'completed' && (
-          <Button className="w-full" variant="secondary" disabled>
-            Valutazione Completata
-          </Button>
-        )}
-      </div>
+          {mode === 'voting' && session?.canVote && (
+            <Button
+              className="w-full"
+              variant={session.hasVoted ? "outline" : "default"}
+              onClick={onVote}
+            >
+              {session.hasVoted ? "Aggiorna la Tua Valutazione" : "Vota Questo Giocatore"}
+            </Button>
+          )}
+        </div>
+      )}
     </Card>
   );
 }
