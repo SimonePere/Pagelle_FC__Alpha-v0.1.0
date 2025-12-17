@@ -103,3 +103,18 @@ temp/
 # ===========================
 .eslintcache
 *.tsbuildinfo
+
+# ===========================
+# PROJECT SPECIFIC - DEBUG & ANALYSIS
+# ===========================
+# Analysis documentation (temporary)
+analysis/
+
+# Server debug utilities (not needed in version control)
+server/debug-utils/add-missing-davide.js
+server/debug-utils/check-davide-data-fixed.js
+server/debug-utils/check-six-raw-data.js
+server/debug-utils/correct-six-data.js
+server/debug-utils/fix-davide-swap.js
+server/debug-utils/player-stats-summary.js
+server/debug-utils/regenerate-leaderboard-cache.js
