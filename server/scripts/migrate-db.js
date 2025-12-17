@@ -19,16 +19,16 @@ const fs = require('fs').promises;
 const path = require('path');
 
 // Import dei modelli
-const User = require('./src/models/User');
-const Match = require('./src/models/Match');
-const Team = require('./src/models/Team');
-const VoteSubmission = require('./src/models/VoteSubmission');
-const VoteResult = require('./src/models/VoteResult');
-const VotingSession = require('./src/models/VotingSession');
-const PlayerCardSubmission = require('./src/models/PlayerCardSubmission');
-const PlayerCardResult = require('./src/models/PlayerCardResult');
-const PlayerLeaderboardStats = require('./src/models/PlayerLeaderboardStats');
-const MatchNotification = require('./src/models/MatchNotification');
+const User = require('../src/models/User');
+const Match = require('../src/models/Match');
+const Team = require('../src/models/Team');
+const VoteSubmission = require('../src/models/VoteSubmission');
+const VoteResult = require('../src/models/VoteResult');
+const VotingSession = require('../src/models/VotingSession');
+const PlayerCardSubmission = require('../src/models/PlayerCardSubmission');
+const PlayerCardResult = require('../src/models/PlayerCardResult');
+const PlayerLeaderboardStats = require('../src/models/PlayerLeaderboardStats');
+const MatchNotification = require('../src/models/MatchNotification');
 
 // Configurazione
 const BACKUP_DIR = './db-backups';

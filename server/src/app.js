@@ -16,6 +16,9 @@ const leaderboardRoutes = require('./routes/leaderboards');
 
 const app = express();
 
+// Trust proxy for Render/Vercel deployment
+app.set('trust proxy', true);
+
 // Security middleware
 app.use(helmet());
 

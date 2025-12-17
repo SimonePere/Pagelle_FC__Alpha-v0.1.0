@@ -2,10 +2,10 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 
 // Import dei modelli
-const Match = require('./src/models/Match');
-const VotingSession = require('./src/models/VotingSession');
-const VoteResult = require('./src/models/VoteResult');
-const PlayerLeaderboardStats = require('./src/models/PlayerLeaderboardStats');
+const Match = require('../src/models/Match');
+const VotingSession = require('../src/models/VotingSession');
+const VoteResult = require('../src/models/VoteResult');
+const PlayerLeaderboardStats = require('../src/models/PlayerLeaderboardStats');
 
 async function connectDB() {
     try {

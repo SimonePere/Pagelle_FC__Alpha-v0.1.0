@@ -4,12 +4,12 @@ const fs = require('fs');
 const path = require('path');
 
 // Import dei modelli
-const Match = require('./src/models/Match');
-const VotingSession = require('./src/models/VotingSession');
-const VoteResult = require('./src/models/VoteResult');
-const User = require('./src/models/User');
-const Team = require('./src/models/Team'); // AGGIUNTO: Fix per hook post-save
-const PlayerLeaderboardStats = require('./src/models/PlayerLeaderboardStats');
+const Match = require('../src/models/Match');
+const VotingSession = require('../src/models/VotingSession');
+const VoteResult = require('../src/models/VoteResult');
+const User = require('../src/models/User');
+const Team = require('../src/models/Team'); // AGGIUNTO: Fix per hook post-save
+const PlayerLeaderboardStats = require('../src/models/PlayerLeaderboardStats');
 
 const BULK_DATA_FILE = './bulk-data.json';
 
