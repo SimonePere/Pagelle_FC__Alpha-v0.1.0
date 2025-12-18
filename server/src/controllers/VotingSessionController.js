@@ -81,6 +81,13 @@ const getUserVotingSessions = async (req, res) => {
     console.log('✅ Sessions recuperate via service:', sessionsWithStats.length);
     console.log('🟢 === FINE GET USER VOTING SESSIONS ===\n');
 
+    // Disabilita cache per dati real-time
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+
     res.json({
       success: true,
       votingSessions: sessionsWithStats,

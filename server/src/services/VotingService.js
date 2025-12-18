@@ -1,12 +1,21 @@
-const VotingSession = require('../models/VotingSession');
-const VoteSubmission = require('../models/VoteSubmission');
-const VoteResult = require('../models/VoteResult');
-const Match = require('../models/Match');
-const Team = require('../models/Team');
-const PlayerLeaderboardStats = require('../models/PlayerLeaderboardStats');
+// 🎯 REPOSITORY PATTERN - Accesso dati tramite Repository
+const {
+    VotingSessionRepository,
+    VoteSubmissionRepository,
+    VoteResultRepository,
+    MatchRepository,
+    TeamRepository,
+    UserRepository,
+    PlayerLeaderboardStatsRepository
+} = require('../repositories');
 
 /**
  * VotingService - Business Logic Layer per Gestione Votazioni
+ * 
+ * 🔄 AGGIORNATO CON REPOSITORY PATTERN:
+ * - Non accede più direttamente ai Model Mongoose
+ * - Usa Repository per separare data access da business logic
+ * - Più testabile e modulare
  * 
  * Responsabilità:
  * - Validation business rules votazioni
@@ -16,6 +25,20 @@ const PlayerLeaderboardStats = require('../models/PlayerLeaderboardStats');
  * - Gestione statistiche giocatori
  */
 class VotingService {
+
+    /**
+     * 🏗️ Costruttore - Inizializza i repository
+     */
+    constructor() {
+        // Inizializza i repository per accesso dati
+        this.votingSessionRepository = new VotingSessionRepository();
+        this.voteSubmissionRepository = new VoteSubmissionRepository();
+        this.voteResultRepository = new VoteResultRepository();
+        this.matchRepository = new MatchRepository();
+        this.teamRepository = new TeamRepository();
+        this.userRepository = new UserRepository();
+        this.playerStatsRepository = new PlayerLeaderboardStatsRepository();
+    }
 
     // ====================
     // 1. VALIDATION METHODS
@@ -120,19 +143,20 @@ class VotingService {
         }
 
         // 2. Verifica che la partita esista
-        const match = await Match.findById(targetId);
+        // 🎯 USA REPOSITORY invece di Model diretto
+        const match = await this.matchRepository.findById(targetId);
         if (!match) {
             throw new Error('Match not found');
         }
 
         // 3. Verifica che il team esista
-        const team = await Team.findById(match.teamId);
+        const team = await this.teamRepository.findById(match.teamId);
         if (!team) {
             throw new Error('Team not found');
         }
 
         // 4. Business rules per creazione sessione
-        const votingSession = await VotingSession.create({
+        const votingSession = await this.votingSessionRepository.create({
             type: 'match_rating',
             targetId: match._id,
             teamId: match.teamId,
@@ -185,7 +209,8 @@ class VotingService {
         }
 
         // 1. Trova la sessione di votazione
-        const session = await VotingSession.findById(sessionId);
+        // 🎯 USA REPOSITORY invece di Model diretto
+        const session = await this.votingSessionRepository.findById(sessionId);
         if (!session) {
             throw new Error('Voting session not found');
         }
@@ -204,13 +229,10 @@ class VotingService {
         }
 
         // 3. Controlla se ha già votato
-        const existingVote = await VoteSubmission.findOne({
-            votingSessionId: session._id,
-            voterId: userId,
-            isActive: true
-        });
+        // 🎯 USA REPOSITORY con metodo specifico
+        const existingVote = await this.voteSubmissionRepository.findBySessionAndUser(sessionId, userId);
 
-        if (existingVote) {
+        if (existingVote && existingVote.isActive) {
             throw new Error('User has already voted');
         }
 
@@ -251,7 +273,7 @@ class VotingService {
             });
 
             // 3. Crea e salva il voto
-            const newVote = new VoteSubmission({
+            const newVote = await this.voteSubmissionRepository.create({
                 votingSessionId: session._id,
                 voterId: userId,
                 voteData: transformedVoteData,
@@ -262,7 +284,6 @@ class VotingService {
                 validated: false
             });
 
-            await newVote.save();
             console.log('✅ Voto salvato nel database');
 
             // 4. Controlla auto-completion DOPO aver salvato il voto
@@ -315,14 +336,14 @@ class VotingService {
             }
 
             // 1. Trova la sessione
-            const session = await VotingSession.findById(sessionId);
+            const session = await this.votingSessionRepository.findById(sessionId);
             if (!session || session.status !== 'active') {
                 console.log('⚠️ Sessione non trovata o non attiva, skip auto-complete');
                 return false;
             }
 
             // 2. Conta submissions attive
-            const submissionsCount = await VoteSubmission.countDocuments({
+            const submissionsCount = await this.voteSubmissionRepository.countDocuments({
                 votingSessionId: sessionId,
                 isActive: true
             });
@@ -426,6 +447,22 @@ class VotingService {
         return transformedVoteData;
     }
 
+    /**
+     * Calcola grade da rating
+     * @param {number} rating - Rating medio
+     * @returns {string} Grade letter
+     */
+    calculateGrade(rating) {
+        if (rating >= 9.5) return 'A+';
+        if (rating >= 9.0) return 'A';
+        if (rating >= 8.5) return 'B+';
+        if (rating >= 8.0) return 'B';
+        if (rating >= 7.5) return 'C+';
+        if (rating >= 7.0) return 'C';
+        if (rating >= 6.0) return 'D';
+        return 'F';
+    }
+
     // ==========================
     // 4. RESULTS CALCULATION
     // ==========================
@@ -449,7 +486,7 @@ class VotingService {
         }
 
         // 1. Verifica che la sessione esista e sia match_rating
-        const session = await VotingSession.findById(sessionId);
+        const session = await this.votingSessionRepository.findById(sessionId);
         if (!session) {
             throw new Error('Voting session not found');
         }
@@ -460,10 +497,10 @@ class VotingService {
 
         // 2. Se la sessione è completed, cerca risultati ufficiali
         if (session.status === 'completed') {
-            const officialResult = await VoteResult.findOne({
-                votingSessionId: sessionId,
-                'sessionMetadata.sessionType': 'match_rating'
-            });
+            const officialResult = await this.voteResultRepository.findBySessionType(
+                sessionId,
+                'match_rating'
+            );
 
             if (officialResult) {
                 console.log('📊 Restituendo risultati match rating ufficiali salvati');
@@ -481,10 +518,13 @@ class VotingService {
         // 3. Calcola risultati live
         console.log('🔄 Calcolando risultati match rating al volo per sessione', session.status);
 
-        const submissions = await VoteSubmission.find({
-            votingSessionId: sessionId,
-            isActive: true
-        }).populate('voterId', 'name');
+        const submissions = await this.voteSubmissionRepository.findAll({
+            filter: {
+                votingSessionId: sessionId,
+                isActive: true
+            },
+            populate: [{ path: 'voterId', select: 'name' }]
+        });
 
         if (submissions.length === 0) {
             throw new Error('No votes found for this session');
@@ -614,7 +654,7 @@ class VotingService {
         }
 
         // 1. Verifica che la sessione esista e sia match_rating
-        const session = await VotingSession.findById(sessionId);
+        const session = await this.votingSessionRepository.findById(sessionId);
         if (!session) {
             throw new Error('Voting session not found');
         }
@@ -625,10 +665,10 @@ class VotingService {
 
         // 2. Se già completed, restituisci risultati esistenti
         if (session.status === 'completed') {
-            const existingResult = await VoteResult.findOne({
-                votingSessionId: sessionId,
-                'sessionMetadata.sessionType': 'match_rating'
-            });
+            const existingResult = await this.voteResultRepository.findBySessionType(
+                sessionId,
+                'match_rating'
+            );
 
             if (existingResult) {
                 return {
@@ -636,16 +676,21 @@ class VotingService {
                     message: 'Session already completed',
                     alreadyCompleted: true,
                     completedAt: session.completedAt,
-                    officialResults: existingResult.getMatchRatingResults()
+                    officialResults: existingResult.matchRatingResults || {}
                 };
             }
         }
 
         // 3. Calcola risultati finali
-        const submissions = await VoteSubmission.find({
-            votingSessionId: sessionId,
-            isActive: true
-        }).populate('voterId', 'name');
+        const submissions = await this.voteSubmissionRepository.findAll(
+            {
+                votingSessionId: sessionId,
+                isActive: true
+            },
+            {
+                populate: [{ path: 'voterId', select: 'name' }]
+            }
+        );
 
         if (submissions.length === 0) {
             throw new Error('Cannot complete session with no votes');
@@ -654,14 +699,62 @@ class VotingService {
         // 4. Aggrega risultati usando il metodo esistente
         const finalResults = this.aggregatePlayerStats(submissions);
 
-        // 5. Salva risultati ufficiali
-        const voteResult = VoteResult.createMatchRatingResult(
-            sessionId,
-            finalResults,
-            submissions.length
-        );
+        // 5. Salva risultati ufficiali con struttura corretta VoteResult
+        const voteResultData = {
+            votingSessionId: sessionId,
+            matchRatingResults: new Map(),
+            sessionMetadata: {
+                totalVoters: submissions.length,
+                sessionType: 'match_rating',
+                calculatedAt: new Date(),
+                playersCount: Object.keys(finalResults).length,
+                completionRate: 100
+            },
+            statistics: {
+                voteCount: submissions.length,
+                overallAverageRating: 0,
+                totalGoalsReported: 0,
+                totalAssistsReported: 0,
+                ratingDistribution: {
+                    '9-10': 0,
+                    '8-9': 0,
+                    '7-8': 0,
+                    '6-7': 0,
+                    '5-6': 0,
+                    'below-5': 0
+                },
+                badgesSummary: {
+                    mvp: 0,
+                    goleador: 0,
+                    assist_man: 0,
+                    difensore: 0,
+                    maratoneta: 0,
+                    gol_bello: 0
+                }
+            },
+            calculationMethod: 'average'
+        };
 
-        await voteResult.save();
+        // Popola matchRatingResults e statistiche
+        let totalRating = 0;
+        for (const [playerId, playerStats] of Object.entries(finalResults)) {
+            const avgRating = playerStats.averageRating || 6;
+            voteResultData.matchRatingResults.set(playerId, {
+                playerId: playerId,
+                averageRating: avgRating,
+                medianRating: avgRating,
+                goals: playerStats.goals || 0,
+                assists: playerStats.assists || 0,
+                voteCount: playerStats.voteCount || 1,
+                badges: playerStats.badges || [],
+                grade: this.calculateGrade(avgRating)
+            });
+            totalRating += avgRating;
+        }
+
+        voteResultData.statistics.overallAverageRating = totalRating / Object.keys(finalResults).length;
+
+        const voteResult = await this.voteResultRepository.create(voteResultData);
 
         // 6. Aggiorna player statistics
         await this.updatePlayerStatistics(finalResults);
@@ -670,14 +763,17 @@ class VotingService {
         session.status = 'completed';
         session.completedAt = new Date();
         session.completionType = completionType;
-        await session.save();
+        await this.votingSessionRepository.updateById(session._id, {
+            status: 'completed',
+            completedAt: new Date(),
+            completionType: completionType
+        });
 
         // 8. Aggiorna Match status per coerenza
         try {
-            const match = await Match.findById(session.targetId);
+            const match = await this.matchRepository.findById(session.targetId);
             if (match && match.status === 'active') {
-                match.status = 'completed';
-                await match.save();
+                await this.matchRepository.updateById(match._id, { status: 'completed' });
                 console.log('✅ Match status aggiornato a completed');
             }
         } catch (error) {
@@ -690,14 +786,14 @@ class VotingService {
         console.log('🗳️ Votanti totali:', submissions.length);
 
         // 9. Leggi risultati salvati per il return
-        const savedResults = voteResult.getMatchRatingResults();
+        const savedResults = finalResults; // Ora abbiamo già i risultati aggregati
 
         return {
             success: true,
             message: 'Session completed successfully',
-            completedAt: session.completedAt,
+            completedAt: new Date(),
             completionType: completionType,
-            officialResults: savedResults || finalResults,
+            officialResults: savedResults,
             voteResultId: voteResult._id,
             playersCount: Object.keys(finalResults).length,
             votersCount: submissions.length
@@ -717,7 +813,7 @@ class VotingService {
 
         for (const [playerId, playerResults] of Object.entries(results)) {
             try {
-                const playerStats = await PlayerLeaderboardStats.findOne({ playerId: playerId });
+                const playerStats = await this.playerStatsRepository.findOne({ playerId: playerId });
                 if (!playerStats) {
                     console.log(`⚠️ PlayerStats non trovato per player ${playerId}`);
                     continue;
@@ -740,7 +836,7 @@ class VotingService {
 
                 // Aggiorna solo se necessario
                 if (Object.keys(updateFields).length > 0) {
-                    await PlayerLeaderboardStats.findOneAndUpdate(
+                    await this.playerStatsRepository.findOneAndUpdate(
                         { playerId: playerId },
                         updateFields
                     );
@@ -779,8 +875,9 @@ class VotingService {
             throw new Error('User ID is required');
         }
 
-        const votingSession = await VotingSession.findById(sessionId)
-            .populate('targetId', 'opponent date venue teamMemberIds');
+        const votingSession = await this.votingSessionRepository.findById(sessionId, {
+            populate: [{ path: 'targetId', select: 'opponent date venue teamMemberIds' }]
+        });
 
         if (!votingSession) {
             throw new Error('Voting session not found');
@@ -838,7 +935,7 @@ class VotingService {
             throw new Error('User ID is required');
         }
 
-        const votingSession = await VotingSession.findById(sessionId);
+        const votingSession = await this.votingSessionRepository.findById(sessionId);
 
         if (!votingSession) {
             throw new Error('Voting session not found');
@@ -862,7 +959,7 @@ class VotingService {
         // Attiva la sessione
         votingSession.status = 'active';
         votingSession.startedAt = new Date();
-        await votingSession.save();
+        await this.votingSessionRepository.save(votingSession);
 
         console.log('✅ Match rating session attivata:', votingSession.title);
         console.log('🟠 === FINE ACTIVATE SESSION (SERVICE) ===\n');
@@ -902,7 +999,7 @@ class VotingService {
         }
 
         // 1. Verifica che la sessione esista
-        const session = await VotingSession.findById(sessionId);
+        const session = await this.votingSessionRepository.findById(sessionId);
         if (!session) {
             throw new Error('Voting session not found');
         }
@@ -918,7 +1015,7 @@ class VotingService {
         }
 
         // 3. Trova il submission specifico
-        const submission = await VoteSubmission.findOne({
+        const submission = await this.voteSubmissionRepository.findOne({
             votingSessionId: sessionId,
             voterId: voterId,
             isActive: true
@@ -981,26 +1078,35 @@ class VotingService {
         }
 
         // 1. Trova tutte le sessioni match_rating dove l'utente è eligible voter
-        const votingSessions = await VotingSession.find({
-            eligibleVoters: userId,
-            type: 'match_rating'
-        })
-            .populate('targetId', 'opponent date venue')
-            .sort({ createdAt: -1 })
-            .limit(50);
+        const votingSessions = await this.votingSessionRepository.findAll(
+            {
+                eligibleVoters: { $in: [userId] },
+                type: 'match_rating'
+            },
+            {
+                populate: [{ path: 'targetId', select: 'opponent date venue status' }],
+                sort: { createdAt: -1 },
+                limit: 50
+            }
+        );
 
         console.log('📊 Match rating sessions trovate:', votingSessions.length);
+
+        // 🔍 DEBUG: Log degli status delle sessioni e match
+        votingSessions.forEach((session, index) => {
+            console.log(`   [${index}] Session: ${session.status}, Match: ${session.targetId?.status || 'N/A'}, Opponent: ${session.targetId?.opponent || 'N/A'}`);
+        });
 
         // 2. Per ogni sessione, calcola statistiche business logic
         const sessionsWithStats = await Promise.all(votingSessions.map(async session => {
             // Business Logic: Verifica se user ha già votato
-            const hasVoted = await VoteSubmission.exists({
+            const hasVoted = await this.voteSubmissionRepository.exists({
                 votingSessionId: session._id,
                 voterId: userId
             });
 
             // Business Logic: Conta submissions totali attive
-            const submissionsCount = await VoteSubmission.countDocuments({
+            const submissionsCount = await this.voteSubmissionRepository.countDocuments({
                 votingSessionId: session._id,
                 isActive: true
             });
@@ -1066,7 +1172,7 @@ class VotingService {
         }
 
         // 1. Verifica che la sessione esista e sia match_rating
-        const session = await VotingSession.findById(sessionId);
+        const session = await this.votingSessionRepository.findById(sessionId);
         if (!session) {
             throw new Error('Voting session not found');
         }
@@ -1081,13 +1187,19 @@ class VotingService {
         }
 
         // 3. Recupera tutti i submissions attivi con tutti i dettagli
-        const submissions = await VoteSubmission.find({
-            votingSessionId: sessionId,
-            isActive: true
-        })
-            .populate('voterId', 'name email')
-            .populate('voteData.playerRatings.playerId', 'name email')
-            .sort({ createdAt: -1 });
+        const submissions = await this.voteSubmissionRepository.findAll(
+            {
+                votingSessionId: sessionId,
+                isActive: true
+            },
+            {
+                populate: [
+                    { path: 'voterId', select: 'name email' },
+                    { path: 'voteData.playerRatings.playerId', select: 'name email' }
+                ],
+                sort: { createdAt: -1 }
+            }
+        );
 
         // 4. Business Logic: Formatta tutti i submissions completi per il frontend
         const completeSubmissions = submissions.map(submission => ({

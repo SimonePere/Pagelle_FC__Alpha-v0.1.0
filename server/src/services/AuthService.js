@@ -2,11 +2,40 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
-const User = require('../models/User');
-const PlayerCardResult = require('../models/PlayerCardResult');
-const PlayerLeaderboardStats = require('../models/PlayerLeaderboardStats');
 
+// 🎯 REPOSITORY PATTERN - Accesso dati tramite Repository
+const {
+    UserRepository,
+    MatchRepository,
+    PlayerCardResultRepository,
+    PlayerLeaderboardStatsRepository
+} = require('../repositories');
+
+/**
+ * AuthService - Business Logic Layer per Autenticazione
+ * 
+ * 🔄 AGGIORNATO CON REPOSITORY PATTERN:
+ * - Non accede più direttamente ai Model Mongoose
+ * - Usa Repository per separare data access da business logic
+ * 
+ * Responsabilità:
+ * - Autenticazione e autorizzazione utenti
+ * - Registrazione e validazione
+ * - Gestione JWT tokens
+ * - Profili utente e statistiche
+ */
 class AuthService {
+
+    /**
+     * 🏗️ Costruttore - Inizializza i repository
+     */
+    constructor() {
+        // Inizializza i repository per accesso dati
+        this.userRepository = new UserRepository();
+        this.matchRepository = new MatchRepository();
+        this.playerCardResultRepository = new PlayerCardResultRepository();
+        this.playerStatsRepository = new PlayerLeaderboardStatsRepository();
+    }
     /**
      * Generate JWT Token
      * @param {string} userId - User ID
@@ -66,7 +95,9 @@ class AuthService {
      * @returns {Promise<boolean>} True if user exists
      */
     async userExistsByEmail(email) {
-        const existingUser = await User.findOne({ email: email.toLowerCase() });
+        const existingUser = await this.userRepository.findOne({
+            email: email.toLowerCase()
+        });
         return !!existingUser;
     }
 
@@ -103,7 +134,7 @@ class AuthService {
         const hashedPassword = await this.hashPassword(password);
 
         // 4. Create user with default profile
-        const user = await User.create({
+        const user = await this.userRepository.create({
             name: name.trim(),
             email: email.toLowerCase().trim(),
             birthdate: birthdate,
@@ -140,11 +171,13 @@ class AuthService {
      * @returns {Promise<Object|null>} User with password field
      */
     async findUserForLogin(email) {
-        return await User.findOne({
+        return await this.userRepository.findOne({
             $or: [
                 { email: email.toLowerCase().trim() },
             ]
-        }).select('+password');
+        }, {
+            select: '+password'
+        });
     }
 
     /**
@@ -205,9 +238,9 @@ class AuthService {
      * @returns {Promise<Object>} User statistics
      */
     async getUserPersonalStats(userId) {
-        const userStats = await PlayerLeaderboardStats.findOne({
+        const userStats = await this.playerStatsRepository.findOne({
             playerId: userId
-        }).lean();
+        });
 
         return userStats ? {
             totalMatches: userStats.totalMatches,
@@ -238,10 +271,10 @@ class AuthService {
             // Calcola stats team dinamiche
             const [totalMatches, teamStats, lastMatch] = await Promise.all([
                 // Conta match del team
-                mongoose.model('Match').countDocuments({ teamId: team._id }),
+                this.matchRepository.countDocuments({ teamId: team._id }),
 
                 // Somma stats di tutti i membri del team
-                PlayerLeaderboardStats.aggregate([
+                this.playerStatsRepository.aggregate([
                     { $match: { teamId: team._id, isActive: true } },
                     {
                         $group: {
@@ -255,10 +288,10 @@ class AuthService {
                 ]),
 
                 // Ultima partita del team
-                mongoose.model('Match').findOne({ teamId: team._id })
-                    .sort({ date: -1 })
-                    .select('date')
-                    .lean()
+                this.matchRepository.findOne(
+                    { teamId: team._id },
+                    { select: 'date', sort: { date: -1 }, lean: true }
+                )
             ]);
 
             const teamStatsData = teamStats[0] || {
@@ -289,12 +322,12 @@ class AuthService {
      * @returns {Promise<Object>} Player card info
      */
     async getUserPlayerCardInfo(userId) {
-        const latestPlayerCard = await PlayerCardResult.findOne({
+        const latestPlayerCard = await this.playerCardResultRepository.findOne({
             targetPlayerId: userId
-        })
-            .sort({ createdAt: -1 })
-            .populate('votingSessionId', 'title createdAt completedAt')
-            .lean();
+        }, {
+            sort: { createdAt: -1 },
+            populate: [{ path: 'votingSessionId', select: 'title createdAt completedAt' }]
+        });
 
         return latestPlayerCard ? {
             hasPlayerCard: true,
@@ -329,9 +362,11 @@ class AuthService {
      */
     async getUserProfile(userId) {
         // 1. Get user with teams populated
-        const user = await User.findById(userId)
-            .select('-password')
-            .populate('teamIds', 'name description colors settings inviteCode');
+        // 🎯 USA REPOSITORY per trovare utente
+        const user = await this.userRepository.findById(userId, {
+            select: '-password',
+            populate: 'teamIds'
+        });
 
         if (!user) {
             throw new Error('User not found');

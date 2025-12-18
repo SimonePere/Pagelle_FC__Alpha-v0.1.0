@@ -1,326 +1,111 @@
 // controllers/LeaderboardController.js
-const PlayerLeaderboardStats = require('../models/PlayerLeaderboardStats');
-const mongoose = require('mongoose');
+const LeaderboardService = require('../services/LeaderboardService');
 
 /**
  * LEADERBOARD CONTROLLER
  * 
- * Gestisce tutte le classifiche per team:
- * - Rating (voto medio)
- * - Goals (gol totali) 
- * - Assists (assist totali)
- * - PlayerCard (overall rating)
- * - Form (forma recente)
+ * Orchestration-only controller che delega tutta la business logic
+ * al LeaderboardService. Gestisce solo HTTP request/response.
  * 
- * 🎯 FIX: Tutti gli endpoint restituiscono gli stessi campi completi,
- * ma ordinati diversamente per tipo di classifica
+ * Endpoint supportati:
+ * - GET /leaderboard/:teamId/rating
+ * - GET /leaderboard/:teamId/goals
+ * - GET /leaderboard/:teamId/assists
+ * - GET /leaderboard/:teamId/playercard
+ * - GET /leaderboard/:teamId/form
+ * - GET /leaderboard/:teamId/all
  */
 
-// Campi standard da restituire per ogni classifica
-const STANDARD_FIELDS = 'playerId playerName totalMatches totalGoals totalAssists averageRating playerCardTOT playerCardAverage formRating recentForm';
+// Initialize service
+const leaderboardService = new LeaderboardService();
 
 // === CLASSIFICA RATING ===
-exports.getRatingLeaderboard = async (req, res) => {
+exports.getRatingLeaderboard = async (req, res, next) => {
     try {
         const { teamId } = req.params;
         const limit = parseInt(req.query.limit) || 10;
 
-        const players = await PlayerLeaderboardStats
-            .find({ teamId, isActive: true })
-            .sort({ averageRating: -1 })
-            .limit(limit)
-            .select(STANDARD_FIELDS);
+        const result = await leaderboardService.getLeaderboard(teamId, 'rating', limit);
 
-        res.json({
-            success: true,
-            data: players,
-            type: 'rating'
-        });
+        res.json(result);
 
     } catch (error) {
-        console.error('❌ Errore getRatingLeaderboard:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Errore nel recupero classifica rating'
-        });
+        next(error);
     }
 };
 
 // === CLASSIFICA GOL ===
-exports.getGoalsLeaderboard = async (req, res) => {
+exports.getGoalsLeaderboard = async (req, res, next) => {
     try {
         const { teamId } = req.params;
         const limit = parseInt(req.query.limit) || 10;
 
-        const players = await PlayerLeaderboardStats
-            .find({ teamId, isActive: true })
-            .sort({ totalGoals: -1, averageRating: -1 }) // Tie-break con rating
-            .limit(limit)
-            .select(STANDARD_FIELDS);
+        const result = await leaderboardService.getLeaderboard(teamId, 'goals', limit);
 
-        res.json({
-            success: true,
-            data: players,
-            type: 'goals'
-        });
+        res.json(result);
 
     } catch (error) {
-        console.error('❌ Errore getGoalsLeaderboard:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Errore nel recupero classifica gol'
-        });
+        next(error);
     }
 };
 
 // === CLASSIFICA ASSIST ===
-exports.getAssistsLeaderboard = async (req, res) => {
+exports.getAssistsLeaderboard = async (req, res, next) => {
     try {
         const { teamId } = req.params;
         const limit = parseInt(req.query.limit) || 10;
 
-        const players = await PlayerLeaderboardStats
-            .find({ teamId, isActive: true })
-            .sort({ totalAssists: -1, averageRating: -1 }) // Tie-break con rating
-            .limit(limit)
-            .select(STANDARD_FIELDS);
+        const result = await leaderboardService.getLeaderboard(teamId, 'assists', limit);
 
-        res.json({
-            success: true,
-            data: players,
-            type: 'assists'
-        });
+        res.json(result);
 
     } catch (error) {
-        console.error('❌ Errore getAssistsLeaderboard:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Errore nel recupero classifica assist'
-        });
+        next(error);
     }
 };
 
 // === CLASSIFICA PLAYERCARD ===
-exports.getPlayercardLeaderboard = async (req, res) => {
+exports.getPlayercardLeaderboard = async (req, res, next) => {
     try {
         const { teamId } = req.params;
         const limit = parseInt(req.query.limit) || 10;
 
-        const players = await PlayerLeaderboardStats
-            .find({
-                teamId,
-                isActive: true,
-                $or: [
-                    { playerCardAverage: { $ne: null, $gt: 0 } },
-                    { playerCardTOT: { $ne: null, $gt: 0 } }
-                ]
-            })
-            .sort({ playerCardAverage: -1, playerCardTOT: -1 })
-            .limit(limit)
-            .select(STANDARD_FIELDS);
+        const result = await leaderboardService.getLeaderboard(teamId, 'playercard', limit);
 
-        res.json({
-            success: true,
-            data: players,
-            type: 'playercard'
-        });
+        res.json(result);
 
     } catch (error) {
-        console.error('❌ Errore getPlayercardLeaderboard:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Errore nel recupero classifica playercard'
-        });
+        next(error);
     }
 };
 
 // === CLASSIFICA FORM ===
-exports.getFormLeaderboard = async (req, res) => {
+exports.getFormLeaderboard = async (req, res, next) => {
     try {
         const { teamId } = req.params;
         const limit = parseInt(req.query.limit) || 10;
 
-        // Trova giocatori con almeno 3 partite recenti o con formRating
-        const players = await PlayerLeaderboardStats
-            .find({
-                teamId,
-                isActive: true,
-                $or: [
-                    { formRating: { $ne: null, $gt: 0 } },
-                    { $expr: { $gte: [{ $size: "$recentForm" }, 3] } }
-                ]
-            })
-            .sort({ formRating: -1, averageRating: -1 }) // Ordina per formRating
-            .limit(limit)
-            .select(STANDARD_FIELDS);
+        const result = await leaderboardService.getLeaderboard(teamId, 'form', limit);
 
-        res.json({
-            success: true,
-            data: players,
-            type: 'form'
-        });
+        res.json(result);
 
     } catch (error) {
-        console.error('❌ Errore getFormLeaderboard:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Errore nel recupero classifica form'
-        });
+        next(error);
     }
 };
 
 // === TUTTE LE CLASSIFICHE (OTTIMIZZATO) ===
-exports.getAllLeaderboards = async (req, res) => {
+exports.getAllLeaderboards = async (req, res, next) => {
     try {
         const { teamId } = req.params;
         const limit = parseInt(req.query.limit) || 5;
 
-        // 🚀 PERFORMANCE BOOST: 1 sola aggregation invece di 5 query separate
-        // Da 200ms → 20ms (1000% più veloce!)
-        const [result] = await PlayerLeaderboardStats.aggregate([
-            {
-                // Match del team con giocatori attivi
-                $match: {
-                    teamId: teamId, // Manteniamo come string se il tuo schema usa string
-                    isActive: true
-                }
-            },
-            {
-                // $facet permette multiple pipeline parallele
-                $facet: {
-                    // 1. Classifica Rating
-                    rating: [
-                        { $sort: { averageRating: -1 } },
-                        { $limit: limit },
-                        {
-                            $project: {
-                                playerId: 1,
-                                playerName: 1,
-                                totalMatches: 1,
-                                totalGoals: 1,
-                                totalAssists: 1,
-                                averageRating: 1,
-                                playerCardTOT: 1,
-                                playerCardAverage: 1,
-                                formRating: 1,
-                                recentForm: 1
-                            }
-                        }
-                    ],
+        const result = await leaderboardService.getAllLeaderboards(teamId, limit);
 
-                    // 2. Classifica Goals (con tie-break rating)
-                    goals: [
-                        { $sort: { totalGoals: -1, averageRating: -1 } },
-                        { $limit: limit },
-                        {
-                            $project: {
-                                playerId: 1,
-                                playerName: 1,
-                                totalMatches: 1,
-                                totalGoals: 1,
-                                totalAssists: 1,
-                                averageRating: 1,
-                                playerCardTOT: 1,
-                                playerCardAverage: 1,
-                                formRating: 1,
-                                recentForm: 1
-                            }
-                        }
-                    ],
-
-                    // 3. Classifica Assists (con tie-break rating)
-                    assists: [
-                        { $sort: { totalAssists: -1, averageRating: -1 } },
-                        { $limit: limit },
-                        {
-                            $project: {
-                                playerId: 1,
-                                playerName: 1,
-                                totalMatches: 1,
-                                totalGoals: 1,
-                                totalAssists: 1,
-                                averageRating: 1,
-                                playerCardTOT: 1,
-                                playerCardAverage: 1,
-                                formRating: 1,
-                                recentForm: 1
-                            }
-                        }
-                    ]
-                }
-            }
-        ]);
-
-        // Separata aggregation per PlayerCard (diverso filtro)
-        const playercardResult = await PlayerLeaderboardStats.aggregate([
-            {
-                $match: {
-                    teamId: teamId,
-                    playerCardAverage: { $ne: null, $gt: 0 }
-                }
-            },
-            { $sort: { playerCardAverage: -1 } },
-            { $limit: limit },
-            {
-                $project: {
-                    playerId: 1,
-                    playerName: 1,
-                    totalMatches: 1,
-                    totalGoals: 1,
-                    totalAssists: 1,
-                    averageRating: 1,
-                    playerCardTOT: 1,
-                    playerCardAverage: 1,
-                    formRating: 1,
-                    recentForm: 1
-                }
-            }
-        ]);
-
-        // Separata aggregation per Form (diverso filtro)
-        const formResult = await PlayerLeaderboardStats.aggregate([
-            {
-                $match: {
-                    teamId: teamId,
-                    formRating: { $ne: null, $gt: 0 }
-                }
-            },
-            { $sort: { formRating: -1 } },
-            { $limit: limit },
-            {
-                $project: {
-                    playerId: 1,
-                    playerName: 1,
-                    totalMatches: 1,
-                    totalGoals: 1,
-                    totalAssists: 1,
-                    averageRating: 1,
-                    playerCardTOT: 1,
-                    playerCardAverage: 1,
-                    formRating: 1,
-                    recentForm: 1
-                }
-            }
-        ]);
-
-        // Struttura response identica al precedente (compatibilità frontend)
-        res.json({
-            success: true,
-            data: {
-                rating: result.rating,
-                goals: result.goals,
-                assists: result.assists,
-                playercard: playercardResult,
-                form: formResult
-            }
-        });
+        res.json(result);
 
     } catch (error) {
-        console.error('❌ Errore getAllLeaderboards:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Errore nel recupero classifiche'
-        });
+        next(error);
     }
 };
 
