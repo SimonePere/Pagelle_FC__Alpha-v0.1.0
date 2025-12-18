@@ -13,6 +13,7 @@ lerna-debug.log*
 # ===========================
 dist
 dist-ssr
+dev-dist
 build
 *.local
 .output

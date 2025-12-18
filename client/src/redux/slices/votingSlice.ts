@@ -214,11 +214,6 @@ export const fetchTeamMembers = createAsyncThunk(
             console.log('🔍 MemberIds trovati:', memberIds);
             console.log('📊 Numero membri:', memberIds.length);
 
-            // Log dettagliato di ogni membro
-            memberIds.forEach((member, index) => {
-                console.log(`👤 Membro ${index + 1}:`, member);
-            });
-
             return memberIds;
         } catch (error: any) {
             console.log('❌ ERRORE FETCH TEAM MEMBERS:', error.message);
