@@ -19,6 +19,12 @@ build
 .nuxt
 
 # ===========================
+# VITE/CLIENT SPECIFIC
+# ===========================
+client/dev-dist/
+client/dist/
+
+# ===========================
 # ENVIRONMENT & CONFIG
 # ===========================
 .env
@@ -27,6 +33,14 @@ build
 .env.test.local
 .env.production.local
 .env.production
+
+# ===========================
+# DATABASE & BACKUPS (SECURITY CRITICAL)
+# ===========================
+server/db-backups/
+server/db-backups/*.json
+server/db-backups/*.txt
+server/db-backups/env-backup-*
 
 # ===========================
 # LOGS
@@ -46,7 +60,7 @@ playwright-report
 # ===========================
 # DEVELOPMENT TEST SCRIPTS
 # ===========================
-server/scripts/tests/
+# server/scripts/tests/  # Commentato per permettere commit test refactor
 server/debug-utils/test-*.js
 
 # ===========================
@@ -124,3 +138,5 @@ server/debug-utils/correct-six-data.js
 server/debug-utils/fix-davide-swap.js
 server/debug-utils/player-stats-summary.js
 server/debug-utils/regenerate-leaderboard-cache.js
+server/debug-utils/copy-prod-data.js
+server/debug-utils/restore-backup.js
