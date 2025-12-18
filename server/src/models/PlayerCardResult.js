@@ -550,55 +550,83 @@ PlayerCardResultSchema.statics.comparePlayerCards = async function (playerId1, p
 // === POST-SAVE HOOK ===
 // ⭐ AGGIORNA AUTOMATICAMENTE LE STATISTICHE LEADERBOARD PLAYERCARD
 PlayerCardResultSchema.post('save', async function (doc) {
-    try {
-        console.log('🃏 PlayerCardResult salvato - aggiornamento leaderboard playercard automatico');
+    // 🔄 RETRY LOGIC per robustezza
+    const MAX_RETRIES = 3;
+    let lastError;
 
-        // Import PlayerLeaderboardStats (deve essere fatto qui per evitare circular dependencies)
-        const PlayerLeaderboardStats = mongoose.model('PlayerLeaderboardStats');
-        const VotingSession = mongoose.model('VotingSession');
-        const User = mongoose.model('User');
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            console.log(`🃏 PlayerCardResult salvato - sincronizzazione leaderboard (tentativo ${attempt}/${MAX_RETRIES})`);
 
-        // 🔧 RECUPERA DATI MANCANTI tramite populate
-        const session = await VotingSession.findById(doc.votingSessionId).populate('teamId');
-        const targetPlayer = await User.findById(doc.targetPlayerId);
+            // Import PlayerLeaderboardStats (deve essere fatto qui per evitare circular dependencies)
+            const PlayerLeaderboardStats = mongoose.model('PlayerLeaderboardStats');
+            const VotingSession = mongoose.model('VotingSession');
+            const User = mongoose.model('User');
 
-        if (!session || !targetPlayer) {
-            console.error('❌ Sessione o giocatore non trovato per leaderboard update');
-            return;
-        }
+            // 🔧 RECUPERA DATI MANCANTI tramite populate
+            const session = await VotingSession.findById(doc.votingSessionId).populate('teamId');
+            const targetPlayer = await User.findById(doc.targetPlayerId);
 
-        // Aggiorna statistiche playercard per il giocatore target
-        const updateData = {
-            teamId: session.teamId._id,
-            playerName: targetPlayer.name,
-            playercard: {
-                totalEvaluations: 1,
-                overallRating: doc.finalOverallRating,
-                bestRating: doc.finalOverallRating,
-                worstRating: doc.finalOverallRating,
-                attributes: {
-                    tir: doc.finalAttributes.tir,
-                    pas: doc.finalAttributes.pas,
-                    dri: doc.finalAttributes.dri,
-                    fin: doc.finalAttributes.fin,
-                    vis: doc.finalAttributes.vis,
-                    res: doc.finalAttributes.res,
-                    for: doc.finalAttributes.for
-                },
-                positions: doc.consensusProfile.mostVotedPosition ? [doc.consensusProfile.mostVotedPosition] : []
-            },
-            form: {
-                recentEvaluations: [doc.finalOverallRating],
-                playerCardTrend: 1 // 1 nuova valutazione
+            if (!session || !targetPlayer) {
+                console.error(`❌ Sessione o giocatore non trovato per leaderboard update - Player: ${doc.targetPlayerId}, Session: ${doc.votingSessionId}`);
+                return;
             }
-        };
 
-        await PlayerLeaderboardStats.updateStats(doc.targetPlayerId, updateData);
-        console.log(`🃏 Aggiornate statistiche playercard per giocatore ${doc.targetPlayerId}`);
+            // Aggiorna statistiche playercard per il giocatore target
+            const updateData = {
+                teamId: session.teamId._id,
+                playerName: targetPlayer.name,
+                playercard: {
+                    totalEvaluations: 1,
+                    overallRating: doc.finalOverallRating,
+                    bestRating: doc.finalOverallRating,
+                    worstRating: doc.finalOverallRating,
+                    attributes: {
+                        tir: doc.finalAttributes.tir,
+                        pas: doc.finalAttributes.pas,
+                        dri: doc.finalAttributes.dri,
+                        fin: doc.finalAttributes.fin,
+                        vis: doc.finalAttributes.vis,
+                        res: doc.finalAttributes.res,
+                        for: doc.finalAttributes.for
+                    },
+                    positions: doc.consensusProfile.mostVotedPosition ? [doc.consensusProfile.mostVotedPosition] : []
+                },
+                form: {
+                    recentEvaluations: [doc.finalOverallRating],
+                    playerCardTrend: 1 // 1 nuova valutazione
+                }
+            };
 
-    } catch (error) {
-        console.error('❌ Errore aggiornamento leaderboard da PlayerCardResult:', error);
+            await PlayerLeaderboardStats.updateStats(doc.targetPlayerId, updateData);
+            console.log(`✅ Statistiche leaderboard sincronizzate per ${targetPlayer.name} (TOT: ${doc.finalOverallRating})`);
+
+            // Se arriviamo qui, l'aggiornamento è riuscito
+            return;
+
+        } catch (error) {
+            lastError = error;
+            console.error(`❌ Tentativo ${attempt}/${MAX_RETRIES} fallito per PlayerCardResult sync:`, {
+                playerId: doc.targetPlayerId,
+                sessionId: doc.votingSessionId,
+                overallRating: doc.finalOverallRating,
+                error: error.message
+            });
+
+            // Se non è l'ultimo tentativo, aspetta prima di riprovare
+            if (attempt < MAX_RETRIES) {
+                await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Backoff progressivo
+            }
+        }
     }
+
+    // Se tutti i tentativi sono falliti, logga errore critico
+    console.error(`🚨 CRITICO: Sincronizzazione PlayerCardResult fallita dopo ${MAX_RETRIES} tentativi:`, {
+        playerId: doc.targetPlayerId,
+        sessionId: doc.votingSessionId,
+        finalOverallRating: doc.finalOverallRating,
+        lastError: lastError?.message
+    });
 });
 
 module.exports = mongoose.model('PlayerCardResult', PlayerCardResultSchema);
