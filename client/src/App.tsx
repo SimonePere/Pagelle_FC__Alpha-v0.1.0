@@ -26,7 +26,6 @@ const PlayerCards = lazy(() => import("./pages/PlayerCards"));
 
 // ⚡ Loading skeleton component
 const PageSkeleton = () => {
-  console.log('🎯 PageSkeleton rendered - Lazy loading working!');
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center">
       <div className="text-center space-y-4">

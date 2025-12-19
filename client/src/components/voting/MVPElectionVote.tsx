@@ -155,9 +155,6 @@ export default function MVPElectionVote({ votingSession, onComplete, onCancel }:
         selectedPlayerId,
         reason: reason || undefined
       };
-
-      console.log('🏆 Invio voto MVP:', voteData);
-
       const result = await dispatch(submitVote({
         sessionId: votingSession.id,
         voteData: {

@@ -47,28 +47,17 @@ export default function PlayerCards() {
   // Carica team members quando il componente si monta
   useEffect(() => {
     if (user?.teams?.[0]?.id && teamMembers.length === 0) {
-      console.log('🔄 Caricamento team members per team:', user.teams[0].id);
       dispatch(fetchTeamMembers(user.teams[0].id));
     }
   }, [user, teamMembers.length, dispatch]);
 
   // Usa team members reali invece di fake players  
   const allPlayers = React.useMemo(() => {
-    console.log('🎮 RENDER Players Debug:');
-    console.log('  teamMembers:', teamMembers);
-    console.log('  teamMembers.length:', teamMembers?.length);
-    console.log('  teamMembers falsy?', !teamMembers);
-    console.log('  teamMembers.length === 0?', teamMembers?.length === 0);
-    console.log('  isLoadingTeamMembers:', isLoadingTeamMembers);
-
     // Se sta caricando o non ci sono teamMembers, ritorna array vuoto
     // NON usare mai fake players
     if (isLoadingTeamMembers || !teamMembers || teamMembers.length === 0) {
-      console.log('⏳ ATTENDENDO TEAM MEMBERS - non renderizzare nulla');
       return [];
     }
-
-    console.log('✅ USANDO TEAM MEMBERS REALI:', teamMembers);
     // Usa team members reali dal backend
     const mappedPlayers = teamMembers.map(member => ({
       id: member.id,        // Fix: usa 'id' invece di '_id'
@@ -76,9 +65,6 @@ export default function PlayerCards() {
       email: member.email,
       age: member.birthdate ? calculateAge(member.birthdate) : 25 // Calcola età reale da birthdate
     }));
-
-    console.log('🔄 MAPPED PLAYERS:', mappedPlayers);
-    console.log('  mappedPlayers.length:', mappedPlayers.length);
     return mappedPlayers;
   }, [teamMembers, isLoadingTeamMembers]);
 
@@ -87,8 +73,6 @@ export default function PlayerCards() {
       navigate("/login");
       return;
     }
-
-    console.log('🌐 TENTATIVO CARICAMENTO SESSIONI PLAYERCARD...');
     // Load player card sessions from API
     dispatch(fetchPlayerCardSessions({}));
   }, [user, navigate, dispatch]);
@@ -99,26 +83,16 @@ export default function PlayerCards() {
     if (!targetPlayer) return;
 
     try {
-      console.log('🎯 === CREATE PLAYER CARD SESSION with AUTO-OPEN ===');
-      console.log('👤 Target Player:', targetPlayer.name);
-
       const response = await dispatch(createPlayerCardSession({
         targetPlayerId: targetPlayer.id,
         title: `Valuta ${targetPlayer.name}`,
         description: `Esprimi la tua valutazione sulle abilità di ${targetPlayer.name}`,
         teamId: user?.teams?.[0]?.id
       })).unwrap();
-
-      console.log('✅ PlayerCard session creata:', response.votingSession?.id);
-      console.log('🔄 Auto-open flag:', response.autoOpenVoteForm);
-
       toast.success(`Sessione di valutazione per ${targetPlayer.name} creata!`);
 
       // 🟢 AUTO-APERTURA form voto (COME MATCH PATTERN)
       if (response.votingSession && response.autoOpenVoteForm) {
-        console.log('🎯 AUTO-APERTURA form voto dopo creazione PlayerCard');
-        console.log('📋 Session ID per auto-apertura:', response.votingSession.id);
-
         setSelectedSession(response.votingSession.id);
         setShowVoteForm(true);
 
@@ -135,41 +109,27 @@ export default function PlayerCards() {
 
   // Gestisce l'apertura del form di voto per Navigator
   const handleOpenVoteForm = (sessionId: string) => {
-    console.log('🎯 CLICK VOTA GIOCATORE - sessionId:', sessionId);
-    console.log('🔀 Apertura form PlayerCardRatingVote');
     setSelectedSession(sessionId);
     setShowVoteForm(true);
   };
 
   // Vera API per risultati finali
   const handleLoadResults = async (playerId: string) => {
-    console.log('📊 Caricamento risultati REALI per playerId:', playerId);
-
     try {
       // Chiama la vera API con timestamp per bypassare cache
       const timestamp = Date.now();
       const response = await apiCall(`/player-cards/results/user/${playerId}?t=${timestamp}`);
-      console.log('📊 Risposta API ricevuta:', response);
-
       // 🐛 DEBUG: Verifica contenuto COMPLETO della risposta  
-      console.log('🔍 DEBUG Frontend API Response:');
-      console.log('📋 response.results[0]:', response?.results?.[0]);
-      console.log('📋 finalAdditionalAttributes:', response?.results?.[0]?.finalAdditionalAttributes);
-      console.log('📋 JSON completo results[0]:', JSON.stringify(response?.results?.[0], null, 2));
+
 
       if (!response.success || !response.results || response.results.length === 0) {
-        console.log('📊 Nessun risultato trovato');
         return null;
       }
 
       // Prendi il risultato più recente 
       const latestResult = response.results[0];
-      console.log('🔍 latestResult completo:', latestResult);
-      console.log('🔍 latestResult.finalAttributes:', latestResult.finalAttributes);
-
       // 📝 Verifica che il risultato abbia i dati necessari
       if (!latestResult.finalAttributes) {
-        console.log('❌ Nessun finalAttributes trovato nel risultato');
         return null;
       }
 
@@ -183,12 +143,6 @@ export default function PlayerCards() {
       );
 
       const finalRating = dbOverallRating || calculatedRating;
-
-      console.log('🎯 Creazione oggetto risultato:');
-      console.log(`   🏛️ DB finalOverallRating: ${dbOverallRating}`);
-      console.log(`   🧮 Calculated fallback: ${calculatedRating}`);
-      console.log(`   ✅ Using: ${finalRating}`);
-
       // Mappa la risposta API al formato PlayerCardResult
       const result = {
         finalAttributes: latestResult.finalAttributes,
@@ -204,8 +158,6 @@ export default function PlayerCards() {
           confidence: latestResult.statistics?.overallStats?.confidence || 95
         }
       };
-
-      console.log('✅ Risultato finale creato:', result);
       return result;
 
     } catch (error) {
@@ -326,10 +278,7 @@ export default function PlayerCards() {
 
               {/* Vote Form */}
               {(() => {
-                console.log('🎮 RENDER FORM DEBUG:');
-                console.log('  showVoteForm:', showVoteForm);
-                console.log('  selectedSession:', selectedSession);
-                console.log('  Condizione (showVoteForm && selectedSession):', showVoteForm && selectedSession);
+
                 return null;
               })()}
               {showVoteForm && selectedSession && (
@@ -366,11 +315,6 @@ export default function PlayerCards() {
 
               {/* PlayerCardNavigator - Sostituisce la Grid */}
               {(() => {
-                console.log('🎯 DEBUG RENDER NAVIGATOR CONDITIONS:');
-                console.log('  showVoteForm:', showVoteForm);
-                console.log('  allPlayers.length:', allPlayers.length);
-                console.log('  allPlayers:', allPlayers);
-                console.log('  Condizione completa:', !showVoteForm && allPlayers.length > 0);
                 return null;
               })()}
               {!showVoteForm && allPlayers.length > 0 && (
@@ -397,9 +341,6 @@ export default function PlayerCards() {
 
                   {/* PlayerCardNavigator */}
                   {(() => {
-                    console.log('🎯 BEFORE RENDERING PlayerCardNavigator');
-                    console.log('  players:', allPlayers);
-                    console.log('  sessions:', mappedSessions);
                     return null;
                   })()}
                   <PlayerCardNavigator

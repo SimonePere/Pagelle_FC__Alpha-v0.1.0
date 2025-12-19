@@ -85,28 +85,19 @@ export function PlayerCardNavigator({
   onVote,
   onLoadResults
 }: PlayerCardNavigatorProps) {
-  console.log('🎮 PLAYERCARD NAVIGATOR COMPONENT INITIALIZED');
-  console.log('  props.players:', players);
-  console.log('  props.sessions:', sessions);
-
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
   const [cardResults, setCardResults] = useState<Record<string, PlayerCardResult>>({});
 
   const currentPlayer = players[currentIndex];
-  console.log('🔍 currentPlayer dopo players[currentIndex]:', currentPlayer);
 
   // Trova la sessione per il player corrente
   const currentSession = sessions.find(session =>
     session.targetId === currentPlayer?.id
   );
-  console.log('🔍 currentSession dopo find:', currentSession);
-  console.log('🔍 sessions per debug:', sessions);
-  console.log('🔍 currentPlayer?.id per debug:', currentPlayer?.id);
 
   // Determina la modalità della card
   const getCardMode = (): CardMode => {
-    console.log('🔍 getCardMode chiamato, currentSession:', currentSession);
     if (!currentSession) return 'empty';
     if (currentSession.status === 'completed') return 'completed';
     return 'voting';
@@ -143,39 +134,23 @@ export function PlayerCardNavigator({
 
   // Load results quando necessario
   useEffect(() => {
-    console.log('🔄 useEffect per load results triggered:');
-    console.log('  currentPlayer:', currentPlayer?.name);
-    console.log('  cardMode:', getCardMode());
-    console.log('  onLoadResults disponibile:', !!onLoadResults);
-    console.log('  cardResults già presente:', !!cardResults[currentPlayer.id]);
-
     if (getCardMode() === 'completed' && onLoadResults && currentPlayer) {
       if (!cardResults[currentPlayer.id]) {
-        console.log('🚀 Chiamata onLoadResults per player:', currentPlayer.id);
         onLoadResults(currentPlayer.id).then(result => {
-          console.log('📦 Risultato ricevuto da onLoadResults:', result);
           if (result) {
-            console.log('✅ Salvando risultato in cardResults per player:', currentPlayer.id);
             setCardResults(prev => ({
               ...prev,
               [currentPlayer.id]: result
             }));
-          } else {
-            console.log('❌ Risultato vuoto da onLoadResults');
           }
         }).catch(error => {
-          console.error('❌ Errore in onLoadResults:', error);
+          console.error('Error loading results:', error);
         });
-      } else {
-        console.log('ℹ️ Risultato già presente per player:', currentPlayer.id);
       }
-    } else {
-      console.log('⏭️ Condizioni non soddisfatte per load results');
     }
   }, [currentIndex, currentPlayer, onLoadResults, cardResults]);
 
   if (!currentPlayer) {
-    console.log('❌ EARLY RETURN: currentPlayer è null/undefined');
     return (
       <div className="flex items-center justify-center h-96">
         <p className="text-muted-foreground">Nessun giocatore disponibile</p>
@@ -185,12 +160,6 @@ export function PlayerCardNavigator({
 
   const cardMode = getCardMode();
   const currentResult = cardResults[currentPlayer.id];
-
-  console.log('🎮 RENDER STATE BEFORE JSX:');
-  console.log('  currentPlayer:', currentPlayer.name);
-  console.log('  cardMode:', cardMode);
-  console.log('  currentSession?.id:', currentSession?.id);
-  console.log('  currentResult:', !!currentResult);
 
   return (
     <div className="w-full space-y-6">
@@ -281,13 +250,6 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
   // Helper per convertire API results in PlayerAttributes format
   const convertToPlayerAttributes = (apiResult: PlayerCardResult): PlayerAttributes => {
     // 🐛 DEBUG: Verifica che i dati delle stelle arrivino
-    console.log('🔍 DEBUG convertToPlayerAttributes:', {
-      playerId: player.id,
-      finalAdditionalAttributes: apiResult.finalAdditionalAttributes,
-      piedeDebole: apiResult.finalAdditionalAttributes?.piedeDebole,
-      skill: apiResult.finalAdditionalAttributes?.skill
-    });
-
     return {
       shooting: apiResult.finalAttributes.tir,
       passing: apiResult.finalAttributes.pas,
@@ -434,12 +396,6 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
                 <div className="text-xs text-muted-foreground mb-1">Piede Debole</div>
                 <div className="flex gap-0.5">{renderStars((() => {
                   const piedeDebole = result.finalAdditionalAttributes?.piedeDebole || 3;
-                  console.log('🔍 DEBUG Piede Debole:', {
-                    playerId: player.id,
-                    playerName: player.name,
-                    finalAdditionalAttributes: result.finalAdditionalAttributes,
-                    piedeDebole: piedeDebole
-                  });
                   return piedeDebole;
                 })())}</div>
               </div>
@@ -447,12 +403,6 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
                 <div className="text-xs text-muted-foreground mb-1">Skill</div>
                 <div className="flex gap-0.5">{renderStars((() => {
                   const skill = result.finalAdditionalAttributes?.skill || 3;
-                  console.log('🔍 DEBUG Skill:', {
-                    playerId: player.id,
-                    playerName: player.name,
-                    finalAdditionalAttributes: result.finalAdditionalAttributes,
-                    skill: skill
-                  });
                   return skill;
                 })())}</div>
               </div>

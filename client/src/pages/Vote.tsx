@@ -59,14 +59,6 @@ const Vote: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
 
-  // 🔍 DEBUG: Analizziamo i selectors
-  console.log('🔍 DEBUG Vote selectors:', {
-    allSessions: sessions,
-    activeSessions,
-    pendingSessions,
-    combined: [...pendingSessions, ...activeSessions]
-  });
-
   // Stati per gestire la votazione attiva
   const [selectedSession, setSelectedSession] = useState<VotingSession | null>(null);
   const [viewMode, setViewMode] = useState<'dashboard' | 'voting'>('dashboard');
@@ -78,7 +70,6 @@ const Vote: React.FC = () => {
     }
 
     // 🌐 Carica TUTTE le sessioni di votazione dell'utente
-    console.log('🗳️ Caricamento automatico delle sessioni di votazione...');
     dispatch(fetchUserVotingSessions({
       page: 1,
       limit: 50
@@ -87,7 +78,6 @@ const Vote: React.FC = () => {
     // 🎯 Carica anche le partite per il lookup dei dati reali
     if (user.teams?.length) {
       const teamId = user.teams[0].id;
-      console.log('🎯 Caricamento matches per lookup vote data...');
       dispatch(fetchTeamMatches(teamId));
     }
   }, [user, navigate, dispatch]);
@@ -102,26 +92,17 @@ const Vote: React.FC = () => {
   };
 
   const handleEnterSession = (session: VotingSession) => {
-    console.log('🗳️ Entering session:', session);
+
     setSelectedSession(session);
     setViewMode('voting');
   };
 
   // 🎯 Converte VotingSession in formato match per VoteCard
   const mapSessionToMatch = (session: VotingSession) => {
-    console.log('🔍 DEBUG mapSessionToMatch:', {
-      sessionId: session.id,
-      targetId: session.targetId,
-      createdAt: session.createdAt,
-      description: session.description,
-      eligibleVotersCount: session.eligibleVotersCount
-    });
-
     // 🎯 Trova la partita reale usando targetId
     const realMatch = matches?.find(match => match.id === session.targetId);
 
     if (realMatch) {
-      console.log('✅ Trovata partita reale:', realMatch);
       // Usa i dati della partita vera con mapping dello status
       return {
         id: realMatch.id,
@@ -148,7 +129,6 @@ const Vote: React.FC = () => {
 
   // 🗳️ Handler per click info sulla sessione
   const handleSessionInfo = (session: VotingSession) => {
-    console.log('ℹ️ Visualizza info sessione:', session);
     // Future: navigazione a pagina dettaglio sessione
   };
 
@@ -249,27 +229,10 @@ const Vote: React.FC = () => {
                         const mappedMatch = mapSessionToMatch(session);
                         const realMatch = matches?.find(match => match.id === session.targetId);
 
-                        // 🎯 DEBUG: Verifichiamo l'array generato
-                        console.log('🔍 DEBUG mappedMatch:', {
-                          sessionId: session.id,
-                          mappedMatchId: mappedMatch.id,
-                          teamMemberIdsLength: mappedMatch.teamMemberIds.length,
-                          teamMemberIds: mappedMatch.teamMemberIds.slice(0, 3) // Prime 3 per brevità
-                        });
-
                         // 🎯 Calcolo corretto della percentuale voti
                         const totalMembers = mappedMatch.teamMemberIds.length;
                         const votesReceived = Math.round((session.participationRate || 0) / 100 * session.eligibleVotersCount);
                         const correctProgress = totalMembers > 0 ? Math.round((votesReceived / totalMembers) * 100) : 0;
-
-                        console.log('🔢 DEBUG Progress calculation:', {
-                          sessionId: session.id,
-                          participationRate: session.participationRate,
-                          eligibleVotersCount: session.eligibleVotersCount,
-                          votesReceived,
-                          totalMembers,
-                          correctProgress
-                        });
 
                         return (
                           <VoteCard

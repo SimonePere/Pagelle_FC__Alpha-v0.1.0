@@ -35,8 +35,6 @@ export const fetchUserVotingSessions = createAsyncThunk(
         limit?: number;
     } = {}, { rejectWithValue }) => {
         try {
-            console.log('🔍 Caricamento sessioni di votazione utente...');
-
             const queryParams = new URLSearchParams();
             if (params.status && params.status !== 'all') queryParams.set('status', params.status);
             if (params.type && params.type !== 'all') queryParams.set('type', params.type);
@@ -45,8 +43,6 @@ export const fetchUserVotingSessions = createAsyncThunk(
 
             // 🌐 API CALL REAL - Non più mock!
             const response = await api.get(`/voting-sessions?${queryParams.toString()}`);
-
-            console.log('✅ Risposta API reale:', response);
 
             // Il backend restituisce { success: true, votingSessions: [] }
             // Adattiamo la risposta al formato atteso dal frontend
@@ -66,13 +62,7 @@ export const fetchVotingSessionById = createAsyncThunk(
     'voting/fetchSessionById',
     async (sessionId: string, { rejectWithValue }) => {
         try {
-            console.log('🔍 Caricamento dettagli sessione:', sessionId);
-
-            const response: VotingSessionResponse = await api.get(`/voting-sessions/${sessionId}`);
-
-            console.log('✅ Dettagli sessione caricati');
-
-            return response.votingSession;
+            const response: VotingSessionResponse = await api.get(`/voting-sessions/${sessionId}`); return response.votingSession;
         } catch (error: any) {
             console.error('❌ Errore caricamento sessione:', error);
             return rejectWithValue(error.message || 'Errore nel caricamento della sessione');
@@ -85,8 +75,6 @@ export const createVotingSession = createAsyncThunk(
     'voting/createSession',
     async (sessionData: CreateVotingSessionRequest, { rejectWithValue }) => {
         try {
-            console.log('🆕 Creazione nuova sessione di votazione:', sessionData.type);
-
             // 🔧 AUTO-MAP: Aggiungi targetType automaticamente se non presente
             const { getTargetTypeFromVotingType } = await import('../../types/voting');
             const requestData = {
@@ -94,16 +82,8 @@ export const createVotingSession = createAsyncThunk(
                 targetType: sessionData.targetType || getTargetTypeFromVotingType(sessionData.type)
             };
 
-            console.log('📤 Dati inviati al backend:', {
-                type: requestData.type,
-                targetType: requestData.targetType,
-                targetId: requestData.targetId
-            });
-
             // 🌐 API CALL REAL - Non più mock!
             const response = await api.post('/voting-sessions', requestData);
-
-            console.log('✅ Risposta API reale creazione:', response);
 
             // Il backend restituisce { success: true, votingSession: {...} }
             // Adattiamo la struttura per il frontend
@@ -127,11 +107,7 @@ export const createVotingSession = createAsyncThunk(
                 canVote: false,
                 teamId: '', // Verrà aggiunto in futuro
                 createdBy: '' // Verrà aggiunto in futuro
-            };
-
-            console.log('✅ Sessione creata e adattata:', adaptedSession.id);
-
-            return adaptedSession;
+            }; return adaptedSession;
         } catch (error: any) {
             console.error('❌ Errore creazione sessione:', error);
             return rejectWithValue(error.message || 'Errore nella creazione della sessione');
@@ -144,13 +120,7 @@ export const submitVote = createAsyncThunk(
     'voting/submitVote',
     async ({ sessionId, voteData }: { sessionId: string; voteData: SubmitVoteRequest }, { rejectWithValue }) => {
         try {
-            console.log('🗳️ Invio voto per sessione:', sessionId);
-
-            const response = await api.post(`/voting-sessions/${sessionId}/vote`, voteData);
-
-            console.log('✅ Voto inviato con successo');
-
-            return { sessionId, submission: response.submission };
+            const response = await api.post(`/voting-sessions/${sessionId}/vote`, voteData); return { sessionId, submission: response.submission };
         } catch (error: any) {
             console.error('❌ Errore invio voto:', error);
             return rejectWithValue(error.message || 'Errore nell\'invio del voto');
@@ -163,13 +133,7 @@ export const activateVotingSession = createAsyncThunk(
     'voting/activateSession',
     async (sessionId: string, { rejectWithValue }) => {
         try {
-            console.log('🟢 Attivazione sessione:', sessionId);
-
-            const response = await api.patch(`/voting-sessions/${sessionId}/activate`);
-
-            console.log('✅ Sessione attivata');
-
-            return { sessionId, updatedSession: response.votingSession };
+            const response = await api.patch(`/voting-sessions/${sessionId}/activate`); return { sessionId, updatedSession: response.votingSession };
         } catch (error: any) {
             console.error('❌ Errore attivazione sessione:', error);
             return rejectWithValue(error.message || 'Errore nell\'attivazione della sessione');
@@ -182,13 +146,7 @@ export const fetchVotingResults = createAsyncThunk(
     'voting/fetchResults',
     async (sessionId: string, { rejectWithValue }) => {
         try {
-            console.log('📊 Caricamento risultati sessione:', sessionId);
-
-            const response: VotingResultsResponse = await api.get(`/voting-sessions/${sessionId}/results`);
-
-            console.log('✅ Risultati caricati');
-
-            return { sessionId, results: response.results };
+            const response: VotingResultsResponse = await api.get(`/voting-sessions/${sessionId}/results`); return { sessionId, results: response.results };
         } catch (error: any) {
             console.error('❌ Errore caricamento risultati:', error);
             return rejectWithValue(error.message || 'Errore nel caricamento dei risultati');
@@ -205,18 +163,9 @@ export const fetchTeamMembers = createAsyncThunk(
     'voting/fetchTeamMembers',
     async (teamId: string, { rejectWithValue }) => {
         try {
-            console.log('👥 Caricamento membri team:', teamId);
-            const response = await api.get(`/teams/${teamId}`);
-            console.log('✅ Team data caricato:', response);
-
-            // Fix: usa memberIds invece di members e logga il contenuto
-            const memberIds = response.team.memberIds || [];
-            console.log('🔍 MemberIds trovati:', memberIds);
-            console.log('📊 Numero membri:', memberIds.length);
-
-            return memberIds;
+            const response = await api.get(`/teams/${teamId}`);// Fix: usa memberIds invece di members e logga il contenuto
+            const memberIds = response.team.memberIds || []; return memberIds;
         } catch (error: any) {
-            console.log('❌ ERRORE FETCH TEAM MEMBERS:', error.message);
             return rejectWithValue(error.message);
         }
     }
@@ -236,14 +185,7 @@ export const createPlayerCardSession = createAsyncThunk(
         teamId?: string;
     }, { rejectWithValue }) => {
         try {
-            console.log('🃏 Creazione sessione player card per:', data.targetPlayerId);
-
-            const response = await api.post('/player-cards/sessions', data);
-
-            console.log('✅ Sessione player card creata:', response.votingSession.id);
-            console.log('🔄 Auto-open flag ricevuto:', response.autoOpenVoteForm);
-
-            // 🎯 RITORNA L'INTERA RESPONSE per avere autoOpenVoteForm
+            const response = await api.post('/player-cards/sessions', data);// 🎯 RITORNA L'INTERA RESPONSE per avere autoOpenVoteForm
             return response;
         } catch (error: any) {
             console.error('❌ Errore creazione sessione player card:', error);
@@ -261,21 +203,14 @@ export const fetchPlayerCardSessions = createAsyncThunk(
         limit?: number;
     } = {}, { rejectWithValue }) => {
         try {
-            console.log('🔍 Caricamento sessioni player card...');
-
             const queryParams = new URLSearchParams();
             if (params.status && params.status !== 'all') queryParams.set('status', params.status);
             if (params.page) queryParams.set('page', params.page.toString());
             if (params.limit) queryParams.set('limit', params.limit.toString());
 
-            console.log('🌐 URL chiamata:', `/player-cards/sessions?${queryParams.toString()}`);
 
-            const response = await api.get(`/player-cards/sessions?${queryParams.toString()}`);
 
-            console.log('✅ Sessioni player card caricate:', response.votingSessions?.length || 0);
-            console.log('📋 Response completa:', response);
-
-            return {
+            const response = await api.get(`/player-cards/sessions?${queryParams.toString()}`); return {
                 sessions: response.votingSessions || [],
                 pagination: { page: 1, limit: 10, total: response.total || 0, pages: 1 }
             };
@@ -297,13 +232,7 @@ export const fetchPlayerCardSessionById = createAsyncThunk(
     'voting/fetchPlayerCardSessionById',
     async (sessionId: string, { rejectWithValue }) => {
         try {
-            console.log('🔍 Caricamento dettagli sessione player card:', sessionId);
-
-            const response = await api.get(`/player-cards/sessions/${sessionId}`);
-
-            console.log('✅ Dettagli sessione player card caricati');
-
-            return response.votingSession;
+            const response = await api.get(`/player-cards/sessions/${sessionId}`); return response.votingSession;
         } catch (error: any) {
             console.error('❌ Errore caricamento sessione player card:', error);
             return rejectWithValue(error.message || 'Errore nel caricamento della sessione player card');
@@ -346,16 +275,7 @@ export const submitPlayerCardVote = createAsyncThunk(
         }
     }, { rejectWithValue }) => {
         try {
-            console.log('🃏 Invio voto player card per sessione:', sessionId);
-            console.log('🌐 URL chiamata:', `/player-cards/sessions/${sessionId}/vote`);
-            console.log('📤 Dati inviati:', voteData);
-
-            const response = await api.post(`/player-cards/sessions/${sessionId}/vote`, voteData);
-
-            console.log('✅ Voto player card inviato con successo');
-            console.log('📋 Response ricevuta:', response);
-
-            return { sessionId, submission: response.submission };
+            const response = await api.post(`/player-cards/sessions/${sessionId}/vote`, voteData); return { sessionId, submission: response.submission };
         } catch (error: any) {
             console.error('❌ Errore invio voto player card:', error);
             console.error('🌐 Dettagli errore completi:', {
@@ -379,13 +299,7 @@ export const fetchPlayerCardCalculation = createAsyncThunk(
     'voting/fetchPlayerCardCalculation',
     async (sessionId: string, { rejectWithValue }) => {
         try {
-            console.log('📊 Caricamento calcoli player card per sessione:', sessionId);
-
-            const response = await api.get(`/player-cards/sessions/${sessionId}/calculation`);
-
-            console.log('✅ Calcoli player card caricati');
-
-            return { sessionId, calculation: response.calculation };
+            const response = await api.get(`/player-cards/sessions/${sessionId}/calculation`); return { sessionId, calculation: response.calculation };
         } catch (error: any) {
             console.error('❌ Errore caricamento calcoli player card:', error);
             return rejectWithValue(error.message || 'Errore nel caricamento dei calcoli player card');
@@ -401,15 +315,9 @@ export const completePlayerCardSession = createAsyncThunk(
         forceReopen?: boolean;
     }, { rejectWithValue }) => {
         try {
-            console.log('🏁 Completamento sessione player card:', data.sessionId);
-
             const response = await api.post(`/player-cards/sessions/${data.sessionId}/complete`, {
                 forceReopen: data.forceReopen || false
-            });
-
-            console.log('✅ Sessione player card completata');
-
-            return { sessionId: data.sessionId, completedSession: response.votingSession };
+            }); return { sessionId: data.sessionId, completedSession: response.votingSession };
         } catch (error: any) {
             console.error('❌ Errore completamento sessione player card:', error);
             return rejectWithValue(error.message || 'Errore nel completamento della sessione player card');
@@ -426,11 +334,7 @@ export const fetchMatchVotingCalculation = createAsyncThunk(
     'voting/fetchMatchCalculation',
     async (sessionId: string, { rejectWithValue }) => {
         try {
-            console.log('📡 Match Voting -> fetchCalculation:', sessionId);
-            const response = await api.get(`/voting-sessions/${sessionId}/calculation`);
-            console.log('✅ Match Calculation response:', response.calculation?.totalVoters || 0, 'voters');
-
-            return {
+            const response = await api.get(`/voting-sessions/${sessionId}/calculation`); return {
                 sessionId,
                 calculation: response.calculation,
                 isOfficial: response.isOfficial
@@ -447,11 +351,7 @@ export const fetchMatchVotingSubmissions = createAsyncThunk(
     'voting/fetchMatchSubmissions',
     async (sessionId: string, { rejectWithValue }) => {
         try {
-            console.log('📡 Match Voting -> fetchSubmissions:', sessionId);
-            const response = await api.get(`/voting-sessions/${sessionId}/submissions`);
-            console.log('✅ Match Submissions response:', response.submissions?.length || 0, 'submissions');
-
-            return {
+            const response = await api.get(`/voting-sessions/${sessionId}/submissions`); return {
                 sessionId,
                 submissions: response.submissions,
                 totalSubmissions: response.totalSubmissions
@@ -468,7 +368,7 @@ export const fetchMatchVotingData = createAsyncThunk(
     'voting/fetchMatchData',
     async (sessionId: string, { dispatch, rejectWithValue }) => {
         try {
-            console.log('🚀 Match Voting -> fetchData (both APIs):', sessionId);
+
 
             // Chiama entrambe le API in parallelo
             const results = await Promise.allSettled([
@@ -476,13 +376,7 @@ export const fetchMatchVotingData = createAsyncThunk(
                 dispatch(fetchMatchVotingSubmissions(sessionId)).unwrap()
             ]);
 
-            const [calculationResult, submissionsResult] = results;
-
-            console.log('✅ Match voting data fetch completed');
-            console.log('📊 Calculation success:', calculationResult.status === 'fulfilled');
-            console.log('🗳️ Submissions success:', submissionsResult.status === 'fulfilled');
-
-            return { sessionId, success: true };
+            const [calculationResult, submissionsResult] = results; return { sessionId, success: true };
 
         } catch (error: any) {
             console.error('❌ Error fetchMatchVotingData:', error);
@@ -650,12 +544,10 @@ const votingSlice = createSlice({
             .addCase(fetchTeamMembers.fulfilled, (state, action) => {
                 state.isLoadingTeamMembers = false;
                 state.teamMembers = action.payload;
-                console.log(`✅ Caricati ${action.payload.length} team members`);
             })
             .addCase(fetchTeamMembers.rejected, (state, action) => {
                 state.isLoadingTeamMembers = false;
                 state.error = action.payload as string;
-                console.log('❌ Errore caricamento team members:', action.payload);
             });
 
         // ============================================= 
@@ -670,7 +562,6 @@ const votingSlice = createSlice({
                 state.sessions = action.payload.sessions;
                 state.pagination = action.payload.pagination;
                 state.isLoading = false;
-                console.log(`✅ Caricate ${action.payload.sessions.length} sessioni di votazione`);
             })
             .addCase(fetchUserVotingSessions.rejected, (state, action) => {
                 state.isLoading = false;
@@ -694,8 +585,6 @@ const votingSlice = createSlice({
                 if (sessionIndex !== -1) {
                     state.sessions[sessionIndex] = action.payload;
                 }
-
-                console.log('✅ Dettagli sessione caricati:', action.payload.title);
             })
             .addCase(fetchVotingSessionById.rejected, (state, action) => {
                 state.isLoading = false;
@@ -714,7 +603,6 @@ const votingSlice = createSlice({
                 state.sessions.unshift(action.payload); // Aggiungi all'inizio
                 state.currentSession = action.payload;
                 state.isCreatingSession = false;
-                console.log('✅ Sessione creata:', action.payload.title);
             })
             .addCase(createVotingSession.rejected, (state, action) => {
                 state.isCreatingSession = false;
@@ -751,7 +639,6 @@ const votingSlice = createSlice({
                 delete state.draftVotes[sessionId];
 
                 state.isSubmittingVote = false;
-                console.log('✅ Voto inviato per sessione:', sessionId);
             })
             .addCase(submitVote.rejected, (state, action) => {
                 state.isSubmittingVote = false;
@@ -781,7 +668,6 @@ const votingSlice = createSlice({
                 }
 
                 state.isLoading = false;
-                console.log('✅ Sessione attivata:', sessionId);
             })
             .addCase(activateVotingSession.rejected, (state, action) => {
                 state.isLoading = false;
@@ -803,7 +689,6 @@ const votingSlice = createSlice({
                 state.results[sessionId] = results;
 
                 state.isLoading = false;
-                console.log('✅ Risultati caricati per sessione:', sessionId);
             })
             .addCase(fetchVotingResults.rejected, (state, action) => {
                 state.isLoading = false;
@@ -826,8 +711,6 @@ const votingSlice = createSlice({
                 state.sessions.unshift(votingSession); // Aggiungi la voting session all'inizio
                 state.currentSession = votingSession;
                 state.isCreatingSession = false;
-                console.log('✅ Sessione player card creata:', votingSession.title);
-                console.log('🔄 Auto-open flag disponibile nel payload:', action.payload.autoOpenVoteForm);
             })
             .addCase(createPlayerCardSession.rejected, (state, action) => {
                 state.isCreatingSession = false;
@@ -844,7 +727,6 @@ const votingSlice = createSlice({
                 state.sessions = action.payload.sessions;
                 state.pagination = action.payload.pagination;
                 state.isLoadingSessions = false;
-                console.log(`✅ Caricate ${action.payload.sessions.length} sessioni player card`);
             })
             .addCase(fetchPlayerCardSessions.rejected, (state, action) => {
                 state.isLoadingSessions = false;
@@ -866,8 +748,6 @@ const votingSlice = createSlice({
                 if (sessionIndex !== -1) {
                     state.sessions[sessionIndex] = action.payload;
                 }
-
-                console.log('✅ Dettagli sessione player card caricati:', action.payload.title);
             })
             .addCase(fetchPlayerCardSessionById.rejected, (state, action) => {
                 state.isLoadingSession = false;
@@ -902,7 +782,6 @@ const votingSlice = createSlice({
                 delete state.draftVotes[sessionId];
 
                 state.isSubmittingVote = false;
-                console.log('✅ Voto player card inviato per sessione:', sessionId);
             })
             .addCase(submitPlayerCardVote.rejected, (state, action) => {
                 state.isSubmittingVote = false;
@@ -922,7 +801,6 @@ const votingSlice = createSlice({
                 state.results[sessionId] = calculation;
 
                 state.isLoading = false;
-                console.log('✅ Calcoli player card caricati per sessione:', sessionId);
             })
             .addCase(fetchPlayerCardCalculation.rejected, (state, action) => {
                 state.isLoading = false;
@@ -950,7 +828,6 @@ const votingSlice = createSlice({
                 }
 
                 state.isLoading = false;
-                console.log('✅ Sessione player card completata:', sessionId);
             })
             .addCase(completePlayerCardSession.rejected, (state, action) => {
                 state.isLoading = false;

@@ -35,17 +35,6 @@ interface MatchGridProps {
 function MatchCard({ match, index }: MatchCardProps) {
   const navigate = useNavigate();
 
-  // 🐛 DEBUG LOG - Dati match per debug partecipanti
-  console.log('🏟️ MATCH CARD DEBUG:', {
-    matchId: match?.id,
-    matchDate: match?.date,
-    playersCount: match?.playersCount,
-    hasTeamMemberIds: !!match?.teamMemberIds,
-    teamMemberIds: match?.teamMemberIds,
-    teamMemberIdsLength: match?.teamMemberIds?.length || 0,
-    fullMatch: match
-  });
-
   // Controllo di sicurezza per l'oggetto match
   if (!match) {
     return (
@@ -184,14 +173,6 @@ const MatchGrid: React.FC<MatchGridProps> = ({ showStats = true }) => {
 
   // Controllo di sicurezza per l'array matches
   const safeMatches = Array.isArray(matches) ? matches : [];
-
-  // 🐛 DEBUG LOG - Matches array completo
-  console.log('📊 MATCHGRID MATCHES DEBUG:', {
-    matchesIsArray: Array.isArray(matches),
-    matchesLength: matches?.length || 0,
-    firstMatch: matches?.[0],
-    allMatches: matches
-  });
 
   // Stati per filtri e ordinamento
   const [selectedYear, setSelectedYear] = useState<string>('all');

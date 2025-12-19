@@ -93,32 +93,31 @@ const getRatingLabel = (rating: number) => {
 
 export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps) {
   const dispatch = useAppDispatch();
-  const session = useAppSelector(state => 
+  const session = useAppSelector(state =>
     state.voting.sessions.find(s => s.id === sessionId)
   );
   const isSubmitting = useAppSelector(state => state.voting.isSubmittingVote);
-  
+
   // Recupero i dati del match collegato alla sessione di voto
   const currentMatch = useAppSelector(state => state.matches.currentMatch);
   const matchLoading = useAppSelector(state => state.matches.isLoading);
-  
+
   // Estraggo i giocatori dal match
   const matchPlayers: Player[] = currentMatch?.teamMembers?.map((member: any) => ({
     id: member.id,
     name: member.displayName || member.name
   })) || [];
-  
+
   // Carico il match quando il componente si monta
   useEffect(() => {
     if (session?.targetId && (!currentMatch || currentMatch.id !== session.targetId)) {
-      console.log('🔍 Caricamento match per votazione:', session.targetId);
       dispatch(fetchMatchById(session.targetId));
     }
   }, [session?.targetId, currentMatch?.id, dispatch]);
 
   // Stati per i voti dei giocatori
   const [playerRatings, setPlayerRatings] = useState<{ [playerId: string]: PlayerRating }>({});
-  
+
   // Inizializza i rating quando i giocatori del match sono disponibili
   useEffect(() => {
     if (matchPlayers.length > 0) {
@@ -133,17 +132,16 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
         };
       });
       setPlayerRatings(initialRatings);
-      console.log('✅ Inizializzati rating per', matchPlayers.length, 'giocatori');
     }
   }, [matchPlayers.length]);
-  
+
   const [matchComments, setMatchComments] = useState('');
 
   // Calcolo statistiche generali
-  const averageRating = Object.keys(playerRatings).length > 0 
+  const averageRating = Object.keys(playerRatings).length > 0
     ? Object.values(playerRatings).reduce((sum, p) => sum + p.rating, 0) / Object.keys(playerRatings).length
     : 6;
-  const topRated = Object.entries(playerRatings).sort(([,a], [,b]) => b.rating - a.rating).slice(0, 3);
+  const topRated = Object.entries(playerRatings).sort(([, a], [, b]) => b.rating - a.rating).slice(0, 3);
   const ratedPlayersCount = Object.values(playerRatings).filter(p => p.rating !== 6).length;
 
   const handlePlayerRatingChange = (playerId: string, rating: number) => {
@@ -190,12 +188,12 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
     setPlayerRatings(prev => {
       const currentBadges = prev[playerId]?.badges || [];
       const hasBadge = currentBadges.includes(badge);
-      
+
       return {
         ...prev,
         [playerId]: {
           ...prev[playerId],
-          badges: hasBadge 
+          badges: hasBadge
             ? currentBadges.filter(b => b !== badge)
             : [...currentBadges, badge]
         }
@@ -205,7 +203,7 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!session) {
       toast.error('Sessione di votazione non trovata');
       return;
@@ -217,25 +215,14 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
       return;
     }
 
-    console.log('⚽ Invio valutazione partita:', {
-      match: session.title,
-      playerRatings,
-      averageRating: averageRating.toFixed(2),
-      topRated: topRated.map(([id, rating]) => ({
-        player: matchPlayers.find(p => p.id === id)?.name,
-        rating: rating.rating
-      })),
-      matchComments: matchComments.trim()
-    });
-
     const vote: MatchPlayerRatingVoteType = {
       playerRatings,
       matchComments: matchComments.trim()
     };
 
     try {
-      await dispatch(submitVote({ 
-        sessionId, 
+      await dispatch(submitVote({
+        sessionId,
         voteData: {
           vote: vote,
           deviceInfo: {
@@ -324,11 +311,11 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
         {/* Lista giocatori */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Valutazione Giocatori</h3>
-          
+
           {matchPlayers.map(player => {
             const rating = playerRatings[player.id]?.rating || 6;
             const comments = playerRatings[player.id]?.comments || '';
-            
+
             return (
               <Card key={player.id} className="overflow-hidden">
                 <CardContent className="p-6">
@@ -343,10 +330,10 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
                           <h4 className="font-semibold">{player.name}</h4>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-2">
-                        <Badge 
-                          variant="outline" 
+                        <Badge
+                          variant="outline"
                           className={`${getRatingColor(rating)} text-white font-mono`}
                         >
                           {rating.toFixed(1)}/10
@@ -406,7 +393,7 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
                           </Button>
                         </div>
                       </div>
-                      
+
                       <div className="space-y-2">
                         <Label className="text-sm font-medium flex items-center gap-1">
                           🏆 Assist
@@ -445,7 +432,7 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
                         {Object.entries(badgeDefinitions).map(([badgeKey, badgeInfo]) => {
                           const badge = badgeKey as PlayerMatchBadge;
                           const isSelected = playerRatings[player.id]?.badges?.includes(badge) || false;
-                          
+
                           return (
                             <Button
                               key={badge}
@@ -523,7 +510,7 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
                   })}
                 </div>
               </div>
-              
+
               {/* Submit */}
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t">
                 <div className="text-sm text-muted-foreground space-y-1">
@@ -536,9 +523,9 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
                     Valutati {ratedPlayersCount}/{matchPlayers.length} giocatori • Badge assegnati: {Object.values(playerRatings).reduce((sum, p) => sum + (p.badges?.length || 0), 0)}
                   </p>
                 </div>
-                
-                <Button 
-                  type="submit" 
+
+                <Button
+                  type="submit"
                   disabled={isSubmitting || ratedPlayersCount < 1}
                   className="w-full sm:w-auto"
                 >

@@ -15,7 +15,6 @@ import { Button } from '../components/ui/button';
 import { motion } from 'framer-motion';
 
 // 🚀 Log per verificare lazy loading
-console.log('📦 TestVote component loaded via lazy import!');
 import {
   Vote as VoteIcon,
   CheckCircle2,

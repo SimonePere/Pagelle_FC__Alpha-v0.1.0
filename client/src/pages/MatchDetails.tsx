@@ -63,7 +63,6 @@ export default function MatchDetails() {
     }
 
     if (matchId) {
-      console.log('📡 MatchDetails -> fetchMatchById:', matchId);
       dispatch(fetchMatchById(matchId));
     }
   }, [matchId, user, navigate, dispatch]);
@@ -72,7 +71,6 @@ export default function MatchDetails() {
   useEffect(() => {
     if (currentMatch?.votingSession?.id) {
       const sessionId = currentMatch.votingSession.id;
-      console.log('📡 MatchDetails -> fetchMatchVotingData:', sessionId);
       dispatch(fetchMatchVotingData(sessionId));
     }
 
@@ -341,8 +339,8 @@ toglie importanza al contenuto dettagliato della partita */}
               isVotingLoading={matchVoting.isLoading}
               votingError={matchVoting.error}
               index={0}
-              onClick={(match) => console.log('🎯 MatchDetails -> Card clicked:', match?.id)}
-              onVoteClick={(match) => console.log('🗳️ MatchDetails -> Vote clicked:', match?.id)}
+              onClick={() => { }}
+              onVoteClick={() => { }}
             />
           </motion.div>
 

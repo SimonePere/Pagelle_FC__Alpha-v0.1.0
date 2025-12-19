@@ -3,8 +3,8 @@ import { createRoot } from "react-dom/client";
 import { ThemeProvider } from "next-themes";
 import App from "./App.tsx";
 import "./index.css";
-import {Provider} from "react-redux";
-import store  from "./redux/store/store";
+import { Provider } from "react-redux";
+import store from "./redux/store/store";
 import { initializeAuth } from "./redux/slices/authSlice.ts";
 
 store.dispatch(initializeAuth());
@@ -15,7 +15,6 @@ if (import.meta.env.DEV) {
   (window as any).getAuthState = () => store.getState().auth;
   (window as any).getTeamsState = () => store.getState().teams;
   (window as any).getMatchesState = () => store.getState().matches;
-  console.log('🧪 DEBUG MODE: Store disponibile come window.store');
 }
 
 createRoot(document.getElementById("root")!).render(

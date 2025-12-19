@@ -46,11 +46,7 @@ export const fetchTeamById = createAsyncThunk(
   'teams/fetchById',
   async (teamId: string, { rejectWithValue }) => {
     try {
-      console.log('🔄 Caricamento team ID:', teamId);
       const response = await api.get(`/teams/${teamId}`);
-      console.log('✅ Team ricevuto dal backend:', response.team.name);
-      console.log('👥 Membri trovati:', response.team.memberIds?.length || 0);
-      
       // Restituiamo solo il campo 'team' dalla risposta
       return response.team;
     } catch (error: any) {
@@ -217,7 +213,6 @@ const teamSlice = createSlice({
         state.myTeams.push(action.payload);
         state.currentTeam = action.payload;
         state.isLoading = false;
-        console.log('Team creato:', action.payload.name);
       })
       .addCase(createTeam.rejected, (state, action) => {
         state.isLoading = false;
@@ -239,7 +234,6 @@ const teamSlice = createSlice({
         }
         state.currentTeam = joinedTeam;
         state.isLoading = false;
-        console.log('Team joinato:', joinedTeam.name);
       })
       .addCase(joinTeam.rejected, (state, action) => {
         state.isLoading = false;
@@ -262,7 +256,6 @@ const teamSlice = createSlice({
         }
         
         state.isLoading = false;
-        console.log('Team abbandonato');
       })
       .addCase(leaveTeam.rejected, (state, action) => {
         state.isLoading = false;

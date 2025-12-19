@@ -28,9 +28,7 @@ const store = configureStore({
         }),
 });
 
-// Log della configurazione dello store (come nel tuo stile)
-console.log('Store Football App configurato! Stati disponibili:',
-    Object.keys(store.getState()));
+// Store configurato
 
 // Esporta i tipi per TypeScript
 export type RootState = ReturnType<typeof store.getState>;

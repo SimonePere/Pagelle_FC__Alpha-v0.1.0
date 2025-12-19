@@ -117,19 +117,6 @@ export const MatchDetailsCard: React.FC<VoteCardProps> = ({
 }) => {
 
   // 🐛 DEBUG LOG - Match object completo
-  console.log('🏟️ MATCH DETAILS DEBUG:', {
-    matchId: match.id,
-    matchDate: match.date,
-    matchStatus: match.status,
-    hasTeamMemberIds: !!match.teamMemberIds,
-    teamMemberIdsArray: match.teamMemberIds,
-    teamMemberIdsLength: match.teamMemberIds?.length || 0,
-    hasTeamMembers: !!match.teamMembers,
-    teamMembersArray: match.teamMembers,
-    teamMembersLength: match.teamMembers?.length || 0,
-    fullMatchObject: match
-  });
-
   // const [showIndividualRatings, setShowIndividualRatings] = useState(false);
   // const [showEditDialog, setShowEditDialog] = useState(false);
 
@@ -299,19 +286,6 @@ export const MatchDetailsCard: React.FC<VoteCardProps> = ({
                   </h4>
                   <div className="grid grid-cols-4 gap-3">
                     {match.teamMemberIds?.slice(0, 4).map((playerId, index) => {
-
-                      // 🐛 DEBUG LOG - Dati badge giocatori
-                      console.log('🎮 BADGE DEBUG:', {
-                        index,
-                        playerId,
-                        playerIdType: typeof playerId,
-                        playerIdLength: playerId?.length || 0,
-                        hasTeamMembers: !!match.teamMembers,
-                        teamMembersLength: match.teamMembers?.length || 0,
-                        fullPlayerObject: match.teamMembers?.find(m => m.id === playerId),
-                        playerName: getPlayerName(playerId)
-                      });
-
                       // Nome completo del giocatore
                       const playerName = getPlayerName(playerId);
 

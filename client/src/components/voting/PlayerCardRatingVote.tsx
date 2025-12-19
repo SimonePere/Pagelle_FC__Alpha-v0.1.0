@@ -32,14 +32,6 @@ export function PlayerCardRatingVote({ sessionId }: PlayerCardRatingVoteProps) {
   );
   const isSubmitting = useAppSelector(state => state.voting.isSubmittingVote);
 
-  // Debug log
-  console.log('🎯 PlayerCardRatingVote Debug:', {
-    sessionId,
-    allSessions: allSessions.length,
-    session: session ? 'FOUND' : 'NOT FOUND',
-    sessionIds: allSessions.map(s => s.id)
-  });
-
   if (!session) {
     console.error('❌ SESSIONE NON TROVATA - ID richiesto:', sessionId);
     console.error('❌ Sessioni disponibili:', allSessions.map(s => ({ id: s.id, type: s.type })));
@@ -174,13 +166,6 @@ export function PlayerCardRatingVote({ sessionId }: PlayerCardRatingVoteProps) {
       return;
     }
 
-    console.log('🎯 Invio valutazione reale:', {
-      sessionId: session.id,
-      profile,
-      attributes,
-      comments: comments.trim()
-    });
-
     try {
       // Struttura del voto compatibile con backend
       const voteData = {
@@ -206,17 +191,12 @@ export function PlayerCardRatingVote({ sessionId }: PlayerCardRatingVoteProps) {
           comments: comments.trim() || undefined
         }
       };
-
-      console.log('📤 Invio al backend:', voteData);
-
       await dispatch(submitPlayerCardVote({
         sessionId: session.id,
         voteData
       })).unwrap();
 
       toast.success('🎉 Valutazione inviata con successo!');
-      console.log('✅ Valutazione completata!');
-
     } catch (error) {
       console.error('❌ Errore invio valutazione:', error);
       toast.error('Errore durante l\'invio della valutazione');

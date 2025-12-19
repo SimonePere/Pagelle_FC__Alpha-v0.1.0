@@ -24,9 +24,7 @@ export const fetchTeamMatches = createAsyncThunk(
   'matches/fetchTeamMatches',
   async (teamId: string, { rejectWithValue }) => {
     try {
-      console.log('🔍 Caricamento match per team:', teamId);
       const response = await api.get(`/matches/team/${teamId}`);
-      console.log('✅ Risposta API match:', response.matches?.length || 0, 'partite');
 
       // Mappiamo ogni match per adattarlo al formato frontend
       const matches = (response.matches || []).map((match: any) => ({
@@ -45,9 +43,7 @@ export const fetchTeamMatches = createAsyncThunk(
   'matches/fetchById',
   async (matchId: string, { rejectWithValue }) => {
     try {
-      console.log('🔍 Caricamento match ID:', matchId);
       const response = await api.get(`/matches/${matchId}`);
-      console.log('✅ Match ricevuto dal backend:', response.match?.id);
 
       // Mappiamo la risposta del backend al formato del frontend
       const match = {
@@ -55,9 +51,6 @@ export const fetchTeamMatches = createAsyncThunk(
         teamMembers: response.match.teamMemberIds, // ← USA teamMemberIds popolati dal backend!
         teamMemberIds: response.match.teamMemberIds?.map((member: any) => member._id || member.id) || []
       };
-
-      console.log('🔧 Match mappato - teamMembers:', match.teamMembers?.length);
-      console.log('🔧 Match mappato - teamMemberIds:', match.teamMemberIds?.length);
 
       return match;
     } catch (error: any) {
@@ -71,9 +64,7 @@ export const createMatch = createAsyncThunk(
   'matches/create',
   async (matchData: CreateMatchRequest, { rejectWithValue, dispatch }) => {
     try {
-      console.log('🏈 Creazione match in corso...', matchData.field);
       const response = await api.post('/matches', matchData);
-      console.log('✅ Match creato con successo:', response.match.id);
 
       // Refresh dei match del team dopo creazione
       dispatch(fetchTeamMatches(matchData.teamId));
@@ -91,9 +82,7 @@ export const updateMatch = createAsyncThunk(
   'matches/update',
   async ({ matchId, matchData }: { matchId: string; matchData: Partial<CreateMatchRequest> }, { rejectWithValue }) => {
     try {
-      console.log('🔄 Aggiornamento match:', matchId);
       const response = await api.put(`/matches/${matchId}`, matchData);
-      console.log('✅ Match aggiornato:', response.match.id);
       return response.match;
     } catch (error: any) {
       console.error('❌ Errore aggiornamento match:', error);
@@ -106,9 +95,7 @@ export const deleteMatch = createAsyncThunk(
   'matches/delete',
   async (matchId: string, { rejectWithValue }) => {
     try {
-      console.log('🗑️ Eliminazione match:', matchId);
       await api.delete(`/matches/${matchId}`);
-      console.log('✅ Match eliminato con successo');
       return matchId;
     } catch (error: any) {
       console.error('❌ Errore eliminazione match:', error);
@@ -135,9 +122,7 @@ export const activateMatch = createAsyncThunk(
   'matches/activate',
   async (matchId: string, { rejectWithValue }) => {
     try {
-      console.log('🏁 Attivazione match:', matchId);
       const response = await api.patch(`/matches/${matchId}/activate`);
-      console.log('✅ Match attivato:', response.match.id);
       return response.match;
     } catch (error: any) {
       console.error('❌ Errore attivazione match:', error);
@@ -150,9 +135,7 @@ export const completeMatch = createAsyncThunk(
   'matches/complete',
   async (matchId: string, { rejectWithValue }) => {
     try {
-      console.log('🏆 Completamento match:', matchId);
       const response = await api.patch(`/matches/${matchId}/complete`);
-      console.log('✅ Match completato:', response.match.id);
       return response.match;
     } catch (error: any) {
       console.error('❌ Errore completamento match:', error);
@@ -236,7 +219,6 @@ const matchSlice = createSlice({
       .addCase(fetchTeamMatches.fulfilled, (state, action) => {
         state.matches = action.payload;
         state.isLoading = false;
-        console.log(`✅ Caricate ${action.payload?.length || 0} partite dal backend`);
       })
       .addCase(fetchTeamMatches.rejected, (state, action) => {
         state.isLoading = false;
@@ -250,22 +232,13 @@ const matchSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchMatchById.fulfilled, (state, action) => {
-        console.log('🔄 fetchMatchById.fulfilled - Aggiornando currentMatch:', action.payload);
-        console.log('🔍 Tipo di action.payload:', typeof action.payload);
-        console.log('🔍 action.payload.id:', action.payload?.id);
-
         state.currentMatch = action.payload;
         state.isLoading = false;
-
-        console.log('🔍 state.currentMatch dopo assegnazione:', state.currentMatch);
-        console.log('🔍 Tipo di state.currentMatch:', typeof state.currentMatch);
-
         // Aggiorna anche nella lista se presente
         const matchIndex = state.matches.findIndex(m => (m as any).id === (action.payload as any).id);
         if (matchIndex !== -1) {
           state.matches[matchIndex] = action.payload;
         }
-        console.log('✅ currentMatch aggiornato nel Redux state');
       })
       .addCase(fetchMatchById.rejected, (state, action) => {
         state.isLoading = false;
@@ -282,7 +255,6 @@ const matchSlice = createSlice({
         state.matches.unshift(action.payload); // Aggiungi all'inizio della lista
         state.currentMatch = action.payload;
         state.isLoading = false;
-        console.log('Partita creata:', action.payload.opponent);
       })
       .addCase(createMatch.rejected, (state, action) => {
         state.isLoading = false;
@@ -347,7 +319,6 @@ const matchSlice = createSlice({
         }
 
         state.isSubmittingRatings = false;
-        console.log('Valutazioni inviate con successo');
       })
       .addCase(submitMatchRatings.rejected, (state, action) => {
         state.isSubmittingRatings = false;

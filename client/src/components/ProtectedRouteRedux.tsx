@@ -16,11 +16,8 @@ interface ProtectedRouteProps {
 export const ProtectedRouteRedux = ({ children }: ProtectedRouteProps) => {
   const { user, isLoading, isAuthenticated } = useSelector((state: RootState) => state.auth);
 
-  console.log('🛡️ ProtectedRoute check:', { user: user?.name || user?.username || 'null', isLoading });
-
   // Mostra loading mentre Redux si inizializza
   if (isLoading) {
-    console.log('⏳ ProtectedRoute: showing loading...');
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-foreground">Caricamento...</div>
@@ -30,10 +27,8 @@ export const ProtectedRouteRedux = ({ children }: ProtectedRouteProps) => {
 
   // Redirect a login se non autenticato con Redux
   if (!isAuthenticated || !user) {
-    console.log('❌ ProtectedRouteRedux: utente non autenticato, redirect a /login');
     return <Navigate to="/login" replace />;
   }
 
-  console.log('✅ ProtectedRouteRedux: utente autenticato via Redux:', user.name || user.username);
   return <>{children}</>;
 };

@@ -8,13 +8,6 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000
 export async function apiCall(endpoint: string, options: RequestInit = {}) {
   const token = localStorage.getItem('token');
 
-  console.log('🌐 API Call:', {
-    endpoint: `${API_BASE_URL}${endpoint}`,
-    method: options.method || 'GET',
-    hasAuth: !!token,
-    body: options.body
-  });
-
   // Aggiungi timeout di 30 secondi
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -32,15 +25,8 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
 
     clearTimeout(timeoutId);
 
-    console.log('🌐 API Response:', {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok
-    });
-
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('🌐 API Error Response:', errorText);
 
       let errorMessage;
 
@@ -55,18 +41,15 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
     }
 
     const responseData = await response.json();
-    console.log('🌐 API Success:', responseData);
 
     return responseData;
   } catch (error: any) {
     clearTimeout(timeoutId);
 
     if (error.name === 'AbortError') {
-      console.error('🌐 API Timeout dopo 30 secondi');
       throw new Error('Timeout: Il server non risponde');
     }
 
-    console.error('🌐 API Error:', error);
     throw error;
   }
 }

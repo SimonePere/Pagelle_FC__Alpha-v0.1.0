@@ -51,7 +51,6 @@ const Profile = () => {
   // Forza sempre il caricamento di dati freschi da API
   useEffect(() => {
     if (user) {
-      console.log('🔄 Caricamento dati freschi da /auth/me...');
       dispatch(loadEnrichedUserData());
     }
   }, [user?.id, dispatch]);
@@ -65,7 +64,6 @@ const Profile = () => {
 
     // Usiamo direttamente personalStats da /auth/me invece di calcolare
     if (user.personalStats) {
-      console.log('📊 PersonalStats ricevute:', user.personalStats);
       setStats({
         averageRating: user.personalStats.averageRating || 0,
         goals: user.personalStats.totalGoals || 0,
@@ -75,7 +73,6 @@ const Profile = () => {
         worstRating: user.personalStats.worstRating || 0,
       });
     } else {
-      console.log('❌ PersonalStats non disponibili, caricamento dati ricchi...');
     }
 
     // Teammates da localStorage (SAFE approach)

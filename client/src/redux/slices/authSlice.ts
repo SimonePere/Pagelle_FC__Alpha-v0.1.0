@@ -114,7 +114,6 @@ export const loadEnrichedUserData = createAsyncThunk(
         return rejectWithValue('Dati utente non disponibili');
       }
     } catch (error: any) {
-      console.error('Error loading enriched user data:', error);
       return rejectWithValue(error.message || 'Errore caricamento dati ricchi');
     }
   }
@@ -133,25 +132,19 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     initializeAuth: (state) => {
-      console.log('Inizializzazione auth...');
-
       if (authHelpers.isAuthenticated() && !authHelpers.isTokenExpired()) {
         const storedUser = authHelpers.getStoredUser();
         if (storedUser) {
           state.user = storedUser;
           state.isAuthenticated = true;
-          console.log('✅ Utente ripristinato:', storedUser.name || storedUser.username);
         }
       } else {
         authHelpers.clearAuth();
-        console.log('❌ Token scaduto o non valido');
       }
 
       state.isLoading = false;
       state.error = null;
     }, logout: (state) => {
-      console.log('Logout utente:', state.user?.username);
-
       state.user = null;
       state.isAuthenticated = false;
       state.isLoading = false;
@@ -177,8 +170,6 @@ const authSlice = createSlice({
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         // Debug: vediamo cosa salviamo nello store
-        console.log('🔍 Saving to Redux store:', action.payload);
-
         state.user = action.payload;
         state.isAuthenticated = true;
         state.isLoading = false;

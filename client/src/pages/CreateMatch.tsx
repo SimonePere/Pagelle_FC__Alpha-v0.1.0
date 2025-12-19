@@ -36,10 +36,7 @@ const CreateMatch = () => {
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
 
   useEffect(() => {
-    console.log('🔐 Controllo autenticazione utente...');
-
     if (!user || !user.teams?.length) {
-      console.log('❌ Utente non autenticato o senza team');
       navigate('/login');
       return;
     }
@@ -48,9 +45,7 @@ const CreateMatch = () => {
       setLoadingMembers(true);
       try {
         const teamId = user.teams[0].id; // Primo team dell'utente
-        console.log('📋 Caricando membri del team:', teamId);
         const result = await dispatch(fetchTeamById(teamId));
-        console.log('✅ Team caricato con successo');
       } catch (error) {
         console.error('❌ Errore nel caricamento team:', error);
         toast({
@@ -69,8 +64,6 @@ const CreateMatch = () => {
   // Secondo useEffect per gestire la risposta del team dal backend
   useEffect(() => {
     if (currentTeam?.memberIds) {
-      console.log(`👥 Convertendo ${currentTeam.memberIds.length} membri del team per la UI`);
-
       // Redux Toolkit usa Immer che crea "draft" objects
       // Convertiamo i draft a oggetti normali con tutte le proprietà richieste
       const convertedUsers: User[] = currentTeam.memberIds.map(member => ({
@@ -85,8 +78,6 @@ const CreateMatch = () => {
 
       // Estraiamo gli ID dei membri per la selezione
       setSelectedPlayers(convertedUsers.map(user => user.id).filter(Boolean));
-
-      console.log('✅ Membri pronti per la selezione:', convertedUsers.map(u => u.name).join(', '));
     }
   }, [currentTeam]);
 
@@ -94,7 +85,6 @@ const CreateMatch = () => {
     e.preventDefault();
 
     if (!user || !currentTeam) {
-      console.log('❌ Utente o team mancanti');
       return;
     }
 
@@ -120,8 +110,6 @@ const CreateMatch = () => {
     setCreatingMatch(true);
 
     try {
-      console.log('🏈 Creando match via API...');
-
       // Prepara i dati per l'API backend
       const matchData: CreateMatchRequest = {
         teamId: (currentTeam as any).id || '',
@@ -131,15 +119,10 @@ const CreateMatch = () => {
         notes: notes.trim() || undefined,
         teamMemberIds: selectedPlayers
       };
-
-      console.log('📤 Dati inviati al backend:', matchData);
-
       // Chiama l'API tramite Redux
       const result = await dispatch(createMatch(matchData));
 
       if (createMatch.fulfilled.match(result)) {
-        console.log('✅ Match creato con successo!');
-
         toast({
           title: 'Partita creata! 🎉',
           description: 'Ora puoi valutare i tuoi compagni di squadra.',
