@@ -13,9 +13,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { motion } from 'framer-motion';
-import { 
-  Vote as VoteIcon, 
-  CheckCircle2, 
+
+// 🚀 Log per verificare lazy loading
+console.log('📦 TestVote component loaded via lazy import!');
+import {
+  Vote as VoteIcon,
+  CheckCircle2,
   ArrowLeft,
   TestTube2
 } from 'lucide-react';
@@ -54,7 +57,7 @@ const TestVote: React.FC = () => {
   return (
     <DashboardLayout>
       <div className="mobile-page-container lg:space-y-6 space-y-6">
-        
+
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -107,9 +110,9 @@ const TestVote: React.FC = () => {
               </Badge>
             )}
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={resetVotes}
             disabled={!hasVoted1 && !hasVoted2}
           >
@@ -139,7 +142,7 @@ const TestVote: React.FC = () => {
                 <strong>Risultato:</strong> {hasVoted1 ? '✅ Hai votato!' : '⏳ Clicca per votare'}
               </AlertDescription>
             </Alert>
-            
+
             <VoteCard
               match={mockMatch1}
               voting={{
@@ -165,7 +168,7 @@ const TestVote: React.FC = () => {
                 <strong>Risultato:</strong> {hasVoted2 ? '✅ Hai votato!' : '⏳ Clicca pulsante per votare'}
               </AlertDescription>
             </Alert>
-            
+
             <VoteCard
               match={mockMatch2}
               voting={{
@@ -209,7 +212,7 @@ const mockMatch1 = {
 };
 
 const mockMatch2 = {
-  id: 'test-match-2', 
+  id: 'test-match-2',
   date: '2025-12-08T20:30:00Z',
   status: 'active' as const,
   teamMemberIds: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11']
