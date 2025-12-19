@@ -759,6 +759,18 @@ class VotingService {
         // 6. Aggiorna player statistics
         await this.updatePlayerStatistics(finalResults);
 
+        // 🧹 CACHE INVALIDATION: Pulisci cache dopo aggiornamento statistiche
+        try {
+            const CacheService = require('./CacheService');
+            const teamId = session.teamId;
+            const votedPlayerIds = Object.keys(finalResults);
+
+            await CacheService.invalidateAllAfterVote(teamId, votedPlayerIds);
+        } catch (cacheError) {
+            console.error('⚠️ Errore invalidazione cache post-voto:', cacheError.message);
+            // Non blocchiamo il flusso principale per errori cache
+        }
+
         // 7. Aggiorna session status
         session.status = 'completed';
         session.completedAt = new Date();
@@ -1137,6 +1149,15 @@ class VotingService {
                 isActive,
                 hasVoted: !!hasVoted,
                 canVote,
+                // 🎯 FIX: Usa sempre match.date reale, non session date
+                matchDate: session.targetId?.date || session.createdAt, // Data match reale
+                displayDate: session.targetId?.date || session.createdAt, // Per frontend
+                matchInfo: {
+                    opponent: session.targetId?.opponent || 'TBD',
+                    venue: session.targetId?.venue || 'TBD',
+                    status: session.targetId?.status || 'unknown',
+                    actualMatchDate: session.targetId?.date // Data originale match
+                },
                 matchInfo: {
                     field: session.field,
                     date: session.targetId.date,

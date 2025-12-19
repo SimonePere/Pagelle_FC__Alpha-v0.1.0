@@ -1,4 +1,5 @@
 const PlayerCardService = require('../services/PlayerCardService');
+const cacheService = require('../services/CacheService');
 
 /**
  * PLAYER CARD CONTROLLER
@@ -101,11 +102,44 @@ const getPlayerCardCalculation = async (req, res, next) => {
     try {
         const sessionId = req.params.id;
 
+        // 🎯 CACHE INTEGRATION - Calculation results
+        const cacheKey = `playercard:calculation:${sessionId}`;
+
+        // 🔍 Try cache first
+        console.log(`🔍 Controllo cache per calcoli PlayerCard sessione ${sessionId}`);
+        const cached = await cacheService.get(cacheKey);
+
+        if (cached) {
+            // Cache HIT - return immediately
+            console.log(`⚡ CALCOLI RAPIDI: PlayerCard sessione ${sessionId} servita dalla cache (calcoli già pronti)`);
+            return res.json({
+                ...cached,
+                source: 'cache',
+                cached: true,
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        // 💾 Cache MISS - fetch from service
+        console.log(`🗄️ CACHE VUOTO: Esecuzione calcoli PlayerCard sessione ${sessionId} dal database...`);
         const result = await playerCardService.getPlayerCardCalculation(sessionId);
 
-        res.json(result);
+        // ✅ Save in cache for future requests
+        // TTL: 30 minuti (calcoli complessi, ma possono cambiare)
+        await cacheService.set(cacheKey, result, 30 * 60, [`playercard:${sessionId}`, 'calculation']);
+
+        console.log(`💾 CALCOLI SALVATI: PlayerCard sessione ${sessionId} memorizzata per 30 minuti (scadenza: ${new Date(Date.now() + 30 * 60 * 1000).toLocaleTimeString('it-IT')})`);
+
+        // Return fresh data
+        res.json({
+            ...result,
+            source: 'database',
+            cached: false,
+            timestamp: new Date().toISOString()
+        });
 
     } catch (error) {
+        console.error('❌ getPlayerCardCalculation error:', error.message);
         next(error);
     }
 };
@@ -141,11 +175,49 @@ const getPlayerCardResults = async (req, res, next) => {
             offset: parseInt(req.query.offset) || 0
         };
 
+        // 🎯 CACHE INTEGRATION - Historical results
+        // Generate cache key che include tutti i filtri importanti
+        const cacheKey = `playercard:results:${filters.targetPlayerId || 'all'}:team${filters.teamId || 'all'}:limit${filters.limit}:offset${filters.offset}`;
+
+        // 🔍 Try cache first
+        console.log(`🔍 Controllo cache per risultati PlayerCard user ${filters.targetPlayerId || 'multipli'}`);
+        const cached = await cacheService.get(cacheKey);
+
+        if (cached) {
+            // Cache HIT - return immediately
+            console.log(`⚡ DATI RAPIDI: PlayerCard serviti dalla cache (aggiornati di recente)`);
+            return res.json({
+                ...cached,
+                source: 'cache',
+                cached: true,
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        // 💾 Cache MISS - fetch from service
+        console.log(`🗄️ CACHE VUOTO: Recupero risultati PlayerCard dal database in corso...`);
         const result = await playerCardService.getPlayerCardResults(filters);
 
-        res.json(result);
+        // ✅ Save in cache for future requests
+        // TTL: 60 minuti (risultati storici cambiano raramente)
+        const tags = ['playercard', 'results'];
+        if (filters.targetPlayerId) tags.push(`player:${filters.targetPlayerId}`);
+        if (filters.teamId) tags.push(`team:${filters.teamId}`);
+
+        await cacheService.set(cacheKey, result, 60 * 60, tags);
+
+        console.log(`💾 RISULTATI SALVATI: PlayerCard memorizzati in cache per 60 minuti (scadenza: ${new Date(Date.now() + 60 * 60 * 1000).toLocaleTimeString('it-IT')})`);
+
+        // Return fresh data
+        res.json({
+            ...result,
+            source: 'database',
+            cached: false,
+            timestamp: new Date().toISOString()
+        });
 
     } catch (error) {
+        console.error('❌ getPlayerCardResults error:', error.message);
         next(error);
     }
 };

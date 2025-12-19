@@ -329,15 +329,26 @@ class AuthService {
             populate: [{ path: 'votingSessionId', select: 'title createdAt completedAt' }]
         });
 
-        return latestPlayerCard ? {
+        // 🛠️ FIX: Gestisce il caso in cui votingSessionId è null dopo populate
+        if (!latestPlayerCard) {
+            return {
+                hasPlayerCard: false,
+                latestCard: null
+            };
+        }
+
+        // Se votingSession non esiste più (dati corrotti), usa dati di fallback
+        const sessionInfo = latestPlayerCard.votingSessionId || {};
+
+        return {
             hasPlayerCard: true,
             latestCard: {
                 id: latestPlayerCard._id,
-                sessionTitle: latestPlayerCard.votingSessionId.title,
+                sessionTitle: sessionInfo.title || 'PlayerCard Session',
                 finalOverallRating: latestPlayerCard.finalOverallRating,
                 consensusProfile: latestPlayerCard.consensusProfile,
                 createdAt: latestPlayerCard.createdAt,
-                completedAt: latestPlayerCard.votingSessionId.completedAt,
+                completedAt: sessionInfo.completedAt || latestPlayerCard.createdAt,
                 finalAttributes: {
                     tir: latestPlayerCard.finalAttributes.tir,
                     pas: latestPlayerCard.finalAttributes.pas,
@@ -349,9 +360,6 @@ class AuthService {
                     men: latestPlayerCard.finalAttributes.men
                 }
             }
-        } : {
-            hasPlayerCard: false,
-            latestCard: null
         };
     }
 

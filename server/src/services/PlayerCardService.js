@@ -583,6 +583,16 @@ class PlayerCardService {
                 completedAt: new Date()
             });
 
+            // 🧹 CACHE INVALIDATION: Pulisci cache PlayerCard per il giocatore valutato
+            try {
+                const CacheService = require('./CacheService');
+                await CacheService.invalidatePlayerCardsAfterVote([session.targetId]);
+                console.log(`🔄 Cache PlayerCard invalidato per giocatore ${session.targetId}`);
+            } catch (cacheError) {
+                console.error('⚠️ Errore invalidazione cache PlayerCard:', cacheError.message);
+                // Non blocchiamo il flusso principale
+            }
+
             return {
                 success: true,
                 message: 'Player card session completed successfully',
