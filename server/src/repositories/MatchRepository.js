@@ -10,7 +10,7 @@ const Match = require('../models/Match');
  * - Ricerca partite attive/completate
  */
 class MatchRepository extends BaseRepository {
-    
+
     constructor() {
         super(Match);
     }
@@ -44,17 +44,16 @@ class MatchRepository extends BaseRepository {
     /**
      * 🔍 Trova partite per team
      * @param {string} teamId - ID del team
+     * @param {Object} options - Opzioni query (sort, limit, skip, populate)
      * @returns {Array} Lista partite del team
      */
-    async findByTeam(teamId) {
-        return this.findAll({
-            $or: [
-                { homeTeam: teamId },
-                { awayTeam: teamId }
-            ]
-        }, {
-            sort: { date: -1 },
-            populate: 'homeTeam awayTeam'
+    async findByTeam(teamId, options = {}) {
+        // Schema reale usa 'teamId' non 'homeTeam/awayTeam'
+        return this.findAll({ teamId }, {
+            sort: options.sort || { date: -1 },
+            limit: options.limit || null,
+            skip: options.skip || null,
+            populate: options.populate || null
         });
     }
 
@@ -78,14 +77,14 @@ class MatchRepository extends BaseRepository {
      */
     async findCompletedMatches(options = {}) {
         const filter = { status: 'completed' };
-        
+
         if (options.team) {
             filter.$or = [
                 { homeTeam: options.team },
                 { awayTeam: options.team }
             ];
         }
-        
+
         if (options.dateRange) {
             filter.date = {
                 $gte: options.dateRange.start,

@@ -35,6 +35,41 @@ const createMatch = async (req, res, next) => {
   }
 };
 
+// @desc    Update match
+// @route   PUT /api/v1/matches/:id
+// @access  Private (team members only)
+const updateMatch = async (req, res, next) => {
+  try {
+    const matchId = req.params.id;
+    const userId = req.user.id;
+    const updateData = req.body;
+
+    const result = await matchService.updateMatch(matchId, userId, updateData);
+
+    res.json(result);
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Delete match
+// @route   DELETE /api/v1/matches/:id
+// @access  Private (team members only)
+const deleteMatch = async (req, res, next) => {
+  try {
+    const matchId = req.params.id;
+    const userId = req.user.id;
+
+    const result = await matchService.deleteMatch(matchId, userId);
+
+    res.json(result);
+
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Get matches for a team
 // @route   GET /api/v1/matches/team/:teamId
 // @access  Private
@@ -224,5 +259,7 @@ module.exports = {
   getTeamMatches,
   getMatch,
   activateMatch,
-  completeMatch
+  completeMatch,
+  updateMatch,
+  deleteMatch
 };

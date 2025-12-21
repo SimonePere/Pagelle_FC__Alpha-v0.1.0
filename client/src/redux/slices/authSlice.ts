@@ -67,7 +67,7 @@ export const loginUser = createAsyncThunk(
 
 export const registerUser = createAsyncThunk(
   'auth/register',
-  async (userData: { name: string; email: string; password: string; birthdate?: string }, { rejectWithValue }) => {
+  async (userData: { name: string; email: string; password: string; birthdate?: string; existingTeamId?: string }, { rejectWithValue }) => {
     try {
       const response = await api.post('/auth/register', userData);
 
@@ -115,6 +115,53 @@ export const loadEnrichedUserData = createAsyncThunk(
       }
     } catch (error: any) {
       return rejectWithValue(error.message || 'Errore caricamento dati ricchi');
+    }
+  }
+);
+
+// Thunk per aggiornare profilo utente
+export const updateUserProfile = createAsyncThunk(
+  'auth/updateUserProfile',
+  async (profileData: { name: string; email: string; birthdate: string }, { rejectWithValue }) => {
+    try {
+      const response = await api.put('/auth/profile', profileData);
+
+      if (response.success && response.user) {
+        // Aggiorna localStorage con i nuovi dati
+        localStorage.setItem('user', JSON.stringify(response.user));
+        return response.user;
+      } else {
+        return rejectWithValue(response.message || 'Errore aggiornamento profilo');
+      }
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Errore aggiornamento profilo');
+    }
+  }
+);
+
+// Thunk per cambiare password
+export const changeUserPassword = createAsyncThunk(
+  'auth/changeUserPassword',
+  async (passwordData: { currentPassword: string; newPassword: string }, { rejectWithValue }) => {
+    try {
+      const response = await api.put('/auth/password', {
+        oldPassword: passwordData.currentPassword,  // Backend si aspetta 'oldPassword'
+        newPassword: passwordData.newPassword
+      });
+
+      // Se arriviamo qui, la chiamata è riuscita (status 200)
+      if (response.success) {
+        return { message: response.message || 'Password cambiata con successo' };
+      } else {
+        // Risposta 200 ma success: false
+        return rejectWithValue(response.error || response.message || 'Errore cambio password');
+      }
+    } catch (error: any) {
+      console.error('🔴 Errore changeUserPassword:', error);
+
+      // Errore HTTP (4xx, 5xx) o errore di rete
+      // apiCall lancia eccezioni per questi casi
+      return rejectWithValue(error.message || 'Errore del server. Riprova più tardi.');
     }
   }
 );
@@ -232,11 +279,41 @@ const authSlice = createSlice({
         // Non cancellare i dati esistenti, solo logga l'errore
         console.warn('Failed to load enriched data:', action.payload);
         state.isLoading = false;
+      })
+
+    // Update Profile
+    builder
+      .addCase(updateUserProfile.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(updateUserProfile.fulfilled, (state, action) => {
+        state.user = action.payload;
+        state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(updateUserProfile.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
+
+    // Change Password
+    builder
+      .addCase(changeUserPassword.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(changeUserPassword.fulfilled, (state) => {
+        state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(changeUserPassword.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
       });
   },
 });
 
 export const { initializeAuth, logout, setLoading, clearError } = authSlice.actions;
 export default authSlice.reducer;
-export type { User, AuthState };
 export type { User, AuthState };

@@ -3,9 +3,8 @@ import authReducer from "../slices/authSlice";
 import teamReducer from "../slices/teamSlice";
 import matchReducer from "../slices/matchSlice";
 import votingReducer from "../slices/votingSlice";
-// import playerCardsReducer from "../slices/playerCardsSlice";
-// import statsReducer from "../slices/statsSlice";
-// import uiReducer from "../slices/uiSlice";
+import usersReducer from "../slices/usersSlice";
+import playerCardsReducer from "../slices/playerCardsSlice";
 
 
 const store = configureStore({
@@ -13,10 +12,9 @@ const store = configureStore({
         auth: authReducer,                      // Autenticazione
         teams: teamReducer,                     // Gestione team
         matches: matchReducer,                  // Gestione partite
-        voting: votingReducer,                  // 🆕 Sistema votazione VotingSession
-        // playerCards: playerCardsReducer,     // Player cards
-        // stats: statsReducer,                 // Statistiche e classifiche  
-        // ui: uiReducer,                       // Loading, errori, notifiche
+        voting: votingReducer,                  // 🆕 Sistema votazione
+        users: usersReducer,                    // 🆕 Gestione utenti
+        playerCards: playerCardsReducer,       // 🆕 Gestione giocatori
     },
     devTools: process.env.NODE_ENV !== 'production',
     middleware: (getDefaultMiddleware) =>

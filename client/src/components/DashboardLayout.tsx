@@ -37,7 +37,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <SidebarTrigger className="text-foreground">
                   <Menu className="w-6 h-6" />
                 </SidebarTrigger>
-                <motion.button 
+                <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => navigate('/')}
@@ -56,16 +56,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   className="focus:outline-none"
                 >
                   <Avatar className="w-9 h-9 border-2 border-primary/30">
-                    <AvatarImage src="" alt={`${user.firstName || ''} ${user.lastName || ''}`} />
+                    <AvatarImage src="" alt={user.name || ''} />
                     <AvatarFallback className="bg-gradient-primary text-primary-foreground text-sm font-semibold">
-                      {`${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`}
+                      {(user.name || '').substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 </motion.button>
               )}
             </div>
           </motion.header>
-          
+
           {/* Desktop header with user icon */}
           <motion.header
             initial={{ y: -100 }}
@@ -81,23 +81,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   className="focus:outline-none"
                 >
                   <Avatar className="w-10 h-10 border-2 border-primary/30">
-                    <AvatarImage src="" alt={`${user.firstName || ''} ${user.lastName || ''}`} />
+                    <AvatarImage src="" alt={user.name || ''} />
                     <AvatarFallback className="bg-gradient-primary text-primary-foreground text-sm font-semibold">
-                      {`${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`}
+                      {(user.name || '').substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 </motion.button>
               )}
             </div>
           </motion.header>
-          
+
           {/* Content */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
             className="flex-1 overflow-auto"
-            style={{ 
+            style={{
               paddingBottom: 'calc(env(safe-area-inset-bottom) + 80px)', /* Bottom nav + safe area */
               paddingTop: '1rem' /* Space from top header */
             }}
@@ -106,7 +106,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             {children}
           </motion.div>
         </main>
-        
+
         {/* Mobile Bottom Navigation */}
         <BottomNav />
       </div>

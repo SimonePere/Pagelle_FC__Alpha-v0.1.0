@@ -2,13 +2,15 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
+const AppError = require('../utils/AppError');
 
 // 🎯 REPOSITORY PATTERN - Accesso dati tramite Repository
 const {
     UserRepository,
     MatchRepository,
     PlayerCardResultRepository,
-    PlayerLeaderboardStatsRepository
+    PlayerLeaderboardStatsRepository,
+    TeamRepository
 } = require('../repositories');
 
 /**
@@ -35,6 +37,7 @@ class AuthService {
         this.matchRepository = new MatchRepository();
         this.playerCardResultRepository = new PlayerCardResultRepository();
         this.playerStatsRepository = new PlayerLeaderboardStatsRepository();
+        this.teamRepository = new TeamRepository();
     }
     /**
      * Generate JWT Token
@@ -90,6 +93,49 @@ class AuthService {
     }
 
     /**
+    * VALIDAZIONI PROFILO UTENTE
+    */
+    validateProfileUpdateData(updateData) {
+        const { name, email, birthdate } = updateData;
+
+        if (name && (!name.trim() || name.length < 2 || name.length > 50)) {
+            throw new AppError('Nome deve essere tra 2 e 50 caratteri', 400);
+        }
+
+        if (email && !/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
+            throw new AppError('Email non valida', 400);
+        }
+
+        if (birthdate && !/^\d{4}-\d{2}-\d{2}$/.test(birthdate)) {
+            throw new AppError('Data nascita deve essere nel formato YYYY-MM-DD', 400);
+        }
+    }
+
+    /**
+     * Valida password
+     */
+    validatePassword(password) {
+        if (!password || password.length < 6) {
+            throw new AppError('Password deve essere di almeno 6 caratteri', 400);
+        }
+
+        if (!/[A-Z]/.test(password)) {
+            throw new AppError('Password deve contenere almeno una lettera maiuscola', 400);
+        }
+
+        if (!/[a-z]/.test(password)) {
+            throw new AppError('Password deve contenere almeno una lettera minuscola', 400);
+        }
+
+        if (!/\d/.test(password)) {
+            throw new AppError('Password deve contenere almeno un numero', 400);
+        }
+
+        if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+            throw new AppError('Password deve contenere almeno un carattere speciale (!@#$%^&*)', 400);
+        }
+    }
+    /**
      * Check if user exists by email
      * @param {string} email - User email
      * @returns {Promise<boolean>} True if user exists
@@ -118,9 +164,10 @@ class AuthService {
      * @param {string} userData.email - User email
      * @param {string} userData.password - User password
      * @param {string} userData.birthdate - User birthdate (optional)
+     * @param {string} userData.existingTeamId - Existing team ID to join (optional)
      * @returns {Promise<Object>} Created user and token
      */
-    async registerUser({ name, email, password, birthdate }) {
+    async registerUser({ name, email, password, birthdate, existingTeamId }) {
         // 1. Input validation
         this.validateRegistrationInput({ name, email, password });
 
@@ -149,6 +196,12 @@ class AuthService {
         // 5. Generate token
         const token = this.generateToken(user._id);
 
+        // 6. Team join opzionale
+        let teamJoined = null;
+        if (existingTeamId) {
+            teamJoined = await this.joinUserToTeam(user._id, existingTeamId);
+        }
+
         return {
             token,
             user: {
@@ -161,10 +214,152 @@ class AuthService {
                 role: user.role,
                 profile: user.profile,
                 totalTeams: user.totalTeams
-            }
+            },
+            team: teamJoined
         };
     }
 
+    /**
+ * Unisce un utente a un team esistente (con validazione completa)
+ * @param {string} userId - ID dell'utente 
+ * @param {string} teamId - ID del team
+ * @returns {Promise<Object>} Info del team unito
+ */
+    async joinUserToTeam(userId, teamId) {
+        try {
+            // 1. Validazione input
+            if (!teamId || !mongoose.isValidObjectId(teamId)) {
+                throw new Error('Team ID non valido');
+            }
+
+            // 2. Verifica esistenza team
+            const team = await this.teamRepository.findById(teamId);
+            if (!team) {
+                throw new Error('Team non trovato');
+            }
+
+            // 3. Verifica che il team sia attivo e pubblico
+            if (!team.isActive) {
+                throw new Error('Team non attivo');
+            }
+            if (team.settings?.isPrivate === true) {
+                throw new Error('Team privato, usa il codice invito');
+            }
+
+            // 4. Aggiungi utente al team
+            await this.teamRepository.updateById(teamId, {
+                $addToSet: { memberIds: userId }
+            });
+
+            // 5. Aggiorna teamIds dell'utente  
+            await this.userRepository.updateById(userId, {
+                $addToSet: { teamIds: teamId }
+            });
+
+            // 6. Restituisci info team
+            return {
+                id: team._id,
+                name: team.name,
+                description: team.description,
+                totalMembers: (team.memberIds?.length || 0) + 1
+            };
+
+        } catch (error) {
+            throw new Error(`Errore team join: ${error.message}`);
+        }
+    }
+
+    /**
+ * Aggiorna il profilo utente
+ * @param {string} userId - ID dell'utente
+ * @param {Object} updateData - Dati da aggiornare
+ * @returns {Promise<Object>} Profilo aggiornato
+ */
+    async updateProfile(userId, updateData) {
+        try {
+            // 1. Valida dati input
+            this.validateProfileUpdateData(updateData);
+
+            // 2. Verifica che l'utente esista
+            const existingUser = await this.userRepository.findById(userId);
+            if (!existingUser) {
+                throw new AppError('Utente non trovato', 404);
+            }
+
+            // 3. Se cambia email, verifica che non sia già usata
+            if (updateData.email && updateData.email !== existingUser.email) {
+                const emailExists = await this.userRepository.findByEmail(updateData.email);
+                if (emailExists) {
+                    throw new AppError('Email già utilizzata da un altro utente', 400);
+                }
+            }
+
+            // 4. Aggiorna usando BaseRepository
+            const updatedUser = await this.userRepository.updateById(userId, updateData);
+
+            console.log(`✅ Profilo utente ${userId} aggiornato con successo`);
+
+            return {
+                success: true,
+                message: 'Profilo aggiornato con successo',
+                user: {
+                    id: updatedUser._id,
+                    name: updatedUser.name,
+                    email: updatedUser.email,
+                    birthdate: updatedUser.birthdate,
+                    updatedAt: updatedUser.updatedAt
+                }
+            };
+
+        } catch (error) {
+            console.error('❌ Errore update profilo:', error.message);
+            throw error;
+        }
+    }
+
+    /**
+ * Cambia password utente
+ * @param {string} userId - ID dell'utente
+ * @param {string} oldPassword - Password attuale
+ * @param {string} newPassword - Nuova password
+ * @returns {Promise<Object>} Conferma cambio password
+ */
+    async changePassword(userId, oldPassword, newPassword) {
+        try {
+            // 1. Trova utente con password
+            const user = await this.userRepository.findById(userId, { select: '+password' });
+            if (!user) {
+                throw new AppError('Utente non trovato', 404);
+            }
+
+            // 2. Verifica password attuale
+            const isOldPasswordValid = await bcrypt.compare(oldPassword, user.password);
+            if (!isOldPasswordValid) {
+                throw new AppError('Password attuale non corretta', 400);
+            }
+
+            // 3. Valida nuova password
+            this.validatePassword(newPassword);
+
+            // 4. Hash nuova password
+            const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS) || 12;
+            const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
+
+            // 5. Aggiorna password
+            await this.userRepository.updateById(userId, { password: hashedNewPassword });
+
+            console.log(`🔐 Password utente ${userId} cambiata con successo`);
+
+            return {
+                success: true,
+                message: 'Password cambiata con successo'
+            };
+
+        } catch (error) {
+            console.error('❌ Errore cambio password:', error.message);
+            throw error;
+        }
+    }
     /**
      * Find user by email for login
      * @param {string} email - User email or name
@@ -352,12 +547,15 @@ class AuthService {
                 finalAttributes: {
                     tir: latestPlayerCard.finalAttributes.tir,
                     pas: latestPlayerCard.finalAttributes.pas,
-                    dif: latestPlayerCard.finalAttributes.dif,
-                    cor: latestPlayerCard.finalAttributes.cor,
                     dri: latestPlayerCard.finalAttributes.dri,
-                    fis: latestPlayerCard.finalAttributes.fis,
-                    vel: latestPlayerCard.finalAttributes.vel,
-                    men: latestPlayerCard.finalAttributes.men
+                    fin: latestPlayerCard.finalAttributes.fin,
+                    vis: latestPlayerCard.finalAttributes.vis,
+                    res: latestPlayerCard.finalAttributes.res,
+                    for: latestPlayerCard.finalAttributes.for
+                },
+                finalAdditionalAttributes: {
+                    piedeDebole: latestPlayerCard.finalAdditionalAttributes?.piedeDebole || null,
+                    skill: latestPlayerCard.finalAdditionalAttributes?.skill || null
                 }
             }
         };

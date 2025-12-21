@@ -8,6 +8,7 @@ const {
 } = require('../repositories');
 
 const AppError = require('../utils/AppError');
+const CacheService = require('./CacheService'); // 🆕 Cache invalidation per match updates
 
 /**
  * MATCH SERVICE
@@ -88,6 +89,34 @@ class MatchService {
     }
 
     /**
+     * Valida i dati per l'update di un match
+     * @param {Object} updateData - Dati da validare
+     */
+    validateMatchUpdateData(updateData) {
+        const { date, field, playersCount, notes, teamMemberIds } = updateData;
+
+        if (date && (!date.trim() || date.length < 8)) {
+            throw new AppError('Data match non valida', 400);
+        }
+
+        if (field && (!field.trim() || field.length < 2 || field.length > 100)) {
+            throw new AppError('Nome campo deve essere tra 2 e 100 caratteri', 400);
+        }
+
+        if (playersCount && ![5, 8, 11].includes(playersCount)) {
+            throw new AppError('Numero giocatori deve essere 5, 8 o 11', 400);
+        }
+
+        if (notes && notes.length > 500) {
+            throw new AppError('Le note non possono superare i 500 caratteri', 400);
+        }
+
+        if (teamMemberIds && !Array.isArray(teamMemberIds)) {
+            throw new AppError('teamMemberIds deve essere un array', 400);
+        }
+    }
+
+    /**
      * Ottiene i match di un team con paginazione
      * @param {string} teamId - ID del team
      * @param {string} userId - ID dell'utente richiedente
@@ -106,8 +135,8 @@ class MatchService {
             // Check team access
             await this.validateTeamAccess(teamId, userId);
 
-            // Get matches with pagination and populate
-            const matches = await this.matchRepository.findAll({ teamId }, {
+            // Get matches usando metodo specifico Repository invece di findAll generico
+            const matches = await this.matchRepository.findByTeam(teamId, {
                 populate: [
                     { path: 'createdBy', select: 'name birthdate teamName' },
                     { path: 'teamMemberIds', select: 'name birthdate profile.position teamName' }
@@ -117,6 +146,7 @@ class MatchService {
                 limit: limit
             });
 
+            // Count total usando BaseRepository per consistency
             const totalMatches = await this.matchRepository.countDocuments({ teamId });
 
             // Format matches for response
@@ -369,22 +399,6 @@ class MatchService {
     }
 
     /**
-     * Verifica che l'utente sia admin del team
-     */
-    async validateAdminAccess(teamId, userId) {
-        const team = await this.teamRepository.findById(teamId);
-        if (!team) {
-            throw new AppError('Team not found', 404);
-        }
-
-        if (!team.isAdmin(userId)) {
-            throw new AppError('Only team admins can perform this action', 403);
-        }
-
-        return team;
-    }
-
-    /**
      * INPUT VALIDATION METHODS
      */
 
@@ -419,6 +433,117 @@ class MatchService {
     validateMatchId(matchId) {
         if (!matchId || typeof matchId !== 'string') {
             throw new AppError('Match ID is required and must be a string', 400);
+        }
+    }
+
+    /**
+     * Modifica un match esistente
+     * @param {string} matchId - ID del match da aggiornare
+     * @param {string} userId - ID dell'utente che richiede l'update
+     * @param {Object} updateData - Dati da aggiornare
+     * @returns {Promise<Object>} Match aggiornato
+     */
+    async updateMatch(matchId, userId, updateData) {
+        try {
+            // 1. Verifica che il match esista
+            const existingMatch = await this.matchRepository.findById(matchId);
+            if (!existingMatch) {
+                throw new AppError('Match non trovato', 404);
+            }
+
+            // 2. Verifica permessi (solo membri del team)
+            const isTeamMember = existingMatch.teamMemberIds.some(
+                memberId => memberId.toString() === userId
+            );
+            if (!isTeamMember) {
+                throw new AppError('Non hai i permessi: non sei membro di questo team', 403);
+            }
+
+            // 3. Valida dati input
+            this.validateMatchUpdateData(updateData);
+
+            // 4. Aggiorna il match usando BaseRepository
+            const updatedMatch = await this.matchRepository.updateById(matchId, updateData);
+
+            console.log(`✅ Match ${matchId} aggiornato con successo da user ${userId}`);
+
+            // 🧹 CACHE INVALIDATION: Pulisce cache per team dopo update match
+            try {
+                await CacheService.invalidateMatchCacheAfterVote(updatedMatch.teamId);
+                console.log(`🧹 Cache match team ${updatedMatch.teamId} invalidata dopo update`);
+            } catch (cacheError) {
+                console.warn(`⚠️ Cache invalidation fallita (non critico):`, cacheError.message);
+            }
+
+            return {
+                success: true,
+                message: 'Match aggiornato con successo',
+                match: updatedMatch
+            };
+
+        } catch (error) {
+            console.error('❌ Errore update match:', error.message);
+            throw error;
+        }
+    }
+
+    /**
+     * Elimina un match esistente
+     * @param {string} matchId - ID del match da eliminare
+     * @param {string} userId - ID dell'utente che richiede l'eliminazione
+     * @returns {Promise<Object>} Conferma eliminazione
+     */
+    async deleteMatch(matchId, userId) {
+        try {
+            // 1. Verifica che il match esista
+            const existingMatch = await this.matchRepository.findById(matchId);
+            if (!existingMatch) {
+                throw new AppError('Match non trovato', 404);
+            }
+
+            // 2. Verifica permessi (solo membri del team)
+            const isTeamMember = existingMatch.teamMemberIds.some(
+                memberId => memberId.toString() === userId
+            );
+            if (!isTeamMember) {
+                throw new AppError('Non hai i permessi: non sei membro di questo team', 403);
+            }
+
+            // 3. Valida dati input (se necessario)
+            this.validateMatchId(matchId);
+
+            // 4. Elimina il match usando BaseRepository
+            await this.matchRepository.deleteById(matchId);
+
+            console.log(`🗑️ Match ${matchId} eliminato con successo da user ${userId}`);
+
+            // 🧹 CACHE INVALIDATION: Pulisce cache per team dopo delete match
+            try {
+                await CacheService.invalidateMatchCacheAfterVote(existingMatch.teamId);
+                console.log(`🧹 Cache match team ${existingMatch.teamId} invalidata dopo delete`);
+            } catch (cacheError) {
+                console.warn(`⚠️ Cache invalidation fallita (non critico):`, cacheError.message);
+            }
+
+            return {
+                success: true,
+                message: 'Match eliminato con successo',
+                deletedMatch: {
+                    id: existingMatch._id,
+                    field: existingMatch.field,
+                    date: existingMatch.date,
+                    playersCount: existingMatch.playersCount,
+                    status: existingMatch.status,
+                    notes: existingMatch.notes,
+                    teamId: existingMatch.teamId,
+                    createdAt: existingMatch.createdAt,
+                    deletedAt: new Date()
+                }
+            };
+
+        } catch (error) {
+            console.error('❌ Errore delete match:', error.message);
+            throw error;
         }
     }
 }

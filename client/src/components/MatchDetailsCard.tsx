@@ -20,22 +20,10 @@ import {
   Calendar,
   Users,
   Vote as VotingIcon,
-  CheckCircle2,
-  Clock,
-  Target,
-  Gift,
-  Send,
-  Footprints,
-  Hand,
-  UserPlus,
-  ThumbsUp,
-  Sparkles,
-  ArrowUpRight,
-  Circle,
-  Zap,
-  Star,
-  Trophy,
-  Flame
+  Edit,
+  Trash2,
+  MapPin,
+  FileText
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -46,10 +34,12 @@ interface VoteCardProps {
   match: {
     id: string;
     date: string;
+    field: string;
     status: 'completed' | 'active' | 'draft' | 'cancelled';
     playersCount?: number;      // 🏟️ Tipo di campo (5, 8, 11)
     teamMemberIds?: string[];
     teamMembers?: { id: string; name: string; }[];  // 🆕 Per mapping nomi
+    notes?: string;             // 📝 Note partita
   };
 
   // 🗳️ Props specifiche per votazioni  
@@ -97,6 +87,11 @@ interface VoteCardProps {
   onClick?: (match: any) => void;        // Click su tutta la card
   onVoteClick?: (match: any) => void;    // Click specifico su "Vota"
 
+  // 🆕 NUOVI PROPS PER AZIONI - AL LIVELLO PRINCIPALE!
+  onEditMatch?: (match: any) => void;    // Handler per modifica
+  onDeleteMatch?: (match: any) => void;  // Handler per elimina
+  showActionButtons?: boolean;           // Mostra i pulsanti (default false)
+
   // 🎭 Future features (commentate)
   // showConfetti?: boolean;     // 🎊 Animazioni di successo
   // customBadges?: Badge[];     // 🏷️ Badge personalizzati
@@ -113,7 +108,11 @@ export const MatchDetailsCard: React.FC<VoteCardProps> = ({
   index = 0,
   showVoteButton = true,    // 🎯 MODALITÀ PREFERITA: Pulsante dedicato di default!
   onClick,
-  onVoteClick
+  onVoteClick,
+  // 🆕 NUOVI PROPS PER AZIONI
+  onEditMatch,
+  onDeleteMatch,
+  showActionButtons = false
 }) => {
 
   // 🐛 DEBUG LOG - Match object completo
@@ -161,49 +160,7 @@ export const MatchDetailsCard: React.FC<VoteCardProps> = ({
     return member?.name || playerId; // Fallback al playerId se nome non trovato
   };
 
-  // 🎨 Colori stati (identico a MatchCard)
-  // const getStatusColor = (status: string) => {
-  //   switch (status) {
-  //     case 'completed':
-  //       return 'bg-green-500 text-green-50';
-  //     case 'active':
-  //       return 'bg-blue-500 text-blue-50';
-  //     case 'draft':
-  //       return 'bg-orange-500 text-orange-50';
-  //     default:
-  //       return 'bg-muted text-muted-foreground';
-  //   }
-  // };
 
-  // 📝 Labels stati (identico a MatchCard)
-  // const getStatusLabel = (status: string) => {
-  //   switch (status) {
-  //     case 'completed': return 'Completata';
-  //     case 'active': return 'In Corso';
-  //     case 'draft': return 'Creata';
-  //     default: return status;
-  //   }
-  // };
-
-  // 🗳️ Badge per stato votazione
-  // const getVotingBadge = () => {
-  //   if (!voting.isVotable) return null;
-  //   
-  //   if (voting.hasVoted) {
-  //     return (
-  //       <Badge className="bg-green-500 text-green-50">
-  //         <CheckCircle2 className="w-3 h-3 mr-1" />
-  //         Votato
-  //       </Badge>
-  //     );
-  //   }
-  //   
-  //   return (
-  //     <Badge className="bg-orange-500 text-orange-50">
-  //       Pendente
-  //     </Badge>
-  //   );
-  // };
 
   // 🎯 Handler per click (ottimizzato per modalità pulsante dedicato)
   const handleCardClick = () => {
@@ -246,29 +203,58 @@ export const MatchDetailsCard: React.FC<VoteCardProps> = ({
         >
 
 
-          <CardHeader className=" ">
+          <CardHeader className="pb-4 pt-6 px-6">
             <div className="flex items-start justify-between">
-              <div className="space-y-3 flex-1 pr-4">
-                <CardTitle className="font-display text-2xl flex items-center gap-3">
+              <div className="space-y-2 flex-1">
+                <CardTitle className="font-display text-2xl font-bold">
                   {getMatchType()}
                 </CardTitle>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Calendar className="w-4 h-4" />
                   <span>{getFormattedDate(match.date)}</span>
                 </div>
+                {/* Campo di gioco */}
+                {match.field && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <MapPin className="w-4 h-4" />
+                    <span>{match.field}</span>
+                  </div>
+                )}
+                {/* Note partita */}
+                {match.notes && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <FileText className="w-4 h-4" />
+                    <span className="line-clamp-2">{match.notes}</span>
+                  </div>
+                )}
               </div>
-              <div className="space-y-2 text-right">
-                {/* <div className="flex flex-col gap-2">
-                <Badge className={getStatusColor(match.status)}>
-                  {getStatusLabel(match.status)}
-                </Badge>
-                {getVotingBadge()}
-              </div> */}
-                {/* <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Users className="w-3 h-3" />
-                {match.teamMemberIds?.length || 0} giocatori
-              </div> */}
-              </div>
+              {/* 🔧 Pulsanti Azioni - Solo se showActionButtons è true */}
+              {showActionButtons && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditMatch?.(match);
+                    }}
+                    className="h-8 px-3"
+                  >
+                    <Edit className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteMatch?.(match);
+                    }}
+                    className="h-8 px-3"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                </div>
+              )}
             </div>
           </CardHeader>
 

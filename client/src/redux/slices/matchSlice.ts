@@ -24,7 +24,9 @@ export const fetchTeamMatches = createAsyncThunk(
   'matches/fetchTeamMatches',
   async (teamId: string, { rejectWithValue }) => {
     try {
-      const response = await api.get(`/matches/team/${teamId}`);
+      // 🔧 SOLUZIONE SEMPLICE: Random parameter per invalidare cache
+      const randomParam = Math.random().toString(36).substring(7);
+      const response = await api.get(`/matches/team/${teamId}?force=${randomParam}`);
 
       // Mappiamo ogni match per adattarlo al formato frontend
       const matches = (response.matches || []).map((match: any) => ({

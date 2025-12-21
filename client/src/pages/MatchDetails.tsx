@@ -17,11 +17,7 @@ import {
 import { motion } from 'framer-motion';
 import { Match, User } from '@/types/match';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
+import EditModal from '@/components/EditModal';
 import MatchDetailsCard from '@/components/MatchDetailsCard';
 
 export default function MatchDetails() {
@@ -39,6 +35,16 @@ export default function MatchDetails() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Utility function per status label
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'completed': return 'Completata';
+      case 'active': return 'In Corso';
+      case 'draft': return 'Creata';
+      default: return status;
+    }
+  };
+
   // SAFETY CHECK: Se il currentMatch ha un ID diverso da quello richiesto, forza un nuovo fetch
   useEffect(() => {
     if (currentMatch && currentMatch.id !== matchId) {
@@ -47,14 +53,6 @@ export default function MatchDetails() {
   }, [currentMatch, matchId, dispatch]);
 
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [editForm, setEditForm] = useState({
-    date: '',
-    opponent: '',
-    weather: '',
-    notes: '',
-    playersCount: 11 as 5 | 8 | 11,
-    selectedPlayers: [] as string[]
-  });
 
   useEffect(() => {
     if (!user) {
@@ -151,27 +149,18 @@ export default function MatchDetails() {
   }
 
   const handleEditMatch = () => {
-    setEditForm({
-      date: currentMatch.date.split('T')[0],
-      opponent: currentMatch.field, // field è il nuovo nome per opponent
-      weather: '', // Non più presente, lasciamo vuoto
-      notes: currentMatch.notes || '',
-      playersCount: currentMatch.playersCount || 11,
-      selectedPlayers: currentMatch.teamMemberIds || []
-    });
     setShowEditDialog(true);
   };
 
-  const handleSaveEdit = async () => {
+  const handleModalSave = async (data: any) => {
     try {
       await dispatch(updateMatch({
         matchId: currentMatch.id,
         matchData: {
-          date: editForm.date,
-          field: editForm.opponent,
-          playersCount: editForm.playersCount,
-          notes: editForm.notes,
-          teamMemberIds: editForm.selectedPlayers
+          date: data.date,
+          field: data.field,
+          playersCount: data.playersCount,
+          notes: data.notes
         }
       })).unwrap();
 
@@ -217,107 +206,57 @@ export default function MatchDetails() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-4"
+            className="flex items-center gap-3"
           >
+            {/* 🔙 Solo icona per mobile, testo nascosto */}
             <Button
               variant="secondary"
               onClick={() => navigate('/history')}
               className="border-2 border-border hover:bg-secondary/80"
+              size="sm"
             >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Torna allo Storico
+              <ArrowLeft className="w-4 h-4" />
+              <span className="sr-only">Torna allo Storico</span>
             </Button>
 
+            {/* 🔧 Pulsanti Azione - Icona + Testo sempre visibili */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleEditMatch}
+              className="border-2 border-border hover:bg-secondary/80"
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              Modifica
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDeleteMatch}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Elimina
+            </Button>
 
           </motion.div>
 
-
-          {/* per ora commentato quello che doveva essere il titolo della pagina, perche troppo grosso e invadente.
-toglie importanza al contenuto dettagliato della partita */}
-
-          {/* <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-sm border-border shadow-card p-8"
-          >
-            <div className="relative z-10">
-              <h1 className="font-display text-4xl font-bold text-foreground flex items-center gap-3">
-                <Search className="w-8 h-8 text-primary" />
-                Dettagli Partita
-              </h1>
-              <p className="text-muted-foreground text-lg mt-4">
-                Visualizza i dettagli completi della partita selezionata.
-              </p>
-            </div>
-            <div className="absolute top-0 right-0 w-48 h-48 bg-primary/10 rounded-full blur-3xl"></div>
-          </motion.div> */}
-
-
-
-
-          {/* Match Info Card */}
-          {/* <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <Card className="bg-card/80 backdrop-blur-sm border-border shadow-card">
-              <CardHeader className="border-b border-border">
-                <CardTitle className="flex items-center gap-3 font-display text-2xl">
-                  <FileText className="w-6 h-6 text-primary" />
-                  Informazioni Partita
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="lg:col-span-2">
-                    <div className="flex flex-wrap gap-4 text-muted-foreground">
-                      <span className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        {new Date(currentMatchData.date).toLocaleDateString('it-IT')}
-                      </span>
-                      <span className="flex items-center gap-2">
-                        <CloudRain className="w-4 h-4" />
-                        {currentMatchData.weather || 'N/A'}
-                      </span>
-                      <span className="flex items-center gap-2">
-                        <Users className="w-4 h-4" />
-                        {currentMatchData.teamMemberIds.length} Giocatori
-                      </span>
-                    </div>
-                    {currentMatchData.notes && (
-                      <div className="mt-4 p-3 bg-secondary/40 rounded-lg border border-border/50">
-                        <div className="flex items-start gap-2 text-sm">
-                          <FileText className="w-4 h-4 text-muted-foreground mt-0.5" />
-                          <p className="text-muted-foreground">{currentMatchData.notes}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  {currentMatchData.status !== 'completed' && (
-                    <div className="flex gap-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={handleEditMatch}
-                      >
-                        <Edit className="w-4 h-4 mr-2" />
-                        Modifica
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={handleDeleteMatch}
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Elimina
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div> */}
+          {/* Messaggio informativo per partite non completate */}
+          {currentMatch.status !== 'completed' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 }}
+            >
+              <Alert className="bg-blue-50/50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
+                <FileText className="h-4 w-4" />
+                <AlertTitle>Dati in fase di completamento</AlertTitle>
+                <AlertDescription>
+                  Questa partita è in stato "{getStatusLabel(currentMatch.status)}".
+                  Alcuni dati potrebbero essere ancora incompleti o in aggiornamento.
+                </AlertDescription>
+              </Alert>
+            </motion.div>
+          )}
 
           {/* Match Details Card */}
           <motion.div
@@ -333,6 +272,9 @@ toglie importanza al contenuto dettagliato della partita */}
                 votingProgress: 65,
                 votingDeadline: '2025-12-20T23:59:59Z'
               }}
+              showActionButtons={false}
+              onEditMatch={handleEditMatch}
+              onDeleteMatch={handleDeleteMatch}
               // 🆕 Voting data from Redux
               calculation={matchVoting.calculation}
               submissions={matchVoting.submissions}
@@ -348,7 +290,19 @@ toglie importanza al contenuto dettagliato della partita */}
         </div>
       </div>
 
-
+      {/* EditModal per modificare match */}
+      <EditModal
+        isOpen={showEditDialog}
+        onClose={() => setShowEditDialog(false)}
+        type='match'
+        data={{
+          field: currentMatch?.field || '',
+          date: currentMatch?.date?.split('T')[0] || '',
+          playersCount: currentMatch?.playersCount || 8,
+          notes: currentMatch?.notes || ''
+        }}
+        onSave={handleModalSave}
+      />
     </DashboardLayout>
   );
 }

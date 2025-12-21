@@ -1,4 +1,4 @@
-const AuthService = require('../services/AuthService');
+const authService = require('../services/AuthService');
 
 // @desc    Register new user
 // @route   POST /api/v1/auth/register
@@ -9,14 +9,14 @@ const register = async (req, res) => {
     name: req.body.name,
     email: req.body.email,
     hasPassword: !!req.body.password,
-    birthdate: req.body.birthdate
+    birthdate: req.body.birthdate,
+    existingTeamId: req.body.existingTeamId || null
   });
 
   try {
-    const { name, email, password, birthdate } = req.body;
-
+    const { name, email, password, birthdate, existingTeamId } = req.body;
     // Delega tutta la business logic all'AuthService
-    const result = await AuthService.registerUser({ name, email, password, birthdate });
+    const result = await authService.registerUser({ name, email, password, birthdate, existingTeamId });
 
     console.log('✅ Utente registrato:', email);
     console.log('🔵 === FINE REGISTRAZIONE ===\n');
@@ -24,7 +24,8 @@ const register = async (req, res) => {
     res.status(201).json({
       success: true,
       token: result.token,
-      user: result.user
+      user: result.user,
+      team: result.team || null
     });
 
   } catch (error) {
@@ -43,6 +44,47 @@ const register = async (req, res) => {
   }
 };
 
+// @desc    Update user profile
+// @route   PUT /api/v1/auth/profile
+// @access  Private
+const updateProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const updateData = req.body;
+
+    const result = await authService.updateProfile(userId, updateData);
+
+    res.json(result);
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Change user password
+// @route   PUT /api/v1/auth/password
+// @access  Private
+const changePassword = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { oldPassword, newPassword } = req.body;
+
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        error: 'Password attuale e nuova password sono richieste'
+      });
+    }
+
+    const result = await authService.changePassword(userId, oldPassword, newPassword);
+
+    res.json(result);
+
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Login user
 // @route   POST /api/v1/auth/login
 // @access  Public
@@ -57,7 +99,7 @@ const login = async (req, res) => {
     const { email, password } = req.body;
 
     // Delega tutta la business logic all'AuthService
-    const result = await AuthService.loginUser({ email, password });
+    const result = await authService.loginUser({ email, password });
 
     console.log('✅ Login completato per:', email);
     console.log('🟢 === FINE LOGIN ===\n');
@@ -91,7 +133,7 @@ const getMe = async (req, res) => {
 
   try {
     // Delega tutta la business logic all'AuthService
-    const userProfile = await AuthService.getUserProfile(req.user.id);
+    const userProfile = await authService.getUserProfile(req.user.id);
 
     console.log('✅ Utente trovato:', userProfile.email);
     console.log('📊 Stats trovate:', userProfile.personalStats.totalMatches > 0 ? 'PlayerLeaderboardStats' : 'Default (0)');
@@ -119,5 +161,7 @@ const getMe = async (req, res) => {
 module.exports = {
   register,
   login,
-  getMe
+  getMe,
+  updateProfile,
+  changePassword
 };

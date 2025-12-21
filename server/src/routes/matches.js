@@ -13,6 +13,16 @@ const auth = require('../middleware/auth');
 // @access  Private
 router.post('/', auth, matchController.createMatch);
 
+// @route   PUT /api/v1/matches/:id
+// @desc    Update match
+// @access  Private (team members only)
+router.put('/:id', auth, matchController.updateMatch);
+
+// @route   DELETE /api/v1/matches/:id
+// @desc    Delete match  
+// @access  Private (team members only)
+router.delete('/:id', auth, matchController.deleteMatch);
+
 // @route   GET /api/v1/matches/team/:teamId
 // @desc    Get team matches
 // @access  Private

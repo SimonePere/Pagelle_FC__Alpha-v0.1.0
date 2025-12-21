@@ -2,19 +2,23 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/redux/store/store';
-import { logout, loadEnrichedUserData } from '@/redux/slices/authSlice';
+import { logout, loadEnrichedUserData, updateUserProfile, changeUserPassword } from '@/redux/slices/authSlice';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { TrendingUp, Target, Users, Trophy, Award, TrendingDown, Star, LogOut, Goal, Hand } from 'lucide-react';
+import { TrendingUp, Target, Users, Trophy, Award, TrendingDown, Star, LogOut, Goal, Hand, User as UserIcon, Lock, KeyRound } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Progress } from '@/components/ui/progress';
 import { Match, User } from '@/types/match';
 // import { PlayerCardDisplay } from '@/components/PlayerCardDisplay';
 import { StatsTooltip } from '@/components/StatsTooltip';
+import EditModal from '@/components/EditModal';
+import { apiCall } from '@/lib/api';
+import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 
 // Semplifichiamo l'interface utilizzando i dati già disponibili
 interface UserStats {
@@ -26,10 +30,33 @@ interface UserStats {
   worstRating: number;
 }
 
+// Interface per PlayerCard risultati completi (come in PlayerCards)
+interface PlayerCardResult {
+  finalAttributes: {
+    tir: number;
+    pas: number;
+    dri: number;
+    fin: number;
+    vis: number;
+    res: number;
+    for: number;
+  };
+  finalAdditionalAttributes?: {
+    piedeDebole?: number;
+    skill?: number;
+  };
+  finalOverallRating: number;
+  profile: {
+    mostVotedPosition?: string;
+    preferredRole?: string;
+  };
+}
+
 const Profile = () => {
   const { user } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   // Semplifichiamo lo stato utilizzando i dati da /auth/me
   const [stats, setStats] = useState<UserStats>({
@@ -43,9 +70,123 @@ const Profile = () => {
   const [pendingMatches, setPendingMatches] = useState<Match[]>([]);
   const [teammates, setTeammates] = useState<User[]>([]);
 
+  // Stato per PlayerCard completa (con stelle)
+  const [playerCardResult, setPlayerCardResult] = useState<PlayerCardResult | null>(null);
+
+  // Stati per EditModal con debug
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editModalType, setEditModalType] = useState<'user-profile' | 'user-password'>('user-profile');
+
+  // Gestione EditModal
+  const handleEditProfile = () => {
+    setEditModalType('user-profile');
+    setEditModalOpen(true);
+  };
+
+  const handleChangePassword = () => {
+    setEditModalType('user-password');
+    setEditModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setEditModalOpen(false);
+  };
+
+  const handleModalSave = async (data: any) => {
+    if (editModalType === 'user-profile') {
+      // Chiamata Redux per aggiornare profilo
+      const result = await dispatch(updateUserProfile({
+        name: data.name,
+        email: data.email,
+        birthdate: data.birthdate
+      }));
+
+      if (updateUserProfile.fulfilled.match(result)) {
+        toast({ title: 'Successo!', description: 'Profilo aggiornato con successo!' });
+        setEditModalOpen(false);
+        // Ricarica i dati per aggiornare la UI
+        dispatch(loadEnrichedUserData());
+        return { success: true };
+      } else {
+        const errorMessage = result.payload as string;
+        toast({
+          title: 'Errore',
+          description: errorMessage || 'Impossibile aggiornare il profilo',
+          variant: 'destructive'
+        });
+        return { success: false, error: errorMessage };
+      }
+
+    } else if (editModalType === 'user-password') {
+      // Chiamata Redux per cambiare password - validazione delegata al backend
+      const result = await dispatch(changeUserPassword({
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword
+      }));
+
+      if (changeUserPassword.fulfilled.match(result)) {
+        toast({ title: 'Successo!', description: 'Password cambiata con successo!' });
+        setEditModalOpen(false); // Chiude modal solo in caso di successo
+        return { success: true };
+      } else {
+        // Errore: modal rimane aperto, messaggio gestito dal backend
+        const errorMessage = result.payload as string;
+        toast({
+          title: 'Errore',
+          description: errorMessage || 'Impossibile cambiare la password',
+          variant: 'destructive'
+        });
+        return { success: false, error: errorMessage };
+      }
+    }
+
+    return { success: false, error: 'Operazione non riconosciuta' };
+  };
+
   const handleLogout = () => {
     dispatch(logout());
     navigate('/login');
+  };
+
+  // Carica risultati PlayerCard completi (con stelle) - IDENTICA A PlayerCards
+  const loadPlayerCardResults = async (userId: string) => {
+    try {
+      const timestamp = Date.now();
+      const response = await apiCall(`/player-cards/results/user/${userId}?t=${timestamp}`);
+
+      if (!response.success || !response.results || response.results.length === 0) {
+        return null;
+      }
+
+      const latestResult = response.results[0];
+      if (!latestResult.finalAttributes) {
+        return null;
+      }
+
+      const dbOverallRating = latestResult.finalOverallRating;
+      const attrs = latestResult.finalAttributes;
+      const calculatedRating = Math.round(
+        (attrs.tir + attrs.pas + attrs.dri + attrs.fin + attrs.vis + attrs.res + attrs.for) / 7
+      );
+
+      const finalRating = dbOverallRating || calculatedRating;
+
+      const result: PlayerCardResult = {
+        finalAttributes: latestResult.finalAttributes,
+        finalAdditionalAttributes: latestResult.finalAdditionalAttributes, // ⭐ STELLE DAL DATABASE
+        finalOverallRating: finalRating,
+        profile: {
+          mostVotedPosition: latestResult.consensusProfile?.mostVotedPosition || "CEN",
+          preferredRole: "Centrocampista"
+        }
+      };
+
+      setPlayerCardResult(result);
+      return result;
+    } catch (error) {
+      console.error('Errore caricamento PlayerCard:', error);
+      return null;
+    }
   };
 
   // Forza sempre il caricamento di dati freschi da API
@@ -54,6 +195,13 @@ const Profile = () => {
       dispatch(loadEnrichedUserData());
     }
   }, [user?.id, dispatch]);
+
+  // Carica i dati PlayerCard completi se l'utente ha una PlayerCard
+  useEffect(() => {
+    if (user?.id && user?.playerCard?.latestCard?.finalOverallRating) {
+      loadPlayerCardResults(user.id);
+    }
+  }, [user?.id, user?.playerCard?.latestCard?.finalOverallRating]);
 
   // Main useEffect - utilizziamo i dati già disponibili da /auth/me
   useEffect(() => {
@@ -132,18 +280,25 @@ const Profile = () => {
                     </div>
 
                     {/* TOT Badge se disponibile - layout orizzontale compatto */}
-                    {user.playerCard?.latestCard?.finalOverallRating && (
-                      <motion.div
-                        whileHover={{ scale: 1.02 }}
-                        className="flex items-center justify-center p-4 bg-gradient-to-r from-accent/20 to-accent/10 rounded-xl border border-accent/30"
+
+
+                    {/* Mobile Action Buttons - sotto TOT badge */}
+                    <div className="flex items-center justify-center gap-4 mt-6">
+                      <button
+                        onClick={handleEditProfile}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-secondary/40 hover:bg-secondary/60 text-secondary-foreground hover:text-foreground transition-all duration-200 text-sm rounded-xl border border-border/40 hover:border-primary/30 shadow-sm"
                       >
-                        <div className="flex items-center gap-3">
-                          <Star className="w-5 h-5 text-accent" />
-                          <span className="text-2xl font-display font-bold text-foreground">{Math.round(user.playerCard.latestCard.finalOverallRating)}</span>
-                          <span className="text-muted-foreground text-sm font-medium">TOT Player Card</span>
-                        </div>
-                      </motion.div>
-                    )}
+                        <UserIcon className="w-4 h-4" />
+                        <span>modifica profilo</span>
+                      </button>
+                      <button
+                        onClick={handleChangePassword}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-secondary/40 hover:bg-secondary/60 text-secondary-foreground hover:text-foreground transition-all duration-200 text-sm rounded-xl border border-border/40 hover:border-primary/30 shadow-sm"
+                      >
+                        <KeyRound className="w-4 h-4" />
+                        <span>cambia password</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Desktop Layout */}
@@ -207,6 +362,28 @@ const Profile = () => {
                           </motion.div>
                         )}
                       </div>
+
+                      {/* Bottoni Edit */}
+                      <div className="flex gap-3 mt-4">
+                        <Button
+                          onClick={handleEditProfile}
+                          variant="outline"
+                          size="sm"
+                          className="bg-primary/10 hover:bg-primary/20 border-primary/30"
+                        >
+                          <UserIcon className="w-4 h-4 mr-2" />
+                          Modifica Profilo
+                        </Button>
+                        <Button
+                          onClick={handleChangePassword}
+                          variant="outline"
+                          size="sm"
+                          className="bg-accent/10 hover:bg-accent/20 border-accent/30"
+                        >
+                          <Lock className="w-4 h-4 mr-2" />
+                          Cambia Password
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -214,8 +391,8 @@ const Profile = () => {
             </Card>
           </motion.div>
 
-          {/* My Player Card - mostrata solo se disponibile da /auth/me */}
-          {user.playerCard?.latestCard?.finalOverallRating && (
+          {/* My Player Card - con dati completi incluse stelle */}
+          {playerCardResult && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -231,13 +408,156 @@ const Profile = () => {
                     Attributi valutati dal tuo team
                   </p>
                 </CardHeader>
-                {/* <CardContent className="p-6 flex justify-center">
-                  
-                  <PlayerCardDisplay
-                    playerName={user.name}
-                    attributes={myPlayerCard.finalAttributes}
-                  />
-                </CardContent> */}
+                <CardContent className="p-6">
+                  <div className="space-y-6">
+                    {/* Header con TOT prominente */}
+                    <div className="text-center">
+                      <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wide">TOT</div>
+                      <div className={`font-display text-5xl font-black leading-none ${playerCardResult.finalOverallRating >= 80 ? 'text-green-500' :
+                        playerCardResult.finalOverallRating >= 70 ? 'text-yellow-500' :
+                          playerCardResult.finalOverallRating >= 60 ? 'text-orange-500' :
+                            'text-red-500'
+                        }`}>
+                        {Math.round(playerCardResult.finalOverallRating)}
+                      </div>
+                      <div className="text-sm text-muted-foreground font-medium mt-1">
+                        {playerCardResult.profile.mostVotedPosition || 'Centrocampista'}
+                      </div>
+                    </div>
+
+                    {/* Attributi */}
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">TIR (Tiro)</span>
+                          <span className="font-bold text-foreground">{playerCardResult.finalAttributes.tir}</span>
+                        </div>
+                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-800"
+                            style={{ width: `${Math.min(playerCardResult.finalAttributes.tir, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">PAS (Passaggio)</span>
+                          <span className="font-bold text-foreground">{playerCardResult.finalAttributes.pas}</span>
+                        </div>
+                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-800"
+                            style={{ width: `${Math.min(playerCardResult.finalAttributes.pas, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">DRI (Dribbling)</span>
+                          <span className="font-bold text-foreground">{playerCardResult.finalAttributes.dri}</span>
+                        </div>
+                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-800"
+                            style={{ width: `${Math.min(playerCardResult.finalAttributes.dri, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">FIN (Finalizzazione)</span>
+                          <span className="font-bold text-foreground">{playerCardResult.finalAttributes.fin}</span>
+                        </div>
+                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-800"
+                            style={{ width: `${Math.min(playerCardResult.finalAttributes.fin, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">VIS (Visione)</span>
+                          <span className="font-bold text-foreground">{playerCardResult.finalAttributes.vis}</span>
+                        </div>
+                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-800"
+                            style={{ width: `${Math.min(playerCardResult.finalAttributes.vis, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">RES (Resistenza)</span>
+                          <span className="font-bold text-foreground">{playerCardResult.finalAttributes.res}</span>
+                        </div>
+                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-800"
+                            style={{ width: `${Math.min(playerCardResult.finalAttributes.res, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">FOR (Forza)</span>
+                          <span className="font-bold text-foreground">{playerCardResult.finalAttributes.for}</span>
+                        </div>
+                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-800"
+                            style={{ width: `${Math.min(playerCardResult.finalAttributes.for, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Star Ratings */}
+                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Piede Debole</div>
+                        <div className="flex gap-0.5">
+                          {Array.from({ length: 5 }).map((_, i) => {
+                            const piedeDebole = playerCardResult.finalAdditionalAttributes?.piedeDebole || 3;
+                            return (
+                              <Star
+                                key={i}
+                                size={16}
+                                className={i < piedeDebole
+                                  ? "fill-primary text-primary"
+                                  : "text-muted-foreground"}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Skill</div>
+                        <div className="flex gap-0.5">
+                          {Array.from({ length: 5 }).map((_, i) => {
+                            const skill = playerCardResult.finalAdditionalAttributes?.skill || 3;
+                            return (
+                              <Star
+                                key={i}
+                                size={16}
+                                className={i < skill
+                                  ? "fill-primary text-primary"
+                                  : "text-muted-foreground"}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
               </Card>
             </motion.div>
           )}
@@ -473,6 +793,19 @@ const Profile = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* EditModal */}
+      <EditModal
+        isOpen={editModalOpen}
+        onClose={handleModalClose}
+        type={editModalType}
+        data={editModalType === 'user-profile' ? {
+          name: user?.name || '',
+          email: user?.email || '',
+          birthdate: user?.birthdate || ''
+        } : {}}
+        onSave={handleModalSave}
+      />
     </DashboardLayout>
   );
 };

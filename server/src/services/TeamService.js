@@ -53,22 +53,22 @@ class TeamService {
             }
 
             // Create team with explicit admin/member setup
-            const team = new Team({
+            const teamData = {
                 name: name.trim(),
                 description: description?.trim(),
                 createdBy: userId,
                 adminIds: [userId],    // Creator as explicit admin
                 memberIds: [userId],   // Creator as explicit member
                 settings: settings || {},
-            });
+            };
 
             // Generate unique invite code
-            await this.generateUniqueInviteCode(team);
+            teamData.inviteCode = await this.generateUniqueInviteCode();
 
-            await this.teamRepository.save(team);
+            const team = await this.teamRepository.create(teamData);
 
             // Update user's teamIds
-            await this.userRepository.findByIdAndUpdate(userId, {
+            await this.userRepository.updateById(userId, {
                 $addToSet: { teamIds: team._id }
             });
 
@@ -114,9 +114,8 @@ class TeamService {
                 query.name = { $regex: search, $options: 'i' };
             }
 
-            const teams = await this.teamRepository.findAll({
-                filter: query,
-                select: 'name description totalMembers stats colors createdAt',
+            const teams = await this.teamRepository.findAll(query, {
+                select: 'name description memberIds stats colors createdAt',
                 sort: { createdAt: -1 },
                 skip: skip,
                 limit: limit
@@ -130,7 +129,7 @@ class TeamService {
                     id: team._id,
                     name: team.name,
                     description: team.description,
-                    totalMembers: team.totalMembers,
+                    totalMembers: team.memberIds ? team.memberIds.length : 0,
                     stats: team.stats,
                     colors: team.colors,
                     createdAt: team.createdAt
@@ -366,13 +365,18 @@ class TeamService {
     /**
      * Genera un codice invito unico per il team
      */
-    async generateUniqueInviteCode(team) {
+    async generateUniqueInviteCode() {
         let codeExists = true;
+        let inviteCode;
+
         while (codeExists) {
-            team.generateInviteCode();
-            const existingCode = await this.teamRepository.findOne({ inviteCode: team.inviteCode });
+            // Generate 6-character alphanumeric code
+            inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            const existingCode = await this.teamRepository.findOne({ inviteCode });
             codeExists = !!existingCode;
         }
+
+        return inviteCode;
     }
 
     /**

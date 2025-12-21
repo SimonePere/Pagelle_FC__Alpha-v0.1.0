@@ -11,13 +11,12 @@ import {
   Users,
   ArrowUp,
   ArrowDown,
-  Eye
+  Eye,
+  FileText
 } from 'lucide-react';
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState, AppDispatch } from '../redux/store/store';
-import { fetchTeamMatches } from '../redux/slices/matchSlice';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import useAppData from '@/hooks/useAppData';
 
 
 
@@ -102,7 +101,10 @@ function MatchCard({ match, index }: MatchCardProps) {
       transition={{ delay: index * 0.05 }}
       className="group"
     >
-      <Card className="bg-card/80 backdrop-blur-sm border-border shadow-card transition-all duration-300 relative">
+      <Card
+        className="bg-card/80 backdrop-blur-sm border-border shadow-card transition-all duration-300 relative cursor-pointer hover:shadow-lg hover:bg-card/90"
+        onClick={handleViewDetails}
+      >
         {/* Numero nell'angolino sinistro */}
         <span className="absolute top-3 left-3 text-xs font-mono bg-secondary/40 px-2 py-1 rounded text-muted-foreground z-10">
           #{index + 1}
@@ -110,14 +112,15 @@ function MatchCard({ match, index }: MatchCardProps) {
 
         <CardHeader className="pb-3 pt-12">
           <div className="flex items-start justify-between">
-            <div className="space-y-3 flex-1 pr-4">
-              <CardTitle className="font-display text-2xl flex items-center gap-3">
+            <div className="space-y-3 flex-1">
+              <CardTitle className="font-display text-2xl flex items-center gap-3 pr-4">
                 {getMatchType()}
               </CardTitle>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground pr-4">
                 <Calendar className="w-4 h-4" />
                 <span>{getFormattedDate(match.date)}</span>
               </div>
+
             </div>
             <div className="space-y-2 text-right">
               <Badge className={getStatusColor(match.status)}>
@@ -131,45 +134,25 @@ function MatchCard({ match, index }: MatchCardProps) {
           </div>
         </CardHeader>
 
-        <CardContent>
-          {/* 
-            🔧 PULSANTE DETTAGLI COMPLETI - ATTIVO SOLO PER PARTITE COMPLETATE
-            ==================================================================
-            
-            ✅ COSA È STATO FATTO:
-            - Pulsante sempre visibile (non più condizionato)
-            - Collegato alla route GET /api/v1/matches/:id con matchId corretto
-            - Handler onClick per navigazione implementato
-            - Abilitato solo per partite con status 'completed'
-            
-            🎯 LOGICA ATTUALE:
-            - disabled={match.status !== 'completed'} 
-            - Solo le partite completate mostrano dettagli completi
-            
-            🔗 ROUTING: navigate(`/matches/${match.id}`) → GET /api/v1/matches/:id
-          */}
-          <div className="pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full transition-colors"
-              disabled={match.status !== 'completed'}
-              onClick={handleViewDetails}
-            >
-              <Eye className="w-4 h-4 mr-2" />
-              Vedi dettagli completi
-            </Button>
+        {/* Note partita - Sfrutta tutta la larghezza */}
+        {match.notes && (
+          <div className="px-6 pb-6">
+            <div className="flex items-start gap-2 text-sm text-muted-foreground">
+              <FileText className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span className="line-clamp-2 leading-relaxed">{match.notes}</span>
+            </div>
           </div>
-        </CardContent>
+        )}
       </Card>
     </motion.div>
   );
 }
 
 const MatchGrid: React.FC<MatchGridProps> = ({ showStats = true }) => {
-  const user = useSelector((state: RootState) => state.auth.user);
-  const { matches, isLoading } = useSelector((state: RootState) => state.matches);
-  const dispatch = useDispatch<AppDispatch>();
+  // 🎯 NUOVO APPROCCIO: Hook centralizzato
+  const { matches, isLoading } = useAppData();
+  // 🔄 ENTERPRISE: Usa loading granulare (solo matches per questa componente)
+  const matchesAreLoading = isLoading.matches;
 
   // Controllo di sicurezza per l'array matches
   const safeMatches = Array.isArray(matches) ? matches : [];
@@ -177,17 +160,6 @@ const MatchGrid: React.FC<MatchGridProps> = ({ showStats = true }) => {
   // Stati per filtri e ordinamento
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc'); // desc = più recenti prime
-
-  // Carica le partite reali dal backend
-  useEffect(() => {
-    if (!user || !user.teams?.length) {
-      return;
-    }
-
-    const teamId = user.teams[0].id;
-    dispatch(fetchTeamMatches(teamId));
-  }, [user, dispatch]);
-
   // Ottieni anni disponibili dalle partite
   const getAvailableYears = () => {
     const years = safeMatches.map(match => new Date(match.date).getFullYear());
@@ -224,12 +196,10 @@ const MatchGrid: React.FC<MatchGridProps> = ({ showStats = true }) => {
     draftMatches: filteredMatches.filter(m => m.status === 'draft').length
   };
 
-  if (!user) return null;
-
   return (
     <div className="space-y-6">
       {/* Loading state */}
-      {isLoading && (
+      {matchesAreLoading && (
         <div className="flex items-center justify-center py-12">
           <div className="text-center space-y-4">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
@@ -239,7 +209,7 @@ const MatchGrid: React.FC<MatchGridProps> = ({ showStats = true }) => {
       )}
 
       {/* Content */}
-      {!isLoading && (
+      {!matchesAreLoading && (
         <>
           {/* Dashboard Stats per Partite - opzionali */}
           {showStats && (
