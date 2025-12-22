@@ -1,0 +1,90 @@
+{
+  "timestamp": "2025-12-22T09:16:54.318Z",
+  "database": "Pagelle-FC-dev",
+  "collections": {
+    "users": [
+      {
+        "_id": "6949099f11cc39cec0da88dd",
+        "name": "Simone DEV",
+        "email": "simone_1914@hotmail.it",
+        "birthdate": "1996-05-06",
+        "password": "$2b$10$IMUWWgr82CJVbhMLeeGMCeq4WbRcvdLe7u5ZBAPuOXcwcLoql4cR.",
+        "teamIds": [
+          "69490a7711cc39cec0da88f7"
+        ],
+        "role": "player",
+        "profile": {
+          "position": "UTIL",
+          "preferredFoot": "right"
+        },
+        "isActive": true,
+        "createdAt": "2025-12-22T09:04:31.696Z",
+        "updatedAt": "2025-12-22T09:08:07.555Z",
+        "__v": 0
+      },
+      {
+        "_id": "69490ae711cc39cec0da8905",
+        "name": "Davide DEV",
+        "email": "craigdavid@hotmail.it",
+        "birthdate": "1995-01-16",
+        "password": "$2b$10$12ZY1gtFMLL2po2SOgS3Ku8m2TBLFz87SrPaGVvDZV0ZIn7ni9TJC",
+        "teamIds": [
+          "69490a7711cc39cec0da88f7"
+        ],
+        "role": "player",
+        "profile": {
+          "position": "UTIL",
+          "preferredFoot": "right"
+        },
+        "isActive": true,
+        "createdAt": "2025-12-22T09:09:59.707Z",
+        "updatedAt": "2025-12-22T09:09:59.768Z",
+        "__v": 0
+      }
+    ],
+    "teams": [
+      {
+        "_id": "69490a7711cc39cec0da88f7",
+        "name": "Six/Dux DEV FC",
+        "createdBy": "6949099f11cc39cec0da88dd",
+        "adminIds": [
+          "6949099f11cc39cec0da88dd"
+        ],
+        "memberIds": [
+          "6949099f11cc39cec0da88dd",
+          "69490ae711cc39cec0da8905"
+        ],
+        "inviteCode": "6ZRCVO",
+        "settings": {
+          "isPrivate": false,
+          "maxMembers": 25,
+          "autoApprove": true,
+          "allowGuestVoting": false
+        },
+        "colors": {
+          "primary": "#007bff",
+          "secondary": "#6c757d"
+        },
+        "isActive": true,
+        "stats": {
+          "totalMatches": 0,
+          "totalGoals": 0,
+          "wins": 0,
+          "losses": 0,
+          "draws": 0
+        },
+        "createdAt": "2025-12-22T09:08:07.521Z",
+        "updatedAt": "2025-12-22T09:09:59.747Z",
+        "__v": 0
+      }
+    ],
+    "matches": [],
+    "votingsessions": [],
+    "votesubmissions": [],
+    "voteresults": [],
+    "playercardsubmissions": [],
+    "playercardresults": [],
+    "playerleaderboardstats": [],
+    "playercarddemands": []
+  }
+}

@@ -9,6 +9,7 @@
     "dev": "nodemon server.js",
     "prod": "set NODE_ENV=production && node server.js",
     "test:env": "set NODE_ENV=test && nodemon server.js",
+    "dev:env": "set NODE_ENV=development && nodemon server.js",
     "seed": "node src/utils/seedData.js",
     "seed:test": "set NODE_ENV=test && node src/utils/seedData.js",
     "db:backup": "set NODE_ENV=test && node migrate-db.js backup",

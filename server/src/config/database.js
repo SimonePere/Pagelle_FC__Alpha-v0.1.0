@@ -7,11 +7,21 @@ const connectDB = async () => {
     console.log(`🔍 NODE_ENV: "${nodeEnv}"`);
 
     // Seleziona il database corretto basato sull'ambiente
-    const mongoUri = nodeEnv === 'test'
-      ? process.env.MONGODB_URI_TEST
-      : process.env.MONGODB_URI;
+    let mongoUri;
 
-    console.log(`🔗 Selected URI contains: ${mongoUri?.includes('test') ? 'TEST' : 'PROD'} database`);
+    if (nodeEnv === 'development') {
+      mongoUri = process.env.MONGODB_URI_DEV;
+    } else if (nodeEnv === 'test') {
+      mongoUri = process.env.MONGODB_URI_TEST;
+    } else {
+      // Default: production
+      mongoUri = process.env.MONGODB_URI;
+    }
+
+
+    console.log(`🔗 Selected URI contains: ${mongoUri?.includes('test') ? 'TEST' :
+      mongoUri?.includes('dev') ? 'DEV' : 'PROD'
+      } database`);
 
     // Configurazione ottimizzata per connessioni multiple
     const conn = await mongoose.connect(mongoUri, {
