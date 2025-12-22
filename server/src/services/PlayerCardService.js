@@ -509,12 +509,16 @@ class PlayerCardService {
      * @returns {Promise<Object>} Risultato completamento
      */
     async completePlayerCardSession(sessionId, options = {}) {
+
         this.validateSessionId(sessionId);
+        console.log("OUTSIDE TRY CATCH sessionId:", sessionId);
         const { forceReopen } = options;
 
         try {
             // 1. Verifica che la sessione esista e sia player_card_rating
+            console.log("TRY SESSION ID: ", sessionId);
             const session = await this.votingSessionRepository.findById(sessionId);
+            console.log("SESSION: ", session);
             if (!session) {
                 throw new AppError('Player card session not found', 404);
             }
@@ -568,20 +572,187 @@ class PlayerCardService {
 
             // 5. Aggrega dati per PlayerCardResult
             const aggregatedData = this.aggregatePlayerCardStats(submissions);
+            console.log("AGGREGATED DATA: ", aggregatedData);
 
-            // 6. Crea PlayerCardResult
-            const playerCardResult = await this.createPlayerCardResult(
-                sessionId,
-                session.targetId,
-                aggregatedData,
-                submissions.length
-            );
+            // 5. Salva risultati ufficiali con struttura corretta PlayerCardResult
+            const playerCardResultData = {
+                votingSessionId: sessionId,
+                targetPlayerId: session.targetId,
 
-            // 7. Aggiorna stato sessione
+                // ✅ Mappa finalAttributes da attributeStats
+                finalAttributes: {
+                    tir: aggregatedData.attributeStats.tir.average,
+                    pas: aggregatedData.attributeStats.pas.average,
+                    dri: aggregatedData.attributeStats.dri.average,
+                    fin: aggregatedData.attributeStats.fin.average,
+                    vis: aggregatedData.attributeStats.vis.average,
+                    res: aggregatedData.attributeStats.res.average,
+                    for: aggregatedData.attributeStats.for.average
+                },
+
+                // ✅ Mappa finalAdditionalAttributes da additionalAttributeStats
+                finalAdditionalAttributes: {
+                    piedeDebole: aggregatedData.additionalAttributeStats.piedeDebole?.average || null,
+                    skill: aggregatedData.additionalAttributeStats.skill?.average || null
+                },
+
+                // ✅ Mappa finalOverallRating da overallStats
+                finalOverallRating: aggregatedData.overallStats.average,
+
+                // ✅ Calcola consensusProfile da positionStats
+                consensusProfile: {
+                    mostVotedPosition: (() => {
+                        const positions = aggregatedData.positionStats || {};
+                        let maxVotes = 0;
+                        let mostVoted = null;
+                        Object.entries(positions).forEach(([pos, votes]) => {
+                            if (votes > maxVotes) {
+                                maxVotes = votes;
+                                mostVoted = pos;
+                            }
+                        });
+                        return mostVoted;
+                    })(),
+                    positionDistribution: new Map(Object.entries(aggregatedData.positionStats || {}))
+                },
+
+                // ✅ Mappa statistics complete
+                statistics: {
+                    voteCount: aggregatedData.totalVotes,
+
+                    // Breakdown dettagliato per ogni attributo
+                    attributeBreakdown: {
+                        tir: {
+                            average: aggregatedData.attributeStats.tir.average,
+                            median: aggregatedData.attributeStats.tir.median,
+                            standardDeviation: aggregatedData.attributeStats.tir.standardDeviation,
+                            min: Math.min(...aggregatedData.attributeStats.tir.values),
+                            max: Math.max(...aggregatedData.attributeStats.tir.values),
+                            distribution: {
+                                '90-100': aggregatedData.attributeStats.tir.values.filter(v => v >= 90).length,
+                                '80-90': aggregatedData.attributeStats.tir.values.filter(v => v >= 80 && v < 90).length,
+                                '70-80': aggregatedData.attributeStats.tir.values.filter(v => v >= 70 && v < 80).length,
+                                '60-70': aggregatedData.attributeStats.tir.values.filter(v => v >= 60 && v < 70).length,
+                                '50-60': aggregatedData.attributeStats.tir.values.filter(v => v >= 50 && v < 60).length,
+                                'below-50': aggregatedData.attributeStats.tir.values.filter(v => v < 50).length
+                            }
+                        },
+                        pas: {
+                            average: aggregatedData.attributeStats.pas.average,
+                            median: aggregatedData.attributeStats.pas.median,
+                            standardDeviation: aggregatedData.attributeStats.pas.standardDeviation,
+                            min: Math.min(...aggregatedData.attributeStats.pas.values),
+                            max: Math.max(...aggregatedData.attributeStats.pas.values),
+                            distribution: {
+                                '90-100': aggregatedData.attributeStats.pas.values.filter(v => v >= 90).length,
+                                '80-90': aggregatedData.attributeStats.pas.values.filter(v => v >= 80 && v < 90).length,
+                                '70-80': aggregatedData.attributeStats.pas.values.filter(v => v >= 70 && v < 80).length,
+                                '60-70': aggregatedData.attributeStats.pas.values.filter(v => v >= 60 && v < 70).length,
+                                '50-60': aggregatedData.attributeStats.pas.values.filter(v => v >= 50 && v < 60).length,
+                                'below-50': aggregatedData.attributeStats.pas.values.filter(v => v < 50).length
+                            }
+                        },
+                        dri: {
+                            average: aggregatedData.attributeStats.dri.average,
+                            median: aggregatedData.attributeStats.dri.median,
+                            standardDeviation: aggregatedData.attributeStats.dri.standardDeviation,
+                            min: Math.min(...aggregatedData.attributeStats.dri.values),
+                            max: Math.max(...aggregatedData.attributeStats.dri.values),
+                            distribution: {
+                                '90-100': aggregatedData.attributeStats.dri.values.filter(v => v >= 90).length,
+                                '80-90': aggregatedData.attributeStats.dri.values.filter(v => v >= 80 && v < 90).length,
+                                '70-80': aggregatedData.attributeStats.dri.values.filter(v => v >= 70 && v < 80).length,
+                                '60-70': aggregatedData.attributeStats.dri.values.filter(v => v >= 60 && v < 70).length,
+                                '50-60': aggregatedData.attributeStats.dri.values.filter(v => v >= 50 && v < 60).length,
+                                'below-50': aggregatedData.attributeStats.dri.values.filter(v => v < 50).length
+                            }
+                        },
+                        fin: {
+                            average: aggregatedData.attributeStats.fin.average,
+                            median: aggregatedData.attributeStats.fin.median,
+                            standardDeviation: aggregatedData.attributeStats.fin.standardDeviation,
+                            min: Math.min(...aggregatedData.attributeStats.fin.values),
+                            max: Math.max(...aggregatedData.attributeStats.fin.values),
+                            distribution: {
+                                '90-100': aggregatedData.attributeStats.fin.values.filter(v => v >= 90).length,
+                                '80-90': aggregatedData.attributeStats.fin.values.filter(v => v >= 80 && v < 90).length,
+                                '70-80': aggregatedData.attributeStats.fin.values.filter(v => v >= 70 && v < 80).length,
+                                '60-70': aggregatedData.attributeStats.fin.values.filter(v => v >= 60 && v < 70).length,
+                                '50-60': aggregatedData.attributeStats.fin.values.filter(v => v >= 50 && v < 60).length,
+                                'below-50': aggregatedData.attributeStats.fin.values.filter(v => v < 50).length
+                            }
+                        },
+                        vis: {
+                            average: aggregatedData.attributeStats.vis.average,
+                            median: aggregatedData.attributeStats.vis.median,
+                            standardDeviation: aggregatedData.attributeStats.vis.standardDeviation,
+                            min: Math.min(...aggregatedData.attributeStats.vis.values),
+                            max: Math.max(...aggregatedData.attributeStats.vis.values),
+                            distribution: {
+                                '90-100': aggregatedData.attributeStats.vis.values.filter(v => v >= 90).length,
+                                '80-90': aggregatedData.attributeStats.vis.values.filter(v => v >= 80 && v < 90).length,
+                                '70-80': aggregatedData.attributeStats.vis.values.filter(v => v >= 70 && v < 80).length,
+                                '60-70': aggregatedData.attributeStats.vis.values.filter(v => v >= 60 && v < 70).length,
+                                '50-60': aggregatedData.attributeStats.vis.values.filter(v => v >= 50 && v < 60).length,
+                                'below-50': aggregatedData.attributeStats.vis.values.filter(v => v < 50).length
+                            }
+                        },
+                        res: {
+                            average: aggregatedData.attributeStats.res.average,
+                            median: aggregatedData.attributeStats.res.median,
+                            standardDeviation: aggregatedData.attributeStats.res.standardDeviation,
+                            min: Math.min(...aggregatedData.attributeStats.res.values),
+                            max: Math.max(...aggregatedData.attributeStats.res.values),
+                            distribution: {
+                                '90-100': aggregatedData.attributeStats.res.values.filter(v => v >= 90).length,
+                                '80-90': aggregatedData.attributeStats.res.values.filter(v => v >= 80 && v < 90).length,
+                                '70-80': aggregatedData.attributeStats.res.values.filter(v => v >= 70 && v < 80).length,
+                                '60-70': aggregatedData.attributeStats.res.values.filter(v => v >= 60 && v < 70).length,
+                                '50-60': aggregatedData.attributeStats.res.values.filter(v => v >= 50 && v < 60).length,
+                                'below-50': aggregatedData.attributeStats.res.values.filter(v => v < 50).length
+                            }
+                        },
+                        for: {
+                            average: aggregatedData.attributeStats.for.average,
+                            median: aggregatedData.attributeStats.for.median,
+                            standardDeviation: aggregatedData.attributeStats.for.standardDeviation,
+                            min: Math.min(...aggregatedData.attributeStats.for.values),
+                            max: Math.max(...aggregatedData.attributeStats.for.values),
+                            distribution: {
+                                '90-100': aggregatedData.attributeStats.for.values.filter(v => v >= 90).length,
+                                '80-90': aggregatedData.attributeStats.for.values.filter(v => v >= 80 && v < 90).length,
+                                '70-80': aggregatedData.attributeStats.for.values.filter(v => v >= 70 && v < 80).length,
+                                '60-70': aggregatedData.attributeStats.for.values.filter(v => v >= 60 && v < 70).length,
+                                '50-60': aggregatedData.attributeStats.for.values.filter(v => v >= 50 && v < 60).length,
+                                'below-50': aggregatedData.attributeStats.for.values.filter(v => v < 50).length
+                            }
+                        }
+                    }
+                },
+
+                calculationMethod: 'average',
+
+                sessionMetadata: {
+                    totalVoters: submissions.length,
+                    sessionType: 'player_card_rating',
+                    calculatedAt: new Date(),
+                    completionRate: 100
+                }
+            };
+
+            console.log("PLAYER CARD RESULT DATA: ", playerCardResultData);
+
+            // 6. Crea record PlayerCardResult
+            const playerCardResult = await this.playerCardResultRepository.create(playerCardResultData);
+
+            console.log("PLAYER CARD RESULT scritto su db : ", playerCardResult);
+
+            // 7. Aggiorna stato sessione a completed
             await this.votingSessionRepository.updateById(sessionId, {
                 status: 'completed',
                 completedAt: new Date()
             });
+
 
             // 🧹 CACHE INVALIDATION: Pulisci cache PlayerCard per il giocatore valutato
             try {
@@ -601,7 +772,7 @@ class PlayerCardService {
                     targetPlayerId: playerCardResult.targetPlayerId,
                     finalAttributes: playerCardResult.finalAttributes,
                     overallRating: playerCardResult.overallRating,
-                    totalVotes: playerCardResult.metadata.totalSubmissions,
+                    totalVotes: playerCardResult.totalVotes,
                     completedAt: playerCardResult.createdAt
                 }
             };

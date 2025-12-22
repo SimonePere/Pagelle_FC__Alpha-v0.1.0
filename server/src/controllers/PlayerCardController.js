@@ -152,7 +152,12 @@ const completePlayerCardSession = async (req, res, next) => {
         const sessionId = req.params.id;
         const options = req.body;
 
+        // console.log(`🚀------  DEBUG COMPLETE PLAYERCARD \n  Session: ${sessionId} \n options:`, options);
+
         const result = await playerCardService.completePlayerCardSession(sessionId, options);
+
+        // console.log(`🚀------  DEBUG result \n  Session: ${sessionId} \n options:`, options);
+
 
         res.json(result);
 
