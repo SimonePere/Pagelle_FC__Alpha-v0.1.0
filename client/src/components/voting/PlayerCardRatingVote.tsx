@@ -43,8 +43,9 @@ export function PlayerCardRatingVote({ sessionId }: PlayerCardRatingVoteProps) {
     );
   }
 
-  const [activeTab, setActiveTab] = useState<'profilo' | 'fisico' | 'tecnica' | 'stelle'>('profilo');
+  const [activeTab, setActiveTab] = useState<'profilo' | 'fisico' | 'tecnica' | 'portiere' | 'stelle'>('profilo');
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
 
   // Stati per profilo giocatore
   const [profile, setProfile] = useState({
@@ -52,38 +53,48 @@ export function PlayerCardRatingVote({ sessionId }: PlayerCardRatingVoteProps) {
     preferredRole: 'none' // Cambiamo da stringa vuota a 'none'
   });
 
+  const getTabsForPosition = () => {
+    return ((profile.position as string) === 'POR')
+      ? ['profilo', 'portiere']
+      : ['profilo', 'fisico', 'tecnica', 'stelle'];
+  };
+
   // Stati per attributi estesi - valori iniziali minimi per forzare la valutazione
   const [attributes, setAttributes] = useState({
-    // Tecnici - partiamo da 10 (minimo degli slider)
-    tir: 10,
-    pas: 10,
-    dri: 10,
-    fin: 10,
-    vis: 10,
+    // Tecnici - partiamo da 60 (minimo degli slider)
+    tir: 60,
+    pas: 60,
+    dri: 60,
+    fin: 60,
+    vis: 60,
     // Fisici
-    res: 10,
-    for: 10,
+    res: 60,
+    for: 60,
+    con: 60,
+    int: 60,
+    prt: 60,
     // Stelle
-    piedeDebole: 3,
-    skill: 3
+    piedeDebole: 1,
+    skill: 1,
+    // Portiere OPZIONALI - partiamo da 60 (minimo degli slider)
+    tf: 60,
+    pr: 60,
+    rn: 60,
+    pz: 60,
+    rf: 60,
   });
 
   const [comments, setComments] = useState('');
 
-  // Opzioni per Select
-  const positionOptions = [
-    { value: 'POR', label: 'POR (Portiere)' },
-    { value: 'DC', label: 'DC (Difensore Centrale)' },
-    { value: 'CC', label: 'CC (Centrocampista Centrale)' },
-    { value: 'AT', label: 'AT (Attaccante)' }
-  ];
+  // // Opzioni per Select
+  // const positionOptions = [
+  //   { value: 'POR', label: 'POR (Portiere)' },
+  //   { value: 'DC', label: 'DC (Difensore Centrale)' },
+  //   { value: 'CC', label: 'CC (Centrocampista Centrale)' },
+  //   { value: 'AT', label: 'AT (Attaccante)' }
+  // ];
 
-  const preferredRoleOptions = [
-    { value: '', label: 'Seleziona ruolo...' },
-    { value: 'Difensore completo', label: 'Difensore completo' },
-    { value: 'Centrocampista tuttofare', label: 'Centrocampista tuttofare' },
-    { value: 'Finalizzatore', label: 'Finalizzatore' }
-  ];
+
 
   const handleAttributeChange = (key: keyof typeof attributes, value: number) => {
     setAttributes(prev => ({
@@ -93,66 +104,77 @@ export function PlayerCardRatingVote({ sessionId }: PlayerCardRatingVoteProps) {
   };
 
   const handleNextStep = () => {
-    switch (activeTab) {
-      case 'profilo':
-        setActiveTab('fisico');
-        break;
-      case 'fisico':
-        setActiveTab('tecnica');
-        break;
-      case 'tecnica':
-        setActiveTab('stelle');
-        break;
-      case 'stelle':
-        // Ultimo step - mostra dialog di conferma invece di inviare direttamente
-        setShowConfirmDialog(true);
-        break;
+    const currentTabs = getTabsForPosition();
+    const currentIndex = currentTabs.indexOf(activeTab);
+
+    if (currentIndex < currentTabs.length - 1) {
+      // Vai al prossimo tab
+      setActiveTab(currentTabs[currentIndex + 1] as any);
+    } else {
+      // Ultimo step - mostra dialog di conferma
+      setShowConfirmDialog(true);
     }
   };
 
   const handlePrevStep = () => {
-    switch (activeTab) {
-      case 'stelle':
-        setActiveTab('tecnica');
-        break;
-      case 'tecnica':
-        setActiveTab('fisico');
-        break;
-      case 'fisico':
-        setActiveTab('profilo');
-        break;
+    const currentTabs = getTabsForPosition();
+    const currentIndex = currentTabs.indexOf(activeTab);
+
+    if (currentIndex > 0) {
+      // Vai al tab precedente
+      setActiveTab(currentTabs[currentIndex - 1] as any);
     }
   };
 
   const getButtonText = () => {
-    const isMobile = window.innerWidth < 640; // sm breakpoint
-    switch (activeTab) {
-      case 'profilo':
-        return isMobile ? 'Fisico' : 'Avanti: Attributi Fisici';
-      case 'fisico':
-        return isMobile ? 'Tecnica' : 'Avanti: Attributi Tecnici';
-      case 'tecnica':
-        return isMobile ? 'Stelle' : 'Avanti: Abilità Speciali';
-      case 'stelle':
-        return isMobile ? '⚠️ Invia' : '⚠️ Invia Valutazione Finale';
-      default:
-        return 'Avanti';
+    const isMobile = window.innerWidth < 640;
+    const currentTabs = getTabsForPosition();
+    const currentIndex = currentTabs.indexOf(activeTab);
+    const isLastTab = currentIndex === currentTabs.length - 1;
+
+    if (isLastTab) {
+      return isMobile ? ' Invia' : ' Invia Valutazione Finale';
     }
+
+    const nextTab = currentTabs[currentIndex + 1];
+    const nextLabels = {
+      'fisico': isMobile ? 'Fisico' : 'Avanti: Attributi Fisici',
+      'tecnica': isMobile ? 'Tecnica' : 'Avanti: Attributi Tecnici',
+      'portiere': isMobile ? 'Portiere' : 'Avanti: Attributi Portiere',
+      'stelle': isMobile ? 'Stelle' : 'Avanti: Abilità Speciali'
+    };
+
+    return nextLabels[nextTab as keyof typeof nextLabels] || 'Avanti';
   };
 
   // Funzione per controllare quanti attributi sono ancora ai valori di default
   const getDefaultValuesCount = () => {
-    const defaultAttributes = ['tir', 'pas', 'dri', 'fin', 'vis', 'res', 'for'].filter(
-      attr => attributes[attr as keyof typeof attributes] === 10
-    );
-    return defaultAttributes.length;
+    if ((profile.position as string) === 'POR') {
+      // Per i portieri, controlla solo gli attributi portiere
+      const goalkeeperAttributes = ['tf', 'pr', 'rn', 'pz', 'rf'].filter(
+        attr => attributes[attr as keyof typeof attributes] === 60
+      );
+      return goalkeeperAttributes.length;
+    } else {
+      // Per giocatori normali, controlla gli attributi base
+      const defaultAttributes = ['tir', 'pas', 'dri', 'fin', 'vis', 'res', 'for', 'con', 'int', 'prt'].filter(
+        attr => attributes[attr as keyof typeof attributes] === 60
+      );
+      return defaultAttributes.length;
+    }
   };
 
-  // Funzione per validare che tutti gli attributi principali siano stati modificati dal default
+  // Funzione per validare che tutti gli attributi obbligatori siano stati modificati dal default
   const isValidForSubmit = () => {
-    const mainAttributes = ['tir', 'pas', 'dri', 'fin', 'vis', 'res', 'for'];
-    return mainAttributes.every(attr => attributes[attr as keyof typeof attributes] > 10);
+    const mainAttributes = ['tir', 'pas', 'dri', 'fin', 'vis', 'res', 'for', 'con', 'int', 'prt'];
+
+    if ((profile.position as string) === 'POR') {
+      return ['tf', 'pr', 'rn', 'pz', 'rf'].every(attr => attributes[attr] > 60);
+    } else {
+      return mainAttributes.every(attr => attributes[attr] > 60);
+    }
   };
+
 
   // Funzione per confermare e inviare
   const handleConfirmSubmit = () => {
@@ -170,7 +192,7 @@ export function PlayerCardRatingVote({ sessionId }: PlayerCardRatingVoteProps) {
       // Struttura del voto compatibile con backend
       const voteData = {
         vote: {
-          // Attributi principali (scala 10-100)
+          // Attributi principali obbligatori (scala 60-100)
           attributes: {
             tir: attributes.tir,
             pas: attributes.pas,
@@ -179,8 +201,18 @@ export function PlayerCardRatingVote({ sessionId }: PlayerCardRatingVoteProps) {
             vis: attributes.vis,
             res: attributes.res,
             for: attributes.for,
+            con: attributes.con,
+            int: attributes.int,
+            prt: attributes.prt,
             piedeDebole: attributes.piedeDebole,
-            skill: attributes.skill
+            skill: attributes.skill,
+
+            // Attributi portiere (opzionali)
+            tf: attributes.tf,
+            pr: attributes.pr,
+            rn: attributes.rn,
+            pz: attributes.pz,
+            rf: attributes.rf,
           },
           // Profilo giocatore
           profile: {
@@ -188,7 +220,7 @@ export function PlayerCardRatingVote({ sessionId }: PlayerCardRatingVoteProps) {
             preferredRole: profile.preferredRole !== 'none' ? profile.preferredRole : undefined
           },
           // Commenti opzionali
-          comments: comments.trim() || undefined
+          comment: comments.trim() || undefined
         }
       };
       await dispatch(submitPlayerCardVote({
@@ -224,23 +256,37 @@ export function PlayerCardRatingVote({ sessionId }: PlayerCardRatingVoteProps) {
 
       {/* Tab System - Solo indicatori di progresso, non più navigazione libera */}
       <Tabs value={activeTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className={`grid w-full ${(profile.position as string) === 'POR' ? 'grid-cols-2' : 'grid-cols-4'}`}>
+
           <TabsTrigger value="profilo" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Profilo
           </TabsTrigger>
-          <TabsTrigger value="fisico" className="flex items-center gap-2">
-            <Dumbbell className="h-4 w-4" />
-            Fisico
-          </TabsTrigger>
-          <TabsTrigger value="tecnica" className="flex items-center gap-2">
-            <Target className="h-4 w-4" />
-            Tecnica
-          </TabsTrigger>
-          <TabsTrigger value="stelle" className="flex items-center gap-2">
-            <Star className="h-4 w-4" />
-            Stelle
-          </TabsTrigger>
+          {(profile.position as string) !== 'POR' && (
+            <TabsTrigger value="fisico" className="flex items-center gap-2">
+              <Dumbbell className="h-4 w-4" />
+              Fisico
+            </TabsTrigger>
+          )}
+          {(profile.position as string) !== 'POR' && (
+            <TabsTrigger value="tecnica" className="flex items-center gap-2">
+              <Target className="h-4 w-4" />
+              Tecnica
+            </TabsTrigger>
+          )}
+          {(profile.position as string) !== 'POR' && (
+            <TabsTrigger value="stelle" className="flex items-center gap-2">
+              <Target className="h-4 w-4" />
+              Stelle
+            </TabsTrigger>
+          )}
+          {(profile.position as string) === 'POR' && (
+            <TabsTrigger value="portiere" className="flex items-center gap-2">
+              <Target className="h-4 w-4" />
+              Portiere
+            </TabsTrigger>
+          )}
+
         </TabsList>
 
         {/* Tab Content - Profilo */}
@@ -257,7 +303,10 @@ export function PlayerCardRatingVote({ sessionId }: PlayerCardRatingVoteProps) {
                 <Label>Posizione</Label>
                 <Select
                   value={profile.position}
-                  onValueChange={(value) => setProfile({ ...profile, position: value as any })}
+                  onValueChange={(value) => {
+                    setProfile({ ...profile, position: value as any });
+                    setActiveTab('profilo'); // Reset al primo tab quando cambia posizione
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -280,29 +329,7 @@ export function PlayerCardRatingVote({ sessionId }: PlayerCardRatingVoteProps) {
                 </Select>
               </div>
 
-              <div>
-                <Label>Ruolo Preferito (opzionale)</Label>
-                <Select
-                  value={profile.preferredRole}
-                  onValueChange={(value) => setProfile({ ...profile, preferredRole: value })}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Seleziona ruolo preferito..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Seleziona ruolo...</SelectItem>
-                    <SelectItem value="Difensore completo">Difensore completo</SelectItem>
-                    <SelectItem value="Esterno offensivo">Esterno offensivo</SelectItem>
-                    <SelectItem value="Centrocampista tuttofare">Centrocampista tuttofare</SelectItem>
-                    <SelectItem value="Centrocampista difensivo">Centrocampista difensivo</SelectItem>
-                    <SelectItem value="Centrocampista offensivo">Centrocampista offensivo</SelectItem>
-                    <SelectItem value="Fantasista">Fantasista</SelectItem>
-                    <SelectItem value="Seconda punta">Seconda punta</SelectItem>
-                    <SelectItem value="Falso 9">Falso 9</SelectItem>
-                    <SelectItem value="Finalizzatore">Finalizzatore</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+
             </CardContent>
           </Card>
         </TabsContent>
@@ -311,7 +338,10 @@ export function PlayerCardRatingVote({ sessionId }: PlayerCardRatingVoteProps) {
         <TabsContent value="fisico" className="space-y-4">
           {[
             { key: 'res' as const, label: 'RES (Resistenza)', description: 'Resistenza e stamina' },
-            { key: 'for' as const, label: 'FOR (Forza)', description: 'Forza fisica e contrasti' }
+            { key: 'for' as const, label: 'FOR (Forza)', description: 'Forza fisica e contrasti' },
+            { key: 'con' as const, label: 'CON (Contrasto)', description: 'Contrasto e scivolata' },
+            { key: 'int' as const, label: 'INT (Intercettazioni)', description: 'Intercettazioni e letture difensive' },
+            { key: 'prt' as const, label: 'PRT (Precisione testa)', description: 'Precisione nei colpi di testa' }
           ].map((attr) => (
             <Card key={attr.key}>
               <CardHeader>
@@ -333,13 +363,13 @@ export function PlayerCardRatingVote({ sessionId }: PlayerCardRatingVoteProps) {
                     value={[attributes[attr.key]]}
                     onValueChange={(value) => handleAttributeChange(attr.key, value[0])}
                     max={100}
-                    min={10}
+                    min={0}
                     step={1}
                     className="w-full"
                   />
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Scarso (10)</span>
-                    <span>Medio (50)</span>
+                    <span>Scarso (60)</span>
+                    <span>Medio (80)</span>
                     <span>Eccellente (100)</span>
                   </div>
                 </div>
@@ -377,13 +407,13 @@ export function PlayerCardRatingVote({ sessionId }: PlayerCardRatingVoteProps) {
                     value={[attributes[attr.key]]}
                     onValueChange={(value) => handleAttributeChange(attr.key, value[0])}
                     max={100}
-                    min={10}
+                    min={0}
                     step={1}
                     className="w-full"
                   />
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Scarso (10)</span>
-                    <span>Medio (50)</span>
+                    <span>Scarso (60)</span>
+                    <span>Medio (80)</span>
                     <span>Eccellente (100)</span>
                   </div>
                 </div>
@@ -443,7 +473,53 @@ export function PlayerCardRatingVote({ sessionId }: PlayerCardRatingVoteProps) {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Tab condizionale - POR  */}
+        <TabsContent value="portiere" className="space-y-4">
+          {[
+            { key: 'tf' as const, label: 'TF (Tuffo)', description: 'Tuffo' },
+            { key: 'pr' as const, label: 'PR (Presa)', description: 'Qualità della presa' },
+            { key: 'rn' as const, label: 'RN (Rinvio)', description: 'Rinvio' },
+            { key: 'pz' as const, label: 'PZ (Piazzamento)', description: 'Piazzamento' },
+            { key: 'rf' as const, label: 'RF (Riflessi)', description: 'Riflessi' }
+          ].map((attr) => (
+            <Card key={attr.key}>
+              <CardHeader>
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Target className="h-4 w-4" />
+                  {attr.label}
+                </h3>
+                <p className="text-sm text-muted-foreground">{attr.description}</p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label>Valore: {attributes[attr.key]}</Label>
+                    <Badge variant="outline" className="font-mono">
+                      {attributes[attr.key]}/100
+                    </Badge>
+                  </div>
+                  <Slider
+                    value={[attributes[attr.key]]}
+                    onValueChange={(value) => handleAttributeChange(attr.key, value[0])}
+                    max={100}
+                    min={0}
+                    step={1}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Scarso (60)</span>
+                    <span>Medio (80)</span>
+                    <span>Eccellente (100)</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </TabsContent>
       </Tabs>
+
+
 
       {/* Commenti */}
       <Card>
@@ -484,7 +560,8 @@ export function PlayerCardRatingVote({ sessionId }: PlayerCardRatingVoteProps) {
                 </Button>
               )}
 
-              {activeTab === 'stelle' ? (
+
+              {(activeTab === 'stelle' || activeTab === 'portiere') ? (
                 <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
                   <AlertDialogTrigger asChild>
                     <Button
@@ -517,7 +594,7 @@ export function PlayerCardRatingVote({ sessionId }: PlayerCardRatingVoteProps) {
                           <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
                             <p className="text-yellow-800 font-medium">⚠️ Attenzione!</p>
                             <p className="text-yellow-700 text-sm">
-                              Hai ancora {getDefaultValuesCount()} attributi con valore minimo (10).
+                              Hai ancora {getDefaultValuesCount()} attributi con valore minimo (60).
                               Assicurati di aver valutato tutti gli attributi correttamente.
                             </p>
                           </div>

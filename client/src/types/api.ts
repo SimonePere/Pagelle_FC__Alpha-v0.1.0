@@ -76,7 +76,7 @@ export interface User {
   isActive?: boolean;
   birthdate?: string;
 }
-}
+
 
 // Auth Types
 export interface LoginRequest {
@@ -209,31 +209,31 @@ export interface PlayerCard {
   team: string | Team;
   attributes: PlayerAttributes;
   overallRating: number;
-  position: string;
+  position?: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface PlayerAttributes {
-  pace: number;
+  // Physical and defensive attributes (0-100)
+  stamina: number;
+  strength: number;
+  contrast: number;
+  interception: number;
+  headPrecision: number;
+  // Technical attributes (0-100)
   shooting: number;
   passing: number;
   dribbling: number;
-  defending: number;
-  physical: number;
-  // Attributi aggiuntivi specifici
-  finishing: number;
-  longShots: number;
-  crossing: number;
-  shortPassing: number;
-  longPassing: number;
-  ballControl: number;
-  dribbling_skill: number;
-  tackling: number;
-  interceptions: number;
-  strength: number;
-  jumping: number;
-  stamina: number;
+  finalizzazione: number;
+  visione: number;
+  // === POR attributes (optional and EXCLUSIVE) ===
+  tuffo?: number;
+  presa?: number;
+  rinvio?: number;
+  piazzamento?: number;
+  riflessi?: number;
+
 }
 
 export interface SubmitPlayerCardRequest {

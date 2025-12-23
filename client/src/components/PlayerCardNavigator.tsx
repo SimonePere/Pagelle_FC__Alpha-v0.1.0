@@ -33,6 +33,16 @@ interface PlayerCardResult {
     vis: number;
     res: number;
     for: number;
+    con: number;
+    int: number;
+    prt: number;
+  };
+  goalkeeperAttributes?: {
+    tf: number;
+    pr: number;
+    rn: number;
+    pz: number;
+    rf: number;
   };
   finalAdditionalAttributes?: {
     piedeDebole?: number;
@@ -56,6 +66,8 @@ interface PlayerCardNavigatorProps {
   onCreateSession: (playerId: string) => void;
   onVote: (sessionId: string) => void;
   onLoadResults?: (playerId: string) => Promise<PlayerCardResult | null>;
+  initialPlayerId?: string;
+  showNavigation?: boolean;
 }
 
 type CardMode = 'empty' | 'voting' | 'completed';
@@ -83,9 +95,19 @@ export function PlayerCardNavigator({
   sessions,
   onCreateSession,
   onVote,
-  onLoadResults
+  onLoadResults,
+  initialPlayerId,
+  showNavigation = true
 }: PlayerCardNavigatorProps) {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    if (initialPlayerId) {
+      const index = players.findIndex(p => p.id === initialPlayerId);
+      return index >= 0 ? index : 0; // Se non trova, parte da 0
+    }
+    return 0;
+  });
+
+
   const [direction, setDirection] = useState(0);
   const [cardResults, setCardResults] = useState<Record<string, PlayerCardResult>>({});
 
@@ -123,6 +145,8 @@ export function PlayerCardNavigator({
 
   // Keyboard navigation
   useEffect(() => {
+    if (!showNavigation) return;
+
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') navigatePrev();
       if (e.key === 'ArrowRight') navigateNext();
@@ -130,7 +154,7 @@ export function PlayerCardNavigator({
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [currentIndex]);
+  }, [currentIndex, showNavigation]);
 
   // Load results quando necessario
   useEffect(() => {
@@ -164,7 +188,7 @@ export function PlayerCardNavigator({
   return (
     <div className="w-full space-y-6">
       {/* Main Card Area */}
-      <div className="relative h-[600px] overflow-hidden">
+      <div className="relative h-[480px] overflow-hidden">
         <AnimatePresence initial={false} custom={direction} mode="wait">
           <motion.div
             key={currentIndex}
@@ -192,46 +216,50 @@ export function PlayerCardNavigator({
       </div>
 
       {/* Navigation */}
-      <div className="flex items-center justify-center space-x-4">
-        {/* Previous Button */}
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={navigatePrev}
-          disabled={players.length <= 1}
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </Button>
+      {showNavigation && (
+        <>
+          <div className="flex items-center justify-center space-x-4">
+            {/* Previous Button */}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={navigatePrev}
+              disabled={players.length <= 1}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
 
-        {/* Dots Indicator */}
-        <div className="flex space-x-2">
-          {players.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => navigateToPlayer(index)}
-              className={`w-3 h-3 rounded-full transition-all duration-200 ${index === currentIndex
-                ? 'bg-primary'
-                : 'bg-muted hover:bg-muted-foreground/50'
-                }`}
-            />
-          ))}
-        </div>
+            {/* Dots Indicator */}
+            <div className="flex space-x-2">
+              {players.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => navigateToPlayer(index)}
+                  className={`w-3 h-3 rounded-full transition-all duration-200 ${index === currentIndex
+                    ? 'bg-primary'
+                    : 'bg-muted hover:bg-muted-foreground/50'
+                    }`}
+                />
+              ))}
+            </div>
 
-        {/* Next Button */}
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={navigateNext}
-          disabled={players.length <= 1}
-        >
-          <ChevronRight className="w-4 h-4" />
-        </Button>
-      </div>
+            {/* Next Button */}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={navigateNext}
+              disabled={players.length <= 1}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
 
-      {/* Player Counter */}
-      <div className="text-center text-sm text-muted-foreground">
-        {currentIndex + 1} / {players.length}
-      </div>
+          {/* Player Counter */}
+          <div className="text-center text-sm text-muted-foreground">
+            {currentIndex + 1} / {players.length}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -258,9 +286,19 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
       visione: apiResult.finalAttributes.vis,
       stamina: apiResult.finalAttributes.res,
       strength: apiResult.finalAttributes.for,
+      contrast: apiResult.finalAttributes.con,
+      interception: apiResult.finalAttributes.int,
+      headPrecision: apiResult.finalAttributes.prt,
+
+      tuffo: apiResult.goalkeeperAttributes?.tf,
+      presa: apiResult.goalkeeperAttributes?.pr,
+      rinvio: apiResult.goalkeeperAttributes?.rn,
+      piazzamento: apiResult.goalkeeperAttributes?.pz,
+      riflessi: apiResult.goalkeeperAttributes?.rf,
+
+      position: apiResult.profile.mostVotedPosition as 'POR' | 'DIF' | 'CEN' | 'ATT' || 'CEN',
       weakFoot: apiResult.finalAdditionalAttributes?.piedeDebole || 3, // ⭐ STELLE DAL DATABASE
       skillMoves: apiResult.finalAdditionalAttributes?.skill || 3,     // ⭐ STELLE DAL DATABASE
-      position: 'CEN' as any, // TODO: Convertire da mostVotedPosition
       preferredRole: apiResult.profile.preferredRole || 'Non specificato',
       age: player.age || 25
     };
@@ -345,7 +383,7 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
               <div className="text-sm text-muted-foreground mt-2">
                 {session.submissionsCount} voti raccolti
                 {session.participationRate && (
-                  <span> • {session.participationRate}% partecipazione</span>
+                  <div> {session.participationRate}% partecipazione</div>
                 )}
               </div>
             )}
@@ -378,38 +416,67 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
       {/* Content basato sulla modalità */}
       <div className="flex-1 px-6">
         {mode === 'completed' && result ? (
-          // Modalità Completed - Mostra attributi completi
-          <div className="space-y-4">
-            <div className="space-y-3">
-              <AttributeBar label="TIR (Tiro)" value={result.finalAttributes.tir} />
-              <AttributeBar label="PAS (Passaggio)" value={result.finalAttributes.pas} />
-              <AttributeBar label="DRI (Dribbling)" value={result.finalAttributes.dri} />
-              <AttributeBar label="FIN (Finalizzazione)" value={result.finalAttributes.fin} />
-              <AttributeBar label="VIS (Visione)" value={result.finalAttributes.vis} />
-              <AttributeBar label="RES (Resistenza)" value={result.finalAttributes.res} />
-              <AttributeBar label="FOR (Forza)" value={result.finalAttributes.for} />
-            </div>
+          (() => {
+            // ✅ FIX: Controlla se ha VERI attributi portiere (non solo oggetto con valori null)
+            const hasValidGoalkeeperAttributes = result.goalkeeperAttributes &&
+              Object.values(result.goalkeeperAttributes).some(value => value !== null && value !== undefined);
 
-            {/* Star Ratings */}
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
-              <div>
-                <div className="text-xs text-muted-foreground mb-1">Piede Debole</div>
-                <div className="flex gap-0.5">{renderStars((() => {
-                  const piedeDebole = result.finalAdditionalAttributes?.piedeDebole || 3;
-                  return piedeDebole;
-                })())}</div>
+            return hasValidGoalkeeperAttributes ? (
+              // UI PORTIERI - Solo 5 attributi goalkeeper
+              <div className="space-y-4">
+
+                <div className="space-y-3">
+                  <AttributeBar label="Tuffo" value={result.goalkeeperAttributes.tf} />
+                  <AttributeBar label="Presa" value={result.goalkeeperAttributes.pr} />
+                  <AttributeBar label="Rinvio" value={result.goalkeeperAttributes.rn} />
+                  <AttributeBar label="Piazzamento" value={result.goalkeeperAttributes.pz} />
+                  <AttributeBar label="Riflessi" value={result.goalkeeperAttributes.rf} />
+                </div>
               </div>
-              <div>
-                <div className="text-xs text-muted-foreground mb-1">Skill</div>
-                <div className="flex gap-0.5">{renderStars((() => {
-                  const skill = result.finalAdditionalAttributes?.skill || 3;
-                  return skill;
-                })())}</div>
+            ) : (
+              // UI GIOCATORI NORMALI - 10 attributi a DUE COLONNE + stelle
+              <div className="space-y-4">
+                {/* Layout a due colonne per ottimizzare spazio */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Colonna Sinistra - 5 attributi */}
+                  <div className="space-y-3">
+                    <AttributeBar label="Tiro" value={result.finalAttributes.tir} />
+                    <AttributeBar label="Passaggio" value={result.finalAttributes.pas} />
+                    <AttributeBar label="Dribbling" value={result.finalAttributes.dri} />
+                    <AttributeBar label="Visione" value={result.finalAttributes.vis} />
+                    <AttributeBar label="Finalizzazione" value={result.finalAttributes.fin} />
+                  </div>
+
+                  {/* Colonna Destra - 5 attributi */}
+                  <div className="space-y-3">
+                    <AttributeBar label="Resistenza" value={result.finalAttributes.res} />
+                    <AttributeBar label="Forza" value={result.finalAttributes.for} />
+                    <AttributeBar label="Contrasto" value={result.finalAttributes.con} />
+                    <AttributeBar label="Intercettazione" value={result.finalAttributes.int} />
+                    <AttributeBar label="Pr. testa" value={result.finalAttributes.prt} />
+                  </div>
+                </div>
+
+                {/* Star Ratings - Solo per giocatori normali */}
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">Piede Debole</div>
+                    <div className="flex gap-0.5">{renderStars((() => {
+                      const piedeDebole = result.finalAdditionalAttributes?.piedeDebole || 3;
+                      return piedeDebole;
+                    })())}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">Skill</div>
+                    <div className="flex gap-0.5">{renderStars((() => {
+                      const skill = result.finalAdditionalAttributes?.skill || 3;
+                      return skill;
+                    })())}</div>
+                  </div>
+                </div>
               </div>
-            </div>
-
-
-          </div>
+            )
+          })() // ← Chiusura della funzione anonima
         ) : (
           // Modalità Empty/Voting - Placeholder o progress
           <div className="flex items-center justify-center h-64">

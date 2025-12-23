@@ -1,8 +1,17 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/redux/store/store';
 import { logout, loadEnrichedUserData, updateUserProfile, changeUserPassword } from '@/redux/slices/authSlice';
+import {
+  fetchPlayerCardSessions,
+  createPlayerCardSession,
+  fetchTeamMembers,
+  selectPlayerCardSessions,
+  selectTeamMembers,
+  selectIsLoadingTeamMembers
+} from '@/redux/slices/votingSlice';
+import { PlayerCardNavigator } from '@/components/PlayerCardNavigator';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -19,6 +28,7 @@ import EditModal from '@/components/EditModal';
 import { apiCall } from '@/lib/api';
 import { toast } from 'sonner';
 import { useToast } from '@/hooks/use-toast';
+import { calculateAge } from '@/utils/playerCardCalculations';
 
 // Semplifichiamo l'interface utilizzando i dati già disponibili
 interface UserStats {
@@ -30,33 +40,21 @@ interface UserStats {
   worstRating: number;
 }
 
-// Interface per PlayerCard risultati completi (come in PlayerCards)
-interface PlayerCardResult {
-  finalAttributes: {
-    tir: number;
-    pas: number;
-    dri: number;
-    fin: number;
-    vis: number;
-    res: number;
-    for: number;
-  };
-  finalAdditionalAttributes?: {
-    piedeDebole?: number;
-    skill?: number;
-  };
-  finalOverallRating: number;
-  profile: {
-    mostVotedPosition?: string;
-    preferredRole?: string;
-  };
-}
 
 const Profile = () => {
   const { user } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Redux selectors esattamente come in PlayerCards
+  const playerCardSessions = useSelector(selectPlayerCardSessions);
+  const teamMembers = useSelector(selectTeamMembers);
+  const isLoadingTeamMembers = useSelector(selectIsLoadingTeamMembers);
+
+  // Local state esattamente come in PlayerCards
+  const [selectedSession, setSelectedSession] = useState<string | null>(null);
+  const [showVoteForm, setShowVoteForm] = useState(false);
 
   // Semplifichiamo lo stato utilizzando i dati da /auth/me
   const [stats, setStats] = useState<UserStats>({
@@ -68,14 +66,150 @@ const Profile = () => {
     worstRating: 0,     // TODO: Da backend
   });
   const [pendingMatches, setPendingMatches] = useState<Match[]>([]);
-  const [teammates, setTeammates] = useState<User[]>([]);
-
-  // Stato per PlayerCard completa (con stelle)
-  const [playerCardResult, setPlayerCardResult] = useState<PlayerCardResult | null>(null);
 
   // Stati per EditModal con debug
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editModalType, setEditModalType] = useState<'user-profile' | 'user-password'>('user-profile');
+
+  // Carica team members quando il componente si monta - ESATTAMENTE COME IN PLAYERCARDS
+  useEffect(() => {
+    if (user?.teams?.[0]?.id && teamMembers.length === 0) {
+      dispatch(fetchTeamMembers(user.teams[0].id));
+    }
+  }, [user, teamMembers.length, dispatch]);
+
+  // Usa team members reali invece di fake players - ESATTAMENTE COME IN PLAYERCARDS
+  const allPlayers = React.useMemo(() => {
+    // Se sta caricando o non ci sono teamMembers, ritorna array vuoto
+    // NON usare mai fake players
+    if (isLoadingTeamMembers || !teamMembers || teamMembers.length === 0) {
+      return [];
+    }
+    // Usa team members reali dal backend
+    const mappedPlayers = teamMembers.map(member => ({
+      id: member.id,        // Fix: usa 'id' invece di '_id'
+      name: member.name,
+      email: member.email,
+      age: member.birthdate ? calculateAge(member.birthdate) : 25 // Calcola età reale da birthdate
+    }));
+    return mappedPlayers;
+  }, [teamMembers, isLoadingTeamMembers]);
+
+  useEffect(() => {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    // Load player card sessions from API - ESATTAMENTE COME IN PLAYERCARDS
+    dispatch(fetchPlayerCardSessions({}));
+  }, [user, navigate, dispatch]);
+
+  // Funzioni handler esattamente come in PlayerCards
+  const handleCreatePlayerCardSession = async (playerId: string) => {
+    const targetPlayer = allPlayers.find(p => p.id === playerId);
+    if (!targetPlayer) return;
+
+    try {
+      const response = await dispatch(createPlayerCardSession({
+        targetPlayerId: targetPlayer.id,
+        title: `Valuta ${targetPlayer.name}`,
+        description: `Esprimi la tua valutazione sulle abilità di ${targetPlayer.name}`,
+        teamId: user?.teams?.[0]?.id
+      })).unwrap();
+      // Sessione creata con successo
+
+      // 🟢 AUTO-APERTURA form voto (COME MATCH PATTERN)
+      if (response.votingSession && response.autoOpenVoteForm) {
+        setSelectedSession(response.votingSession.id);
+        setShowVoteForm(true);
+        // Form di voto aperto automaticamente
+      }
+
+      // Ricarica le sessioni
+      dispatch(fetchPlayerCardSessions({}));
+    } catch (error) {
+      console.error('Errore creazione sessione:', error);
+    }
+  };
+
+  // Gestisce l'apertura del form di voto per Navigator
+  const handleOpenVoteForm = (sessionId: string) => {
+    setSelectedSession(sessionId);
+    setShowVoteForm(true);
+  };
+
+  // Vera API per risultati finali
+  const handleLoadResults = async (playerId: string) => {
+    try {
+      // Chiama la vera API con timestamp per bypassare cache
+      const timestamp = Date.now();
+      const response = await apiCall(`/player-cards/results/user/${playerId}?t=${timestamp}`);
+
+      if (!response.success || !response.results || response.results.length === 0) {
+        return null;
+      }
+
+      // Prendi il risultato più recente 
+      const latestResult = response.results[0];
+      // 📝 Verifica che il risultato abbia i dati necessari
+      if (!latestResult.finalAttributes) {
+        return null;
+      }
+
+      // ✅ USA IL VALORE REALE DAL DATABASE invece di calcolarlo
+      const dbOverallRating = latestResult.finalOverallRating;
+
+      // Fallback se non disponibile nel DB (calcolo manuale)
+      const attrs = latestResult.finalAttributes;
+      const calculatedRating = Math.round(
+        (attrs.tir + attrs.pas + attrs.dri + attrs.fin + attrs.vis + attrs.res + attrs.for) / 7
+      );
+
+      const finalRating = dbOverallRating || calculatedRating;
+      // Mappa la risposta API al formato PlayerCardResult
+      const result = {
+        finalAttributes: latestResult.finalAttributes,
+        goalkeeperAttributes: latestResult.goalkeeperAttributes, // ✅ PORTIERI DAL DATABASE
+        finalAdditionalAttributes: latestResult.finalAdditionalAttributes, // ⭐ STELLE DAL DATABASE
+        finalOverallRating: finalRating, // ✅ VALORE REALE DAL DATABASE
+        grade: finalRating >= 80 ? "A" : finalRating >= 70 ? "B" : "C",
+        profile: {
+          mostVotedPosition: latestResult.consensusProfile?.mostVotedPosition || "CEN",
+          preferredRole: "Centrocampista"
+        },
+        metadata: {
+          totalVoters: latestResult.sessionMetadata?.totalVoters || latestResult.totalVotes || 4,
+          confidence: latestResult.statistics?.overallStats?.confidence || 95
+        }
+      };
+      return result;
+
+    } catch (error) {
+      console.error('📊 Errore caricamento risultati:', error);
+      return null;
+    }
+  };
+
+  // Mappatura sessions per PlayerCardNavigator format
+  const mappedSessions = React.useMemo(() => {
+    return playerCardSessions.map(session => {
+      const targetIdValue = session.targetId as any;
+      const targetIdString = targetIdValue ? (typeof targetIdValue === 'object' ? (targetIdValue._id || targetIdValue.id) : targetIdValue) : '';
+
+      return {
+        id: session.id,
+        targetId: targetIdString,
+        status: session.status as 'active' | 'completed',
+        hasVoted: session.hasVoted || false,
+        canVote: session.canVote || false,
+        submissionsCount: session.submissionsCount || 0,
+        participationRate: session.participationRate
+      };
+    });
+  }, [playerCardSessions]);
+
+  // Check User profile con playercard per mostrare subito la sua card
+  const userPlayerCardSession = mappedSessions.find(s => s.targetId === user?.id);
 
   // Gestione EditModal
   const handleEditProfile = () => {
@@ -148,46 +282,7 @@ const Profile = () => {
     navigate('/login');
   };
 
-  // Carica risultati PlayerCard completi (con stelle) - IDENTICA A PlayerCards
-  const loadPlayerCardResults = async (userId: string) => {
-    try {
-      const timestamp = Date.now();
-      const response = await apiCall(`/player-cards/results/user/${userId}?t=${timestamp}`);
 
-      if (!response.success || !response.results || response.results.length === 0) {
-        return null;
-      }
-
-      const latestResult = response.results[0];
-      if (!latestResult.finalAttributes) {
-        return null;
-      }
-
-      const dbOverallRating = latestResult.finalOverallRating;
-      const attrs = latestResult.finalAttributes;
-      const calculatedRating = Math.round(
-        (attrs.tir + attrs.pas + attrs.dri + attrs.fin + attrs.vis + attrs.res + attrs.for) / 7
-      );
-
-      const finalRating = dbOverallRating || calculatedRating;
-
-      const result: PlayerCardResult = {
-        finalAttributes: latestResult.finalAttributes,
-        finalAdditionalAttributes: latestResult.finalAdditionalAttributes, // ⭐ STELLE DAL DATABASE
-        finalOverallRating: finalRating,
-        profile: {
-          mostVotedPosition: latestResult.consensusProfile?.mostVotedPosition || "CEN",
-          preferredRole: "Centrocampista"
-        }
-      };
-
-      setPlayerCardResult(result);
-      return result;
-    } catch (error) {
-      console.error('Errore caricamento PlayerCard:', error);
-      return null;
-    }
-  };
 
   // Forza sempre il caricamento di dati freschi da API
   useEffect(() => {
@@ -196,12 +291,7 @@ const Profile = () => {
     }
   }, [user?.id, dispatch]);
 
-  // Carica i dati PlayerCard completi se l'utente ha una PlayerCard
-  useEffect(() => {
-    if (user?.id && user?.playerCard?.latestCard?.finalOverallRating) {
-      loadPlayerCardResults(user.id);
-    }
-  }, [user?.id, user?.playerCard?.latestCard?.finalOverallRating]);
+
 
   // Main useEffect - utilizziamo i dati già disponibili da /auth/me
   useEffect(() => {
@@ -223,13 +313,8 @@ const Profile = () => {
     } else {
     }
 
-    // Teammates da localStorage (SAFE approach)
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const currentTeamId = user.teams?.[0]?.id;
-    const teamMembers = users.filter((u: any) => u.teamId === currentTeamId);
-    setTeammates(teamMembers);
-
     // Pending matches (stessa logica di Home.tsx)
+    const currentTeamId = user.teams?.[0]?.id;
     const matches: Match[] = JSON.parse(localStorage.getItem('matches') || '[]');
     const teamMatches = matches.filter(m => m.teamId === currentTeamId);
     const pending = teamMatches.filter(m => m.status === 'active');
@@ -391,177 +476,6 @@ const Profile = () => {
             </Card>
           </motion.div>
 
-          {/* My Player Card - con dati completi incluse stelle */}
-          {playerCardResult && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-            >
-              <Card className="bg-card/80 backdrop-blur-sm border-border shadow-card">
-                <CardHeader className="border-b border-border bg-gradient-to-r from-accent/10 to-primary/10">
-                  <CardTitle className="flex items-center gap-3 font-display text-2xl">
-                    <Star className="w-7 h-7 text-accent" />
-                    La Tua Player Card
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Attributi valutati dal tuo team
-                  </p>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="space-y-6">
-                    {/* Header con TOT prominente */}
-                    <div className="text-center">
-                      <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wide">TOT</div>
-                      <div className={`font-display text-5xl font-black leading-none ${playerCardResult.finalOverallRating >= 80 ? 'text-green-500' :
-                        playerCardResult.finalOverallRating >= 70 ? 'text-yellow-500' :
-                          playerCardResult.finalOverallRating >= 60 ? 'text-orange-500' :
-                            'text-red-500'
-                        }`}>
-                        {Math.round(playerCardResult.finalOverallRating)}
-                      </div>
-                      <div className="text-sm text-muted-foreground font-medium mt-1">
-                        {playerCardResult.profile.mostVotedPosition || 'Centrocampista'}
-                      </div>
-                    </div>
-
-                    {/* Attributi */}
-                    <div className="space-y-3">
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">TIR (Tiro)</span>
-                          <span className="font-bold text-foreground">{playerCardResult.finalAttributes.tir}</span>
-                        </div>
-                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-800"
-                            style={{ width: `${Math.min(playerCardResult.finalAttributes.tir, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">PAS (Passaggio)</span>
-                          <span className="font-bold text-foreground">{playerCardResult.finalAttributes.pas}</span>
-                        </div>
-                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-800"
-                            style={{ width: `${Math.min(playerCardResult.finalAttributes.pas, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">DRI (Dribbling)</span>
-                          <span className="font-bold text-foreground">{playerCardResult.finalAttributes.dri}</span>
-                        </div>
-                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-800"
-                            style={{ width: `${Math.min(playerCardResult.finalAttributes.dri, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">FIN (Finalizzazione)</span>
-                          <span className="font-bold text-foreground">{playerCardResult.finalAttributes.fin}</span>
-                        </div>
-                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-800"
-                            style={{ width: `${Math.min(playerCardResult.finalAttributes.fin, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">VIS (Visione)</span>
-                          <span className="font-bold text-foreground">{playerCardResult.finalAttributes.vis}</span>
-                        </div>
-                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-800"
-                            style={{ width: `${Math.min(playerCardResult.finalAttributes.vis, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">RES (Resistenza)</span>
-                          <span className="font-bold text-foreground">{playerCardResult.finalAttributes.res}</span>
-                        </div>
-                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-800"
-                            style={{ width: `${Math.min(playerCardResult.finalAttributes.res, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">FOR (Forza)</span>
-                          <span className="font-bold text-foreground">{playerCardResult.finalAttributes.for}</span>
-                        </div>
-                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-800"
-                            style={{ width: `${Math.min(playerCardResult.finalAttributes.for, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Star Ratings */}
-                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
-                      <div>
-                        <div className="text-xs text-muted-foreground mb-1">Piede Debole</div>
-                        <div className="flex gap-0.5">
-                          {Array.from({ length: 5 }).map((_, i) => {
-                            const piedeDebole = playerCardResult.finalAdditionalAttributes?.piedeDebole || 3;
-                            return (
-                              <Star
-                                key={i}
-                                size={16}
-                                className={i < piedeDebole
-                                  ? "fill-primary text-primary"
-                                  : "text-muted-foreground"}
-                              />
-                            );
-                          })}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-muted-foreground mb-1">Skill</div>
-                        <div className="flex gap-0.5">
-                          {Array.from({ length: 5 }).map((_, i) => {
-                            const skill = playerCardResult.finalAdditionalAttributes?.skill || 3;
-                            return (
-                              <Star
-                                key={i}
-                                size={16}
-                                className={i < skill
-                                  ? "fill-primary text-primary"
-                                  : "text-muted-foreground"}
-                              />
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-
           {/* 3 Box Statistiche Principali - Mobili ottimizzate */}
           {stats.appearances > 0 && (
             <motion.div
@@ -619,6 +533,31 @@ const Profile = () => {
               ))}
             </motion.div>
           )}
+
+
+          {/* Player Cards Navigator */}
+          {!isLoadingTeamMembers && allPlayers.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+            >
+
+
+              <PlayerCardNavigator
+                players={allPlayers}
+                sessions={mappedSessions}
+                onCreateSession={handleCreatePlayerCardSession}
+                onVote={handleOpenVoteForm}
+                onLoadResults={handleLoadResults}
+                initialPlayerId={user.id}
+                showNavigation={false}
+              />
+
+
+            </motion.div>
+          )}
+
 
           {/* Detailed Stats */}
           <motion.div
@@ -692,9 +631,9 @@ const Profile = () => {
               </CardHeader>
               <CardContent className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {teammates
-                    .filter((teammate: User) => teammate.id !== user.id || true) // Mostriamo tutti
-                    .map((teammate: User, index: number) => (
+                  {teamMembers
+                    .filter((teammate) => teammate.id !== user.id || true) // Mostriamo tutti
+                    .map((teammate, index: number) => (
                       <motion.div
                         key={teammate.id}
                         initial={{ opacity: 0, scale: 0.9 }}

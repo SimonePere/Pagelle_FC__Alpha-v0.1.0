@@ -178,7 +178,7 @@ const PlayerCardSubmissionSchema = new mongoose.Schema({
         type: Number,
         min: 10,
         max: 100
-        // Calcolato manualmente nel controller: media dei 7 attributi principali
+        // Calcolato manualmente nel controller: media dei 10 attributi principali
     },
 
     // === COMMENTO OPZIONALE ===

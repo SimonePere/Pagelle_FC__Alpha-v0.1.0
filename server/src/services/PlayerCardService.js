@@ -98,7 +98,7 @@ class PlayerCardService {
                 tags: ['auto-generated', 'player-card-linked'],
                 environment: 'production',
                 voteConfig: {
-                    attributesToRate: ['tir', 'pas', 'dri', 'fin', 'vis', 'res', 'for'],
+                    attributesToRate: ['tir', 'pas', 'dri', 'fin', 'vis', 'res', 'for', 'con', 'int', 'prt'],
                     attributeRange: { min: 10, max: 100 },
                     allowComments: true
                 }
@@ -605,13 +605,16 @@ class PlayerCardService {
                     skill: aggregatedData.additionalAttributeStats.skill?.average || null
                 },
 
-                goalkeeperAttributes: {
-                    tf: aggregatedData.goalkeeperAttributeStats.tf?.average || null,
-                    pr: aggregatedData.goalkeeperAttributeStats.pr?.average || null,
-                    rn: aggregatedData.goalkeeperAttributeStats.rn?.average || null,
-                    pz: aggregatedData.goalkeeperAttributeStats.pz?.average || null,
-                    rf: aggregatedData.goalkeeperAttributeStats.rf?.average || null,
-                },
+                // ✅ FIX: Crea goalkeeperAttributes solo se è veramente un portiere
+                ...(aggregatedData.metadata.isGoalkeeper ? {
+                    goalkeeperAttributes: {
+                        tf: aggregatedData.goalkeeperAttributeStats.tf?.average || null,
+                        pr: aggregatedData.goalkeeperAttributeStats.pr?.average || null,
+                        rn: aggregatedData.goalkeeperAttributeStats.rn?.average || null,
+                        pz: aggregatedData.goalkeeperAttributeStats.pz?.average || null,
+                        rf: aggregatedData.goalkeeperAttributeStats.rf?.average || null,
+                    }
+                } : {}), // Se non è portiere, non aggiunge il campo
 
 
                 // ✅ Mappa finalOverallRating da overallStats
@@ -966,8 +969,11 @@ class PlayerCardService {
                     targetPlayer: result.targetPlayerId,
                     session: result.votingSessionId,
                     finalAttributes: result.finalAttributes,
-                    finalAdditionalAttributes: result.finalAdditionalAttributes, // ⭐ AGGIUNTO STELLE!
+                    finalAdditionalAttributes: result.finalAdditionalAttributes, // ⭐ STELLE
+                    goalkeeperAttributes: result.goalkeeperAttributes, // ✅ AGGIUNTO PORTIERI
                     finalOverallRating: result.finalOverallRating, // ✅ CAMPO CORRETTO!
+                    consensusProfile: result.consensusProfile, // ✅ AGGIUNTO PROFILO CONSENSUALE
+                    sessionMetadata: result.sessionMetadata, // ✅ METADATI COMPLETI
                     totalVotes: result.sessionMetadata?.totalVoters || 0,
                     createdAt: result.createdAt
                 })),
@@ -1159,8 +1165,8 @@ class PlayerCardService {
             const total = attributes.tir + attributes.pas + attributes.dri + attributes.fin +
                 attributes.vis + attributes.res + attributes.for + attributes.con + attributes.int + attributes.prt;
 
-            const attributeKeys = Object.keys(attributes);
-            return Math.round(total / attributeKeys.length);
+            // ✅ FIX: Sempre 10 attributi per giocatori normali (non conta attributi null)
+            return Math.round(total / 10);
         }
     }
 
@@ -1352,7 +1358,8 @@ class PlayerCardService {
             totalVotes: filteredSubmissions.length,
             metadata: {
                 calculatedAt: new Date(),
-                sessionType: 'player_card_rating'
+                sessionType: 'player_card_rating',
+                isGoalkeeper: isConsensusGoalkeeper  // ✅ Aggiungiamo flag portiere
             }
         };
     }

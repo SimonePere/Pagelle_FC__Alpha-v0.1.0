@@ -41,7 +41,7 @@ export const fetchUserVotingSessions = createAsyncThunk(
             if (params.page) queryParams.set('page', params.page.toString());
             if (params.limit) queryParams.set('limit', params.limit.toString());
 
-            // 🌐 API CALL REAL - Non più mock!
+            // 🌐 API CALL REAL
             const response = await api.get(`/voting-sessions?${queryParams.toString()}`);
 
             // Il backend restituisce { success: true, votingSessions: [] }
@@ -82,7 +82,7 @@ export const createVotingSession = createAsyncThunk(
                 targetType: sessionData.targetType || getTargetTypeFromVotingType(sessionData.type)
             };
 
-            // 🌐 API CALL REAL - Non più mock!
+            // 🌐 API CALL REAL
             const response = await api.post('/voting-sessions', requestData);
 
             // Il backend restituisce { success: true, votingSession: {...} }
@@ -96,7 +96,7 @@ export const createVotingSession = createAsyncThunk(
                 targetType: response.votingSession.targetType,
                 targetId: response.votingSession.targetId,
                 createdAt: response.votingSession.createdAt,
-                updatedAt: response.votingSession.createdAt, // Backend non restituisce updatedAt ancora
+                updatedAt: response.votingSession.createdAt,
                 deadline: response.votingSession.deadline,
                 eligibleVoters: [], // Verrà popolato in futuro
                 eligibleVotersCount: response.votingSession.eligibleVoters || 0,
@@ -255,6 +255,16 @@ export const submitPlayerCardVote = createAsyncThunk(
                     vis: number;
                     res: number;
                     for: number;
+                    con: number;
+                    int: number;
+                    prt: number;
+                    piedeDebole: number;
+                    skill: number;
+                    tf: number;
+                    pr: number;
+                    rn: number;
+                    pz: number;
+                    rf: number;
                 };
                 additionalAttributes?: {
                     piedeDebole?: number;
@@ -262,6 +272,10 @@ export const submitPlayerCardVote = createAsyncThunk(
                 };
                 playerProfile?: {
                     position?: string;
+                };
+                profile?: {
+                    position?: string;
+                    preferredRole?: string;
                 };
                 comment?: string;
             };

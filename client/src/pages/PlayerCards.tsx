@@ -146,6 +146,7 @@ export default function PlayerCards() {
       // Mappa la risposta API al formato PlayerCardResult
       const result = {
         finalAttributes: latestResult.finalAttributes,
+        goalkeeperAttributes: latestResult.goalkeeperAttributes, // ✅ PORTIERI DAL DATABASE
         finalAdditionalAttributes: latestResult.finalAdditionalAttributes, // ⭐ STELLE DAL DATABASE
         finalOverallRating: finalRating, // ✅ VALORE REALE DAL DATABASE
         grade: finalRating >= 80 ? "A" : finalRating >= 70 ? "B" : "C",
@@ -339,16 +340,14 @@ export default function PlayerCards() {
                     </div>
                   </div>
 
-                  {/* PlayerCardNavigator */}
-                  {(() => {
-                    return null;
-                  })()}
+
                   <PlayerCardNavigator
                     players={allPlayers}
                     sessions={mappedSessions}
                     onCreateSession={handleCreatePlayerCardSession}
                     onVote={handleOpenVoteForm}
                     onLoadResults={handleLoadResults}
+                    initialPlayerId={user.id}
                   />
                 </div>
               )}
