@@ -77,6 +77,7 @@ const getPlayerCardSession = async (req, res, next) => {
     }
 };
 
+
 // @desc    Submit PlayerCard vote with multi-range validation
 // @route   POST /api/v1/player-cards/sessions/:id/vote
 // @access  Private
@@ -84,7 +85,7 @@ const submitPlayerCardVote = async (req, res, next) => {
     try {
         const sessionId = req.params.id;
         const userId = req.user.id;
-        const voteData = req.body;
+        const voteData = req.body;  // RAW DATA dal Front End{ attributes: { tir: 85, pas: 90, ... }, comments: "..." }
 
         const result = await playerCardService.submitPlayerCardVote(sessionId, userId, voteData);
 
@@ -153,6 +154,10 @@ const completePlayerCardSession = async (req, res, next) => {
         const options = req.body;
 
         // console.log(`🚀------  DEBUG COMPLETE PLAYERCARD \n  Session: ${sessionId} \n options:`, options);
+
+        if (filteredSubmissions.length === 0) {
+            throw new AppError('Cannot complete session with no valid votes after filtering', 400);
+        }
 
         const result = await playerCardService.completePlayerCardSession(sessionId, options);
 

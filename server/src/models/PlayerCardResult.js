@@ -80,10 +80,28 @@ const PlayerCardResultSchema = new mongoose.Schema({
             min: 10,
             max: 100,
             required: true
-        }  // Media di tutti i voti FOR
+        },  // Media di tutti i voti FOR
+        con: {
+            type: Number,
+            min: 10,
+            max: 100,
+            required: true
+        },  // Media di tutti i voti CON
+        int: {
+            type: Number,
+            min: 10,
+            max: 100,
+            required: true
+        },  // Media di tutti i voti INT
+        prt: {
+            type: Number,
+            min: 10,
+            max: 100,
+            required: true
+        },  // Media di tutti i voti PRT
     },
 
-    // === ATTRIBUTI AGGIUNTIVI AGGREGATI ===
+    // === PIEDE DEBOLE E SKILL MOVES ⭐⭐⭐⭐⭐ ===
 
     finalAdditionalAttributes: {
         piedeDebole: {
@@ -98,6 +116,40 @@ const PlayerCardResultSchema = new mongoose.Schema({
         }  // Media skill moves
     },
 
+    // === ATTRIBUTI POR (opzionali ed ESCLUSIVI) ===
+
+    goalkeeperAttributes: {
+        tf: {
+            type: Number,
+            min: 10,
+            max: 100,
+            required: false,
+        }, // Tuffo
+        pr: {
+            type: Number,
+            min: 10,
+            max: 100,
+            required: false,
+        }, // Presa
+        rn: {
+            type: Number,
+            min: 10,
+            max: 100,
+            required: false,
+        }, // Rinvio
+        pz: {
+            type: Number,
+            min: 10,
+            max: 100,
+            required: false,
+        }, // Piazzamento
+        rf: {
+            type: Number,
+            min: 10,
+            max: 100,
+            required: false,
+        }, // Riflessi
+    },
     // === RATING FINALE ===
 
     finalOverallRating: {
@@ -262,7 +314,132 @@ const PlayerCardResultSchema = new mongoose.Schema({
                     '50-60': { type: Number, default: 0 },
                     'below-50': { type: Number, default: 0 }
                 }
-            }
+            },
+            con: {
+                average: Number,
+                median: Number,
+                standardDeviation: Number,
+                min: Number,
+                max: Number,
+                distribution: {
+                    '90-100': { type: Number, default: 0 },
+                    '80-90': { type: Number, default: 0 },
+                    '70-80': { type: Number, default: 0 },
+                    '60-70': { type: Number, default: 0 },
+                    '50-60': { type: Number, default: 0 },
+                    'below-50': { type: Number, default: 0 }
+                }
+
+            },
+            int: {
+                average: Number,
+                median: Number,
+                standardDeviation: Number,
+                min: Number,
+                max: Number,
+                distribution: {
+                    '90-100': { type: Number, default: 0 },
+                    '80-90': { type: Number, default: 0 },
+                    '70-80': { type: Number, default: 0 },
+                    '60-70': { type: Number, default: 0 },
+                    '50-60': { type: Number, default: 0 },
+                    'below-50': { type: Number, default: 0 }
+                }
+            },
+            prt: {
+                average: Number,
+                median: Number,
+                standardDeviation: Number,
+                min: Number,
+                max: Number,
+                distribution: {
+                    '90-100': { type: Number, default: 0 },
+                    '80-90': { type: Number, default: 0 },
+                    '70-80': { type: Number, default: 0 },
+                    '60-70': { type: Number, default: 0 },
+                    '50-60': { type: Number, default: 0 },
+                    'below-50': { type: Number, default: 0 }
+                }
+            },
+
+            // Statistiche POR (opzionali)
+            tf: {
+                average: Number,
+                median: Number,
+                standardDeviation: Number,
+                min: Number,
+                max: Number,
+                distribution: {
+                    '90-100': { type: Number, default: 0 },
+                    '80-90': { type: Number, default: 0 },
+                    '70-80': { type: Number, default: 0 },
+                    '60-70': { type: Number, default: 0 },
+                    '50-60': { type: Number, default: 0 },
+                    'below-50': { type: Number, default: 0 }
+                }
+
+            },
+            pr: {
+                average: Number,
+                median: Number,
+                standardDeviation: Number,
+                min: Number,
+                max: Number,
+                distribution: {
+                    '90-100': { type: Number, default: 0 },
+                    '80-90': { type: Number, default: 0 },
+                    '70-80': { type: Number, default: 0 },
+                    '60-70': { type: Number, default: 0 },
+                    '50-60': { type: Number, default: 0 },
+                    'below-50': { type: Number, default: 0 }
+                }
+            },
+            rn: {
+                average: Number,
+                median: Number,
+                standardDeviation: Number,
+                min: Number,
+                max: Number,
+                distribution: {
+                    '90-100': { type: Number, default: 0 },
+                    '80-90': { type: Number, default: 0 },
+                    '70-80': { type: Number, default: 0 },
+                    '60-70': { type: Number, default: 0 },
+                    '50-60': { type: Number, default: 0 },
+                    'below-50': { type: Number, default: 0 }
+                }
+            },
+            pz: {
+                average: Number,
+                median: Number,
+                standardDeviation: Number,
+                min: Number,
+                max: Number,
+                distribution: {
+                    '90-100': { type: Number, default: 0 },
+                    '80-90': { type: Number, default: 0 },
+                    '70-80': { type: Number, default: 0 },
+                    '60-70': { type: Number, default: 0 },
+                    '50-60': { type: Number, default: 0 },
+                    'below-50': { type: Number, default: 0 }
+                }
+            },
+            rf: {
+                average: Number,
+                median: Number,
+                standardDeviation: Number,
+                min: Number,
+                max: Number,
+                distribution: {
+                    '90-100': { type: Number, default: 0 },
+                    '80-90': { type: Number, default: 0 },
+                    '70-80': { type: Number, default: 0 },
+                    '60-70': { type: Number, default: 0 },
+                    '50-60': { type: Number, default: 0 },
+                    'below-50': { type: Number, default: 0 }
+                }
+            },
+
         },
 
         // Statistiche generali
@@ -309,7 +486,7 @@ const PlayerCardResultSchema = new mongoose.Schema({
 });
 
 // === METODI VIRTUALI ===
-
+// TODO: Rendere funzioni dinamiche per trovare attributi più forti / deboli
 PlayerCardResultSchema.virtual('grade').get(function () {
     const rating = this.finalOverallRating;
     if (rating >= 95) return 'A+';
@@ -471,7 +648,9 @@ PlayerCardResultSchema.methods.getPlayerCardResults = function () {
         sessionId: this.votingSessionId,
 
         finalAttributes: this.finalAttributes,
-        finalAdditionalAttributes: this.finalAdditionalAttributes,  // ⭐ AGGIUNGO LE STELLE NELLA RISPOSTA API
+        // ⭐ AGGIUNGO LE STELLE NELLA RISPOSTA API
+        finalAdditionalAttributes: this.finalAdditionalAttributes,
+        goalkeeperAttributes: this.goalkeeperAttributes,
         finalOverallRating: this.finalOverallRating,
         grade: this.grade,
 
@@ -482,18 +661,16 @@ PlayerCardResultSchema.methods.getPlayerCardResults = function () {
             breakdown: this.statistics.attributeBreakdown,
             overall: this.statistics.overallStats
         },
-
+        highlights: {
+            strongest: this.strongestAttribute,
+            weakest: this.weakestAttribute,
+            isElite: this.isElitePlayer
+        },
         metadata: {
             calculatedAt: this.sessionMetadata.calculatedAt,
             totalVoters: this.sessionMetadata.totalVoters,
             confidence: this.statistics.overallStats.confidence
         },
-
-        highlights: {
-            strongest: this.strongestAttribute,
-            weakest: this.weakestAttribute,
-            isElite: this.isElitePlayer
-        }
     };
 };
 

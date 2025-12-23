@@ -375,11 +375,17 @@ class PlayerCardService {
             const { attributes, additionalAttributes, playerProfile, profile, comment } = voteData.vote;
             const finalProfile = playerProfile || profile;
 
-            // Validazione dati voto
-            this.validatePlayerCardVoteData({ attributes, additionalAttributes });
+            // Validazione POR dati voto
+            const cleanedVoteData = this.validateAndCleanPlayerCardData(
+                { attributes, additionalAttributes, playerProfile: finalProfile }, session.targetId);
 
-            // 5. Calcola overall rating manualmente (solo dai 7 attributi principali)
-            const calculatedOverallRating = this.calculateOverallRating(attributes);
+            // 5. Calcola overall rating (diverso per portiere vs giocatore normale)
+            const isGoalkeeper = finalProfile?.position === 'POR';
+            const calculatedOverallRating = this.calculateOverallRating(
+                attributes,
+                isGoalkeeper,
+                cleanedVoteData.goalkeeperAttributes
+            );
 
             // 6. Crea e salva la submission
             const newSubmission = await this.playerCardSubmissionRepository.create({
@@ -393,12 +399,16 @@ class PlayerCardService {
                     fin: attributes.fin,
                     vis: attributes.vis,
                     res: attributes.res,
-                    for: attributes.for
+                    for: attributes.for,
+                    con: attributes.con,
+                    int: attributes.int,
+                    prt: attributes.prt,
                 },
                 additionalAttributes: {
                     piedeDebole: attributes?.piedeDebole || additionalAttributes?.piedeDebole || null,
                     skill: attributes?.skill || additionalAttributes?.skill || null
                 },
+                goalkeeperAttributes: cleanedVoteData.goalkeeperAttributes,
                 playerProfile: {
                     position: finalProfile?.position || null
                 },
@@ -511,14 +521,11 @@ class PlayerCardService {
     async completePlayerCardSession(sessionId, options = {}) {
 
         this.validateSessionId(sessionId);
-        console.log("OUTSIDE TRY CATCH sessionId:", sessionId);
         const { forceReopen } = options;
 
         try {
             // 1. Verifica che la sessione esista e sia player_card_rating
-            console.log("TRY SESSION ID: ", sessionId);
             const session = await this.votingSessionRepository.findById(sessionId);
-            console.log("SESSION: ", session);
             if (!session) {
                 throw new AppError('Player card session not found', 404);
             }
@@ -572,7 +579,6 @@ class PlayerCardService {
 
             // 5. Aggrega dati per PlayerCardResult
             const aggregatedData = this.aggregatePlayerCardStats(submissions);
-            console.log("AGGREGATED DATA: ", aggregatedData);
 
             // 5. Salva risultati ufficiali con struttura corretta PlayerCardResult
             const playerCardResultData = {
@@ -587,7 +593,10 @@ class PlayerCardService {
                     fin: aggregatedData.attributeStats.fin.average,
                     vis: aggregatedData.attributeStats.vis.average,
                     res: aggregatedData.attributeStats.res.average,
-                    for: aggregatedData.attributeStats.for.average
+                    for: aggregatedData.attributeStats.for.average,
+                    con: aggregatedData.attributeStats.con?.average,
+                    int: aggregatedData.attributeStats.int?.average,
+                    prt: aggregatedData.attributeStats.prt?.average,
                 },
 
                 // ✅ Mappa finalAdditionalAttributes da additionalAttributeStats
@@ -595,6 +604,15 @@ class PlayerCardService {
                     piedeDebole: aggregatedData.additionalAttributeStats.piedeDebole?.average || null,
                     skill: aggregatedData.additionalAttributeStats.skill?.average || null
                 },
+
+                goalkeeperAttributes: {
+                    tf: aggregatedData.goalkeeperAttributeStats.tf?.average || null,
+                    pr: aggregatedData.goalkeeperAttributeStats.pr?.average || null,
+                    rn: aggregatedData.goalkeeperAttributeStats.rn?.average || null,
+                    pz: aggregatedData.goalkeeperAttributeStats.pz?.average || null,
+                    rf: aggregatedData.goalkeeperAttributeStats.rf?.average || null,
+                },
+
 
                 // ✅ Mappa finalOverallRating da overallStats
                 finalOverallRating: aggregatedData.overallStats.average,
@@ -712,22 +730,135 @@ class PlayerCardService {
                                 'below-50': aggregatedData.attributeStats.res.values.filter(v => v < 50).length
                             }
                         },
-                        for: {
-                            average: aggregatedData.attributeStats.for.average,
-                            median: aggregatedData.attributeStats.for.median,
-                            standardDeviation: aggregatedData.attributeStats.for.standardDeviation,
-                            min: Math.min(...aggregatedData.attributeStats.for.values),
-                            max: Math.max(...aggregatedData.attributeStats.for.values),
+                        con: {
+                            average: aggregatedData.attributeStats.con.average,
+                            median: aggregatedData.attributeStats.con.median,
+                            standardDeviation: aggregatedData.attributeStats.con.standardDeviation,
+                            min: Math.min(...aggregatedData.attributeStats.con.values),
+                            max: Math.max(...aggregatedData.attributeStats.con.values),
                             distribution: {
-                                '90-100': aggregatedData.attributeStats.for.values.filter(v => v >= 90).length,
-                                '80-90': aggregatedData.attributeStats.for.values.filter(v => v >= 80 && v < 90).length,
-                                '70-80': aggregatedData.attributeStats.for.values.filter(v => v >= 70 && v < 80).length,
-                                '60-70': aggregatedData.attributeStats.for.values.filter(v => v >= 60 && v < 70).length,
-                                '50-60': aggregatedData.attributeStats.for.values.filter(v => v >= 50 && v < 60).length,
-                                'below-50': aggregatedData.attributeStats.for.values.filter(v => v < 50).length
+                                '90-100': aggregatedData.attributeStats.con.values.filter(v => v >= 90).length,
+                                '80-90': aggregatedData.attributeStats.con.values.filter(v => v >= 80 && v < 90).length,
+                                '70-80': aggregatedData.attributeStats.con.values.filter(v => v >= 70 && v < 80).length,
+                                '60-70': aggregatedData.attributeStats.con.values.filter(v => v >= 60 && v < 70).length,
+                                '50-60': aggregatedData.attributeStats.con.values.filter(v => v >= 50 && v < 60).length,
+                                'below-50': aggregatedData.attributeStats.con.values.filter(v => v < 50).length
+                            }
+                        },
+                        int: {
+                            average: aggregatedData.attributeStats.int.average,
+                            median: aggregatedData.attributeStats.int.median,
+                            standardDeviation: aggregatedData.attributeStats.int.standardDeviation,
+                            min: Math.min(...aggregatedData.attributeStats.int.values),
+                            max: Math.max(...aggregatedData.attributeStats.int.values),
+                            distribution: {
+                                '90-100': aggregatedData.attributeStats.int.values.filter(v => v >= 90).length,
+                                '80-90': aggregatedData.attributeStats.int.values.filter(v => v >= 80 && v < 90).length,
+                                '70-80': aggregatedData.attributeStats.int.values.filter(v => v >= 70 && v < 80).length,
+                                '60-70': aggregatedData.attributeStats.int.values.filter(v => v >= 60 && v < 70).length,
+                                '50-60': aggregatedData.attributeStats.int.values.filter(v => v >= 50 && v < 60).length,
+                                'below-50': aggregatedData.attributeStats.int.values.filter(v => v < 50).length
+                            }
+                        },
+                        prt: {
+                            average: aggregatedData.attributeStats.prt.average,
+                            median: aggregatedData.attributeStats.prt.median,
+                            standardDeviation: aggregatedData.attributeStats.prt.standardDeviation,
+                            min: Math.min(...aggregatedData.attributeStats.prt.values),
+                            max: Math.max(...aggregatedData.attributeStats.prt.values),
+                            distribution: {
+                                '90-100': aggregatedData.attributeStats.prt.values.filter(v => v >= 90).length,
+                                '80-90': aggregatedData.attributeStats.prt.values.filter(v => v >= 80 && v < 90).length,
+                                '70-80': aggregatedData.attributeStats.prt.values.filter(v => v >= 70 && v < 80).length,
+                                '60-70': aggregatedData.attributeStats.prt.values.filter(v => v >= 60 && v < 70).length,
+                                '50-60': aggregatedData.attributeStats.prt.values.filter(v => v >= 50 && v < 60).length,
+                                'below-50': aggregatedData.attributeStats.prt.values.filter(v => v < 50).length
                             }
                         }
+                    },
+                    goalkeeperAttributeBreakdown: {
+                        tf: {
+                            average: aggregatedData.goalkeeperAttributeStats.tf.average,
+                            median: aggregatedData.goalkeeperAttributeStats.tf.median,
+                            standardDeviation: aggregatedData.goalkeeperAttributeStats.tf.standardDeviation,
+                            min: Math.min(...aggregatedData.goalkeeperAttributeStats.tf.values),
+                            max: Math.max(...aggregatedData.goalkeeperAttributeStats.tf.values),
+                            distribution: {
+                                '90-100': aggregatedData.goalkeeperAttributeStats.tf.values.filter(v => v >= 90).length,
+                                '80-90': aggregatedData.goalkeeperAttributeStats.tf.values.filter(v => v >= 80 && v < 90).length,
+                                '70-80': aggregatedData.goalkeeperAttributeStats.tf.values.filter(v => v >= 70 && v < 80).length,
+                                '60-70': aggregatedData.goalkeeperAttributeStats.tf.values.filter(v => v >= 60 && v < 70).length,
+                                '50-60': aggregatedData.goalkeeperAttributeStats.tf.values.filter(v => v >= 50 && v < 60).length,
+                                'below-50': aggregatedData.goalkeeperAttributeStats.tf.values.filter(v => v < 50).length
+                            },
+
+                        },
+                        pr: {
+                            average: aggregatedData.goalkeeperAttributeStats.pr.average,
+                            median: aggregatedData.goalkeeperAttributeStats.pr.median,
+                            standardDeviation: aggregatedData.goalkeeperAttributeStats.pr.standardDeviation,
+                            min: Math.min(...aggregatedData.goalkeeperAttributeStats.pr.values),
+                            max: Math.max(...aggregatedData.goalkeeperAttributeStats.pr.values),
+                            distribution: {
+                                '90-100': aggregatedData.goalkeeperAttributeStats.pr.values.filter(v => v >= 90).length,
+                                '80-90': aggregatedData.goalkeeperAttributeStats.pr.values.filter(v => v >= 80 && v < 90).length,
+                                '70-80': aggregatedData.goalkeeperAttributeStats.pr.values.filter(v => v >= 70 && v < 80).length,
+                                '60-70': aggregatedData.goalkeeperAttributeStats.pr.values.filter(v => v >= 60 && v < 70).length,
+                                '50-60': aggregatedData.goalkeeperAttributeStats.pr.values.filter(v => v >= 50 && v < 60).length,
+                                'below-50': aggregatedData.goalkeeperAttributeStats.pr.values.filter(v => v < 50).length
+                            },
+
+                        },
+                        rn: {
+                            average: aggregatedData.goalkeeperAttributeStats.rn.average,
+                            median: aggregatedData.goalkeeperAttributeStats.rn.median,
+                            standardDeviation: aggregatedData.goalkeeperAttributeStats.rn.standardDeviation,
+                            min: Math.min(...aggregatedData.goalkeeperAttributeStats.rn.values),
+                            max: Math.max(...aggregatedData.goalkeeperAttributeStats.rn.values),
+                            distribution: {
+                                '90-100': aggregatedData.goalkeeperAttributeStats.rn.values.filter(v => v >= 90).length,
+                                '80-90': aggregatedData.goalkeeperAttributeStats.rn.values.filter(v => v >= 80 && v < 90).length,
+                                '70-80': aggregatedData.goalkeeperAttributeStats.rn.values.filter(v => v >= 70 && v < 80).length,
+                                '60-70': aggregatedData.goalkeeperAttributeStats.rn.values.filter(v => v >= 60 && v < 70).length,
+                                '50-60': aggregatedData.goalkeeperAttributeStats.rn.values.filter(v => v >= 50 && v < 60).length,
+                                'below-50': aggregatedData.goalkeeperAttributeStats.rn.values.filter(v => v < 50).length
+                            },
+
+                        },
+                        pz: {
+                            average: aggregatedData.goalkeeperAttributeStats.pz.average,
+                            median: aggregatedData.goalkeeperAttributeStats.pz.median,
+                            standardDeviation: aggregatedData.goalkeeperAttributeStats.pz.standardDeviation,
+                            min: Math.min(...aggregatedData.goalkeeperAttributeStats.pz.values),
+                            max: Math.max(...aggregatedData.goalkeeperAttributeStats.pz.values),
+                            distribution: {
+                                '90-100': aggregatedData.goalkeeperAttributeStats.pz.values.filter(v => v >= 90).length,
+                                '80-90': aggregatedData.goalkeeperAttributeStats.pz.values.filter(v => v >= 80 && v < 90).length,
+                                '70-80': aggregatedData.goalkeeperAttributeStats.pz.values.filter(v => v >= 70 && v < 80).length,
+                                '60-70': aggregatedData.goalkeeperAttributeStats.pz.values.filter(v => v >= 60 && v < 70).length,
+                                '50-60': aggregatedData.goalkeeperAttributeStats.pz.values.filter(v => v >= 50 && v < 60).length,
+                                'below-50': aggregatedData.goalkeeperAttributeStats.pz.values.filter(v => v < 50).length
+                            },
+
+                        },
+                        rf: {
+                            average: aggregatedData.goalkeeperAttributeStats.rf.average,
+                            median: aggregatedData.goalkeeperAttributeStats.rf.median,
+                            standardDeviation: aggregatedData.goalkeeperAttributeStats.rf.standardDeviation,
+                            min: Math.min(...aggregatedData.goalkeeperAttributeStats.rf.values),
+                            max: Math.max(...aggregatedData.goalkeeperAttributeStats.rf.values),
+                            distribution: {
+                                '90-100': aggregatedData.goalkeeperAttributeStats.rf.values.filter(v => v >= 90).length,
+                                '80-90': aggregatedData.goalkeeperAttributeStats.rf.values.filter(v => v >= 80 && v < 90).length,
+                                '70-80': aggregatedData.goalkeeperAttributeStats.rf.values.filter(v => v >= 70 && v < 80).length,
+                                '60-70': aggregatedData.goalkeeperAttributeStats.rf.values.filter(v => v >= 60 && v < 70).length,
+                                '50-60': aggregatedData.goalkeeperAttributeStats.rf.values.filter(v => v >= 50 && v < 60).length,
+                                'below-50': aggregatedData.goalkeeperAttributeStats.rf.values.filter(v => v < 50).length
+                            },
+
+                        },
                     }
+
                 },
 
                 calculationMethod: 'average',
@@ -740,12 +871,10 @@ class PlayerCardService {
                 }
             };
 
-            console.log("PLAYER CARD RESULT DATA: ", playerCardResultData);
 
             // 6. Crea record PlayerCardResult
             const playerCardResult = await this.playerCardResultRepository.create(playerCardResultData);
 
-            console.log("PLAYER CARD RESULT scritto su db : ", playerCardResult);
 
             // 7. Aggiorna stato sessione a completed
             await this.votingSessionRepository.updateById(sessionId, {
@@ -771,6 +900,7 @@ class PlayerCardService {
                     id: playerCardResult._id,
                     targetPlayerId: playerCardResult.targetPlayerId,
                     finalAttributes: playerCardResult.finalAttributes,
+                    goalkeeperAttributes: playerCardResult.goalkeeperAttributes,
                     overallRating: playerCardResult.overallRating,
                     totalVotes: playerCardResult.totalVotes,
                     completedAt: playerCardResult.createdAt
@@ -901,7 +1031,7 @@ class PlayerCardService {
         const { attributes, additionalAttributes } = voteData;
 
         // Validazione attributi obbligatori
-        const requiredAttributes = ['tir', 'pas', 'dri', 'fin', 'vis', 'res', 'for'];
+        const requiredAttributes = ['tir', 'pas', 'dri', 'fin', 'vis', 'res', 'for', 'con', 'int', 'prt'];
         const missingAttributes = requiredAttributes.filter(attr =>
             !attributes || typeof attributes[attr] !== 'number'
         );
@@ -941,14 +1071,97 @@ class PlayerCardService {
     }
 
     /**
-     * Calcola overall rating manualmente dai 7 attributi principali
+     * Valida e controlla SE PORT O normale PlayerCard
+     * @param {Object} voteData - {attributes, additionalAttributes}
+     */
+    validateAndCleanPlayerCardData(voteData, targetPlayerId) {
+        const { attributes, additionalAttributes, playerProfile } = voteData;
+
+        // STEP 1: Determina se è portiere
+        const isGoalkeeper = playerProfile?.position === 'POR';
+
+        // STEP 2: Crea oggetto result pulito
+        const cleanedData = {
+            attributes: attributes, // Sempre presenti
+            additionalAttributes: additionalAttributes, // Sempre presenti
+            playerProfile: playerProfile
+        };
+
+        if (isGoalkeeper) {
+            // BRANCH PORTIERE: Auto-fill attributi base con valori di default
+            const defaultBaseAttributes = {
+                tir: 18, pas: 18, dri: 18, fin: 18, vis: 18,
+                res: 18, for: 18, con: 18, int: 18, prt: 18
+            };
+
+            // Auto-compila attributi base mancanti per portieri
+            Object.keys(defaultBaseAttributes).forEach(attr => {
+                if (!attributes[attr] || typeof attributes[attr] !== 'number') {
+                    attributes[attr] = defaultBaseAttributes[attr];
+                    console.log(`🥅 Auto-fill portiere: ${attr} = ${defaultBaseAttributes[attr]}`);
+                }
+            });
+
+            // Valida e mantieni attributi GK
+            const requiredGKAttrs = ['tf', 'pr', 'rn', 'pz', 'rf'];
+
+            // Verifica che tutti gli attributi GK siano presenti
+            const missingGKAttrs = requiredGKAttrs.filter(attr =>
+                !attributes[attr] || typeof attributes[attr] !== 'number'
+            );
+
+            if (missingGKAttrs.length > 0) {
+                throw new AppError(`Portiere manca attributi: ${missingGKAttrs.join(', ')}`, 400);
+            }
+
+            // Valida range 10-100 per attributi GK
+            requiredGKAttrs.forEach(attr => {
+                const value = attributes[attr];
+                if (value < 10 || value > 100) {
+                    throw new AppError(`Attributo portiere ${attr}: ${value} deve essere 10-100`, 400);
+                }
+            });
+
+            // Mantieni attributi GK nel result
+            cleanedData.goalkeeperAttributes = {
+                tf: attributes.tf,
+                pr: attributes.pr,
+                rn: attributes.rn,
+                pz: attributes.pz,
+                rf: attributes.rf
+            };
+
+        } else {
+            // BRANCH NON-PORTIERE: Rimuovi attributi GK
+            cleanedData.goalkeeperAttributes = null;
+        }
+
+        return cleanedData;
+    }
+
+
+    /**
+     * Calcola overall rating manualmente degli attributi principali
      * @param {Object} attributes - Attributi principali
      * @returns {number} Overall rating arrotondato
      */
-    calculateOverallRating(attributes) {
-        const total = attributes.tir + attributes.pas + attributes.dri + attributes.fin +
-            attributes.vis + attributes.res + attributes.for;
-        return Math.round(total / 7);
+    calculateOverallRating(attributes, isGoalkeeper = false, goalkeeperAttributes = null) {
+        if (isGoalkeeper && goalkeeperAttributes) {
+            // LOGICA PORTIERE: Soloattributi GK
+
+            const gkValues = [goalkeeperAttributes.tf, goalkeeperAttributes.pr, goalkeeperAttributes.rn,
+            goalkeeperAttributes.pz, goalkeeperAttributes.rf];
+            const gkAverage = gkValues.reduce((sum, val) => sum + val, 0) / 5;
+
+            return Math.round(gkAverage);
+        } else {
+            // LOGICA NORMALE: Tutti e 10 gli attributi base
+            const total = attributes.tir + attributes.pas + attributes.dri + attributes.fin +
+                attributes.vis + attributes.res + attributes.for + attributes.con + attributes.int + attributes.prt;
+
+            const attributeKeys = Object.keys(attributes);
+            return Math.round(total / attributeKeys.length);
+        }
     }
 
     /**
@@ -959,7 +1172,7 @@ class PlayerCardService {
     aggregatePlayerCardStats(submissions) {
         // Inizializza strutture
         const attributeStats = {};
-        ['tir', 'pas', 'dri', 'fin', 'vis', 'res', 'for'].forEach(attr => {
+        ['tir', 'pas', 'dri', 'fin', 'vis', 'res', 'for', 'con', 'int', 'prt'].forEach(attr => {
             attributeStats[attr] = {
                 values: [],
                 average: 0,
@@ -973,14 +1186,54 @@ class PlayerCardService {
             piedeDebole: { values: [], total: 0, count: 0 }
         };
 
+        const goalkeeperAttributeStats = {
+            tf: { values: [], average: 0, median: 0, standardDeviation: 0 },
+            pr: { values: [], average: 0, median: 0, standardDeviation: 0 },
+            rn: { values: [], average: 0, median: 0, standardDeviation: 0 },
+            pz: { values: [], average: 0, median: 0, standardDeviation: 0 },
+            rf: { values: [], average: 0, median: 0, standardDeviation: 0 }
+        };
+
         const overallRatings = [];
         const positionStats = {};
 
+        // === LOGICA CONSENSO PORTIERE ===
+        // Controlla se ci sono voti per portiere con attributi GK validi
+        const goalkeeperVotes = submissions.filter(sub =>
+            sub.playerProfile.position === 'POR' &&
+            sub.goalkeeperAttributes &&
+            Object.values(sub.goalkeeperAttributes).some(val => val !== null && val !== undefined)
+        );
+
+        const isConsensusGoalkeeper = goalkeeperVotes.length > 0;
+
+        // Filtra le submissions in base al consenso
+        let filteredSubmissions;
+        if (isConsensusGoalkeeper) {
+            // Se c'è consenso portiere → usa SOLO i voti portiere
+            filteredSubmissions = goalkeeperVotes;
+            console.log(`🥅 CONSENSO PORTIERE: Usando solo ${filteredSubmissions.length} voti portiere`);
+        } else {
+            // Se NON c'è consenso portiere → usa SOLO i voti non-portiere
+            filteredSubmissions = submissions.filter(sub => sub.playerProfile.position !== 'POR');
+            console.log(`⚽ CONSENSO GIOCATORE: Usando ${filteredSubmissions.length} voti non-portiere`);
+        }
+
+        // === FINE LOGICA CONSENSO ===
+
         // Aggrega dati
-        submissions.forEach(submission => {
+        filteredSubmissions.forEach(submission => {
             // Attributi principali
             Object.keys(attributeStats).forEach(attr => {
                 attributeStats[attr].values.push(submission.attributes[attr]);
+            });
+
+            // Attributi PORTIERE
+            // Attributi portiere (se presenti)
+            Object.keys(goalkeeperAttributeStats).forEach(attr => {
+                if (submission.goalkeeperAttributes?.[attr] !== null && submission.goalkeeperAttributes?.[attr] !== undefined) {
+                    goalkeeperAttributeStats[attr].values.push(submission.goalkeeperAttributes[attr]);
+                }
             });
 
             // Attributi stelle
@@ -1008,6 +1261,9 @@ class PlayerCardService {
             }
         });
 
+
+        // CALCOLO STATISTICHE
+
         // Calcola statistiche attributi principali
         Object.keys(attributeStats).forEach(attr => {
             const values = attributeStats[attr].values;
@@ -1025,6 +1281,28 @@ class PlayerCardService {
             attributeStats[attr].average = Math.round(average);
             attributeStats[attr].median = Math.round(median);
             attributeStats[attr].standardDeviation = Math.round(standardDeviation * 100) / 100;
+        });
+
+        // Calcola statistiche attributi portiere
+        Object.keys(goalkeeperAttributeStats).forEach(attr => {
+            const values = goalkeeperAttributeStats[attr].values;
+            if (values.length > 0) {
+                const sum = values.reduce((a, b) => a + b, 0);
+                const average = sum / values.length;
+
+                const sortedValues = [...values].sort((a, b) => a - b);
+                const median = sortedValues.length % 2 === 0
+                    ? (sortedValues[Math.floor(sortedValues.length / 2) - 1] + sortedValues[Math.floor(sortedValues.length / 2)]) / 2
+                    : sortedValues[Math.floor(sortedValues.length / 2)];
+
+                const variance = values.reduce((sum, val) => sum + Math.pow(val - average, 2), 0) / values.length;
+                const standardDeviation = Math.sqrt(variance);
+
+
+                goalkeeperAttributeStats[attr].average = Math.round(average);
+                goalkeeperAttributeStats[attr].median = Math.round(median);
+                goalkeeperAttributeStats[attr].standardDeviation = Math.round(standardDeviation * 100) / 100;
+            }
         });
 
         // Calcola statistiche stelle
@@ -1067,10 +1345,11 @@ class PlayerCardService {
 
         return {
             attributeStats,
+            goalkeeperAttributeStats,
             additionalAttributeStats,
             overallStats,
             positionStats,
-            totalVotes: submissions.length,
+            totalVotes: filteredSubmissions.length,
             metadata: {
                 calculatedAt: new Date(),
                 sessionType: 'player_card_rating'

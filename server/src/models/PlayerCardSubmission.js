@@ -88,10 +88,28 @@ const PlayerCardSubmissionSchema = new mongoose.Schema({
             min: 10,
             max: 100,
             required: true
-        }  // Forza
+        },  // Forza
+        con: {
+            type: Number,
+            min: 10,
+            max: 100,
+            required: true
+        },  // Contrasto
+        int: {
+            type: Number,
+            min: 10,
+            max: 100,
+            required: true
+        },  // Intercettazione
+        prt: {
+            type: Number,
+            min: 10,
+            max: 100,
+            required: true
+        },  // Precisione testa
     },
 
-    // === ATTRIBUTI AGGIUNTIVI ===
+    // === PIEDE DEBOLE E SKILL MOVES ⭐⭐⭐⭐⭐ ===
 
     additionalAttributes: {
         piedeDebole: {
@@ -108,6 +126,41 @@ const PlayerCardSubmissionSchema = new mongoose.Schema({
         }  // Stelle skill moves (1-5)
     },
 
+    // === ATTRIBUTI POR (opzionali ed ESCLUSIVI) ===
+
+    goalkeeperAttributes: {
+        tf: {
+            type: Number,
+            min: 10,
+            max: 100,
+            required: false,
+        }, // Tuffo
+        pr: {
+            type: Number,
+            min: 10,
+            max: 100,
+            required: false,
+        }, // Presa
+        rn: {
+            type: Number,
+            min: 10,
+            max: 100,
+            required: false,
+        }, // Rinvio
+        pz: {
+            type: Number,
+            min: 10,
+            max: 100,
+            required: false,
+        }, // Piazzamento
+        rf: {
+            type: Number,
+            min: 10,
+            max: 100,
+            required: false,
+        }, // Riflessi
+    },
+
     // === PROFILO GIOCATORE ===
 
     playerProfile: {
@@ -115,9 +168,7 @@ const PlayerCardSubmissionSchema = new mongoose.Schema({
             type: String,
             enum: ['POR', 'DC', 'TS', 'TD', 'CC', 'CDC', 'COC', 'ED', 'ES', 'AT', 'AD', 'AS', 'ATT'],
             required: false
-            // POR=Portiere, DC=Difensore Centrale, TS/TD=Terzini, 
-            // CC=Centrocampista, CDC/COC=Centrocampista Dif/Off,
-            // ED/ES=Esterni, AT/AD/AS=Attaccanti, ATT=Attaccante Centrale
+
         }
     },
 
@@ -223,7 +274,9 @@ PlayerCardSubmissionSchema.index(
 PlayerCardSubmissionSchema.virtual('attributesArray').get(function () {
     return [
         this.attributes.tir, this.attributes.pas, this.attributes.dri,
-        this.attributes.fin, this.attributes.vis, this.attributes.res, this.attributes.for
+        this.attributes.fin, this.attributes.vis, this.attributes.res,
+        this.attributes.for, this.attributes.con, this.attributes.int,
+        this.attributes.prt
     ];
 });
 
@@ -284,7 +337,10 @@ PlayerCardSubmissionSchema.methods.validateAgainstSession = async function () {
  */
 PlayerCardSubmissionSchema.methods.getAttributeBreakdown = function () {
     const attrs = this.attributes;
-    const total = attrs.tir + attrs.pas + attrs.dri + attrs.fin + attrs.vis + attrs.res + attrs.for;
+    const total = attrs.tir + attrs.pas + attrs.dri + attrs.fin + attrs.vis + attrs.res + attrs.for + attrs.con + attrs.int + attrs.prt;
+
+    const gkAttrs = this.goalkeeperAttributes;
+    const gkTotal = (gkAttrs.tf || 0) + (gkAttrs.pr || 0) + (gkAttrs.rn || 0) + (gkAttrs.pz || 0) + (gkAttrs.rf || 0);
 
     return {
         attributes: {
@@ -294,12 +350,27 @@ PlayerCardSubmissionSchema.methods.getAttributeBreakdown = function () {
             fin: attrs.fin,
             vis: attrs.vis,
             res: attrs.res,
-            for: attrs.for
+            for: attrs.for,
+            con: attrs.con,
+            int: attrs.int,
+            prt: attrs.prt
         },
         overallRating: this.overallRating,
         total: total,
-        average: Math.round(total / 7 * 10) / 10,
+        average: Math.round(total / Object.keys(attrs).length * 10) / 10,
+
+        goalkeeperAttributes: {
+            tf: gkAttrs.tf,
+            pr: gkAttrs.pr,
+            rn: gkAttrs.rn,
+            pz: gkAttrs.pz,
+            rf: gkAttrs.rf
+        },
+        gkTotal: gkTotal,
+        gkAverage: gkTotal > 0 ? Math.round(gkTotal / Object.keys(gkAttrs).length * 10) / 10 : null,
+
         additional: this.additionalAttributes,
+
         profile: this.playerProfile
     };
 };
@@ -349,7 +420,10 @@ PlayerCardSubmissionSchema.statics.getPlayerStats = async function (targetPlayer
         fin: { values: [], average: 0 },
         vis: { values: [], average: 0 },
         res: { values: [], average: 0 },
-        for: { values: [], average: 0 }
+        for: { values: [], average: 0 },
+        con: { values: [], average: 0 },
+        int: { values: [], average: 0 },
+        prt: { values: [], average: 0 }
     };
 
     submissions.forEach(submission => {
@@ -365,7 +439,7 @@ PlayerCardSubmissionSchema.statics.getPlayerStats = async function (targetPlayer
     });
 
     const overallAverage = Math.round(
-        Object.values(attributeStats).reduce((sum, stat) => sum + stat.average, 0) / 7
+        Object.values(attributeStats).reduce((sum, stat) => sum + stat.average, 0) / Object.values(attributeStats).length
     );
 
     return {
