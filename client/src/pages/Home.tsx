@@ -13,7 +13,7 @@ import { BadgesSection } from '@/components/BadgesSection';
 import { Match } from '@/types/match';
 import { User } from '@/types/api';
 import { PlayerCard } from '@/types/playerCard';
-import { calculateOverallRating } from '@/utils/playerCardCalculations';
+// import { calculateOverallRating } from '@/utils/playerCardCalculations';
 import MatchCard from '@/components/MatchCard';
 import { api } from '@/lib/api';
 import { OnboardingTutorial } from '@/components/OnboardingTutorial';

@@ -1,6 +1,18 @@
 import { motion } from "framer-motion";
 import { PlayerAttributes } from "@/types/playerCard";
-import { calculateOverallRating } from "@/utils/playerCardCalculations";
+// import { calculateOverallRating } from "@/utils/playerCardCalculations";
+
+// Temporary fallback function - calcolo semplice media
+const calculateOverallRating = (attributes: PlayerAttributes): number => {
+  const values = [
+    attributes.stamina, attributes.strength, attributes.shooting,
+    attributes.passing, attributes.dribbling, attributes.finalizzazione,
+    attributes.visione, attributes.contrast, attributes.interception,
+    attributes.headPrecision
+  ];
+  const sum = values.reduce((a, b) => a + b, 0);
+  return Math.round(sum / values.length);
+};
 import { Star } from "lucide-react";
 import { Card } from "@/components/ui/card";
 

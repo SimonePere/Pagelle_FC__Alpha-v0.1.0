@@ -10,7 +10,20 @@ import { PlayerRadarChart } from '@/components/PlayerRadarChart';
 import { StatsChart } from '@/components/StatsChart';
 // import { PlayerCardDisplay } from '@/components/PlayerCardDisplay';
 import { PlayerCard } from '@/types/playerCard';
-import { calculateOverallRating } from '@/utils/playerCardCalculations';
+// import { calculateOverallRating } from '@/utils/playerCardCalculations';
+
+// Temporary fallback function - calcolo semplice media per Stats
+const calculateOverallRating = (attributes: any): number => {
+  if (!attributes) return 0;
+  const values = [
+    attributes.tir || 0, attributes.pas || 0, attributes.dri || 0,
+    attributes.fin || 0, attributes.vis || 0, attributes.res || 0,
+    attributes.for || 0, attributes.con || 0, attributes.int || 0,
+    attributes.prt || 0
+  ].filter(v => v > 0);
+  if (values.length === 0) return 0;
+  return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+};
 import { motion } from 'framer-motion';
 import { BarChart3, TrendingUp, Users, Trophy, Star, Award } from 'lucide-react';
 
@@ -85,24 +98,24 @@ const Stats = () => {
       const averageRating = data.totalRating / data.appearances;
       const goalsPerGame = data.goals / data.appearances;
       const assistsPerGame = data.assists / data.appearances;
-      
+
       // Calculate consistency (inverse of standard deviation, normalized to 0-100)
-      const variance = data.ratings.reduce((sum: number, rating: number) => 
+      const variance = data.ratings.reduce((sum: number, rating: number) =>
         sum + Math.pow(rating - averageRating, 2), 0) / data.ratings.length;
       const stdDev = Math.sqrt(variance);
       const consistency = Math.max(0, Math.min(100, (10 - stdDev) * 10));
-      
+
       // Form based on last 5 matches
       const recentRatings = data.ratings.slice(-5);
       const recentAverage = recentRatings.reduce((sum: number, r: number) => sum + r, 0) / recentRatings.length;
       const form = (recentAverage / 10) * 100;
-      
+
       // Finishing based on goals per game (normalized)
       const finishing = Math.min(100, goalsPerGame * 50);
-      
+
       // Playmaking based on assists per game (normalized)
       const playmaking = Math.min(100, assistsPerGame * 50);
-      
+
       // Overall rating
       const overall = (averageRating / 10) * 100;
 
@@ -148,10 +161,10 @@ const Stats = () => {
 
   const player1 = allPlayers.find(p => p.userId === selectedPlayer1);
   const player2 = allPlayers.find(p => p.userId === selectedPlayer2);
-  
+
   const card1 = playerCards.find(c => c.playerId === selectedCardPlayer1);
   const card2 = playerCards.find(c => c.playerId === selectedCardPlayer2);
-  
+
   const users = JSON.parse(localStorage.getItem('users') || '[]');
   const getPlayerName = (playerId: string) => {
     return users.find((u: any) => u.id === playerId)?.name || 'Unknown';
@@ -253,14 +266,14 @@ const Stats = () => {
                   transition={{ delay: 0.2 }}
                   className={`grid grid-cols-1 ${comparisonMode && player2 ? 'lg:grid-cols-2' : ''} gap-6`}
                 >
-                  <PlayerRadarChart 
-                    data={getRadarData(player1)} 
+                  <PlayerRadarChart
+                    data={getRadarData(player1)}
                     playerName={player1.name}
                     color="hsl(var(--primary))"
                   />
                   {comparisonMode && player2 && (
-                    <PlayerRadarChart 
-                      data={getRadarData(player2)} 
+                    <PlayerRadarChart
+                      data={getRadarData(player2)}
                       playerName={player2.name}
                       color="hsl(var(--accent))"
                     />
@@ -482,7 +495,7 @@ const Stats = () => {
                                 if (rating >= 65) return "text-orange-500";
                                 return "text-red-500";
                               };
-                              
+
                               return (
                                 <motion.div
                                   key={card.playerId}
@@ -502,7 +515,7 @@ const Stats = () => {
                                       </div>
                                     </div>
                                   </div>
-                                   <div className="text-right">
+                                  <div className="text-right">
                                     <div className={`font-display font-bold text-3xl ${getOverallColor(overall)}`}>
                                       {overall}
                                     </div>

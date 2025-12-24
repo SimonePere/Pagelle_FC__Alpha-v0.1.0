@@ -188,7 +188,7 @@ export function PlayerCardNavigator({
   return (
     <div className="w-full space-y-6">
       {/* Main Card Area */}
-      <div className="relative h-[480px] overflow-hidden">
+      <div className="relative h-[510px] overflow-hidden">
         <AnimatePresence initial={false} custom={direction} mode="wait">
           <motion.div
             key={currentIndex}

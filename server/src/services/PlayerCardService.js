@@ -9,6 +9,8 @@ const {
     UserRepository
 } = require('../repositories');
 
+const { getZoneFromPosition, getWeightsForZone } = require('../utils/PositionWeights');
+
 const AppError = require('../utils/AppError');
 
 /**
@@ -384,7 +386,8 @@ class PlayerCardService {
             const calculatedOverallRating = this.calculateOverallRating(
                 attributes,
                 isGoalkeeper,
-                cleanedVoteData.goalkeeperAttributes
+                cleanedVoteData.goalkeeperAttributes,
+                finalProfile?.position
             );
 
             // 6. Crea e salva la submission
@@ -1147,26 +1150,49 @@ class PlayerCardService {
 
 
     /**
-     * Calcola overall rating manualmente degli attributi principali
-     * @param {Object} attributes - Attributi principali
-     * @returns {number} Overall rating arrotondato
-     */
-    calculateOverallRating(attributes, isGoalkeeper = false, goalkeeperAttributes = null) {
+ * Calcola overall rating con pesi basati sulla posizione
+ * @param {Object} attributes - Attributi principali
+ * @param {boolean} isGoalkeeper - Se è un portiere
+ * @param {Object} goalkeeperAttributes - Attributi portiere
+ * @param {string} playerPosition - Posizione del giocatore (es: 'CDC', 'TD')
+ * @returns {number} Overall rating arrotondato
+ */
+    calculateOverallRating(attributes, isGoalkeeper = false, goalkeeperAttributes = null, playerPosition = null) {
         if (isGoalkeeper && goalkeeperAttributes) {
-            // LOGICA PORTIERE: Soloattributi GK
-
-            const gkValues = [goalkeeperAttributes.tf, goalkeeperAttributes.pr, goalkeeperAttributes.rn,
-            goalkeeperAttributes.pz, goalkeeperAttributes.rf];
+            // LOGICA PORTIERE: Solo attributi GK (rimane invariata)
+            const gkValues = [
+                goalkeeperAttributes.tf,
+                goalkeeperAttributes.pr,
+                goalkeeperAttributes.rn,
+                goalkeeperAttributes.pz,
+                goalkeeperAttributes.rf
+            ];
             const gkAverage = gkValues.reduce((sum, val) => sum + val, 0) / 5;
-
             return Math.round(gkAverage);
         } else {
-            // LOGICA NORMALE: Tutti e 10 gli attributi base
-            const total = attributes.tir + attributes.pas + attributes.dri + attributes.fin +
-                attributes.vis + attributes.res + attributes.for + attributes.con + attributes.int + attributes.prt;
+            // NUOVA LOGICA: Calcolo pesato basato su posizione
+            const zone = getZoneFromPosition(playerPosition);
+            const weights = getWeightsForZone(zone);
 
-            // ✅ FIX: Sempre 10 attributi per giocatori normali (non conta attributi null)
-            return Math.round(total / 10);
+            if (!weights) {
+                // Fallback alla media semplice se non ci sono pesi
+                const total = attributes.tir + attributes.pas + attributes.dri + attributes.fin +
+                    attributes.vis + attributes.res + attributes.for + attributes.con +
+                    attributes.int + attributes.prt;
+                return Math.round(total / 10);
+            }
+
+            // Calcolo pesato
+            let weightedSum = 0;
+            let totalWeights = 0;
+
+            Object.keys(attributes).forEach(attr => {
+                const weight = weights[attr] || 1.0; // Default peso 1.0 se non definito
+                weightedSum += attributes[attr] * weight;
+                totalWeights += weight;
+            });
+
+            return Math.round(weightedSum / totalWeights);
         }
     }
 
