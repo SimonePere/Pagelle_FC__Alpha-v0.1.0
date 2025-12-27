@@ -155,6 +155,9 @@ class VotingService {
             throw new Error('Team not found');
         }
 
+
+
+
         // 4. Business rules per creazione sessione
         const votingSession = await this.votingSessionRepository.create({
             type: 'match_rating',
@@ -165,6 +168,7 @@ class VotingService {
             description: description || `Valuta le prestazioni dei tuoi compagni nella partita del ${match.date ? new Date(match.date).toLocaleDateString('it-IT') : 'oggi'}`,
             deadline: deadline ? new Date(deadline) : null,
             eligibleVoters: team.memberIds, // Business rule: team members can vote
+
             status: 'active', // Business rule: match rating sessions are immediately active
             voteConfig: {
                 ratingRange: { min: 1, max: 10, step: 0.5 },
@@ -226,6 +230,11 @@ class VotingService {
 
         if (!session.eligibleVoters.includes(userId)) {
             throw new Error('User not eligible to vote');
+        }
+
+        // NUOVO: Controlla se l'utente è astenuto
+        if (session.isUserAbstained(userId)) {
+            throw new Error('User is abstained from this voting session');
         }
 
         // 3. Controlla se ha già votato
@@ -342,22 +351,19 @@ class VotingService {
                 return false;
             }
 
-            // 2. Conta submissions attive
-            const submissionsCount = await this.voteSubmissionRepository.countDocuments({
-                votingSessionId: sessionId,
-                isActive: true
-            });
+            // 2. Aggiorna il summary (che include la logica degli astenuti e auto-completion)
+            await session.updateSummary();
 
-            const totalEligibleVoters = session.eligibleVoters.length;
+            // Calcola utenti attivi per il log
+            const activeVotersCount = session.eligibleVoters.length - session.abstainedUsers.length;
+            console.log(`📊 Voti raccolti: ${session.summary.totalSubmissions}/${activeVotersCount}`);
 
-            console.log(`📊 Voti raccolti: ${submissionsCount}/${totalEligibleVoters}`);
-
-            // 3. Se tutti hanno votato, auto-complete!
-            if (submissionsCount === totalEligibleVoters && submissionsCount > 0) {
-                console.log('🎉 TUTTI HANNO VOTATO! Avvio auto-complete...');
+            // 3. Verifica se la sessione è stata completata automaticamente dal updateSummary()
+            if (session.status === 'completed') {
+                console.log('🎉 SESSIONE COMPLETATA AUTOMATICAMENTE!');
 
                 try {
-                    // 🎯 NUOVO: Chiama direttamente il service (NO mock objects)
+                    // 4. Procedi con elaborazione risultati
                     const completionResult = await this.completeSession(sessionId, 'automatic');
 
                     console.log('✅ Auto-complete completato con successo!');
@@ -385,9 +391,9 @@ class VotingService {
             console.log('⏳ Non tutti hanno ancora votato, nessun auto-complete');
             return {
                 autoCompleted: false,
-                submissionsCount,
-                totalEligibleVoters,
-                message: `Attendendo altri voti: ${submissionsCount}/${totalEligibleVoters}`
+                submissionsCount: session.summary.totalSubmissions,
+                totalEligibleVoters: activeVotersCount,
+                message: `Attendendo altri voti: ${session.summary.totalSubmissions}/${activeVotersCount}`
             };
 
         } catch (error) {
@@ -914,6 +920,9 @@ class VotingService {
             title: votingSession.title,
             description: votingSession.description,
             status: votingSession.status,
+            eligibleVoters: votingSession.eligibleVoters,
+            abstainedUsers: votingSession.abstainedUsers,
+            createdBy: votingSession.createdBy,
             deadline: votingSession.deadline,
             createdAt: votingSession.createdAt,
             updatedAt: votingSession.updatedAt,
@@ -923,7 +932,8 @@ class VotingService {
                 date: votingSession.targetId.date,
                 venue: votingSession.targetId.venue,
                 playersCount: votingSession.targetId.playersCount,
-                playersToRate: votingSession.targetId.teamMemberIds
+                playersToRate: votingSession.targetId.teamMemberIds,
+
             }
         };
     }
@@ -1123,8 +1133,11 @@ class VotingService {
                 isActive: true
             });
 
-            // Business Logic: Calcola participation rate
-            const participationRate = Math.round((submissionsCount / session.eligibleVoters.length) * 100);
+
+            // Business Logic: Calcola participation rate considerando gli astenuti
+            const activeVotersCount = session.eligibleVoters.length - session.abstainedUsers.length;
+            const participationRate = activeVotersCount > 0 ?
+                Math.round((submissionsCount / activeVotersCount) * 100) : 0;
 
             // Business Logic: Determina canVote rules
             const isActive = session.status === 'active';
@@ -1144,6 +1157,7 @@ class VotingService {
                 updatedAt: session.updatedAt,
                 eligibleVoters: session.eligibleVoters,
                 eligibleVotersCount: session.eligibleVoters.length,
+                abstainedUsers: session.abstainedUsers, // 🎯 FIX: Include abstained users
                 submissionsCount,
                 participationRate,
                 isActive,

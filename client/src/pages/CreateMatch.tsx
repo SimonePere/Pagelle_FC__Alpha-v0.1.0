@@ -35,6 +35,10 @@ const CreateMatch = () => {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
 
+  // Stato per la sezione di esclusione giocatori
+  const [showExcludeSection, setShowExcludeSection] = useState(false);
+  const [excludedPlayers, setExcludedPlayers] = useState<string[]>([]);
+
   useEffect(() => {
     if (!user || !user.teams?.length) {
       navigate('/login');
@@ -70,7 +74,7 @@ const CreateMatch = () => {
         id: member._id || member.id || '',
         name: member.name || '',
         email: member.email || '',
-        teamId: member.teamId || (member.teams && member.teams[0]?.id) || '',
+        teamId: member.teamIds?.[0] || (member.teams && member.teams[0]?.id) || '',
         teams: member.teams || []
       }));
 
@@ -117,7 +121,11 @@ const CreateMatch = () => {
         field: field.trim(),
         playersCount,
         notes: notes.trim() || undefined,
-        teamMemberIds: selectedPlayers
+        teamMemberIds: selectedPlayers,
+        abstainedMembers: excludedPlayers.map(userId => ({
+          userId,
+          abstainedBy: user?.id || ''
+        })),
       };
       // Chiama l'API tramite Redux
       const result = await dispatch(createMatch(matchData));
@@ -259,6 +267,111 @@ const CreateMatch = () => {
                   {selectedPlayers.length} / {allUsers.length} giocatori selezionati
                 </p>
               </div>
+
+
+              {/* Astensione giocatori dalla votazione (opzionale) */}
+              <div className="space-y-3">
+
+
+                {/* Checkbox principale per attivare esclusioni */}
+
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="show-exclude"
+                    checked={showExcludeSection}
+                    onCheckedChange={(checked) => {
+                      setShowExcludeSection(!!checked);
+                      if (!checked) {
+                        setExcludedPlayers([]); // Reset esclusioni quando si disattiva
+                      }
+                    }}
+                  />
+                  <Label htmlFor="show-exclude" className="text-base font-medium">
+                    Chi si astiene dal votare?
+                  </Label>
+                </div>
+
+                <p className="text-sm text-muted-foreground">
+                  Tra i giocatori che hanno partecipato, seleziona chi si astiene dal processo di votazione.
+                  Attiva questa opzione solo se necessario.
+                </p>
+
+
+                {/* Sezione condizionale per escludere giocatori */}
+                {showExcludeSection && (
+                  <div className="space-y-3 p-4 bg-secondary/20 rounded-lg border border-border">
+                    <Label className="text-sm font-medium text-muted-foreground">
+                      Seleziona i giocatori che si ASTENGONO dal votare:
+                    </Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {allUsers
+                        .filter(player => selectedPlayers.includes(player.id))
+                        .map((player) => (
+                          <div key={player.id} className="flex items-center space-x-3 p-2 rounded hover:bg-secondary/40 transition-colors">
+                            <Checkbox
+                              id={`exclude-${player.id}`}
+                              checked={excludedPlayers.includes(player.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setExcludedPlayers([...excludedPlayers, player.id]);
+                                } else {
+                                  setExcludedPlayers(excludedPlayers.filter(id => id !== player.id));
+                                }
+                              }}
+                            />
+                            <Label htmlFor={`exclude-${player.id}`} className="flex-1 cursor-pointer">
+                              {player.name}
+                            </Label>
+                          </div>
+                        ))}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {excludedPlayers.length} giocatori si astengono dal votare, {selectedPlayers.length - excludedPlayers.length} voteranno
+                    </p>
+                  </div>
+                )}
+
+
+
+                {/* Riepilogo partecipanti */}
+                <p className="text-sm text-muted-foreground">
+                  {showExcludeSection
+                    ? `${selectedPlayers.length - excludedPlayers.length} / ${selectedPlayers.length} giocatori che hanno giocato voteranno`
+                    : `Tutti i ${selectedPlayers.length} giocatori che hanno giocato voteranno`
+                  }
+                </p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+              </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
               <div className="flex gap-3 pt-4">
                 <Button

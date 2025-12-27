@@ -24,7 +24,6 @@ export const fetchTeamPlayerCards = createAsyncThunk(
             return response.playerCards || [];
         } catch (error: any) {
             // 🔄 FALLBACK: se API non esiste, usa localStorage (404 atteso)
-            console.log('📦 Using localStorage fallback for playerCards');
             const cards = JSON.parse(localStorage.getItem('playerCards') || '[]') as PlayerCard[];
             return cards.filter(c => c.teamId === teamId);
         }

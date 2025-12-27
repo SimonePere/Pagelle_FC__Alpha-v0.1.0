@@ -254,6 +254,23 @@ const completeMatch = async (req, res, next) => {
   }
 };
 
+// @desc    Riattiva un utente astenuto
+// @route   POST /api/v1/matches/:matchId/reactivate-voter/:userId
+// @access  Private
+const reactivateVoter = async (req, res, next) => {
+  try {
+    const { matchId, userId } = req.params;
+    const reactivatingUserId = req.user.id;
+
+    const result = await matchService.reactivateVoter(matchId, userId, reactivatingUserId);
+
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 module.exports = {
   createMatch,
   getTeamMatches,
@@ -261,5 +278,6 @@ module.exports = {
   activateMatch,
   completeMatch,
   updateMatch,
-  deleteMatch
+  deleteMatch,
+  reactivateVoter
 };

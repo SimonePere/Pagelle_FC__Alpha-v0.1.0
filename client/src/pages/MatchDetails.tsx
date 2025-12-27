@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { current } from '@reduxjs/toolkit';
 import { RootState, AppDispatch } from '@/redux/store/store';
 import { fetchMatchById, updateMatch, deleteMatch } from '@/redux/slices/matchSlice';
-import { fetchMatchVotingData, clearMatchVotingData } from '@/redux/slices/votingSlice';
+import { fetchMatchVotingData, clearMatchVotingData, reactivateVoter } from '@/redux/slices/votingSlice';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ import { Match, User } from '@/types/match';
 import { useToast } from '@/hooks/use-toast';
 import EditModal from '@/components/EditModal';
 import MatchDetailsCard from '@/components/MatchDetailsCard';
+import useEnrichedMatches from '@/hooks/useEnrichedMatches';
 
 export default function MatchDetails() {
   const { matchId } = useParams();
@@ -28,8 +29,9 @@ export default function MatchDetails() {
   // 🗳️ Voting data selector 
   const { matchVoting } = useSelector((state: RootState) => state.voting);
 
-  // 🎯 NUOVO APPROCCIO - Prendi match dall'array matches (come MatchGrid)
-  const currentMatch = matches?.find?.(match => match?.id === matchId) || null;
+  // 🎯 ENRICHED MATCHES - Con dati astenuti integrati + refresh function
+  const { matches: enrichedMatches, refreshData } = useEnrichedMatches();
+  const currentMatch = enrichedMatches?.find?.(match => match?.id === matchId) || null;
 
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
@@ -198,6 +200,57 @@ export default function MatchDetails() {
     }
   };
 
+  // 🔄 RIATTIVAZIONE UTENTE ASTENUTO
+  const handleReactivateUser = async (userId: string) => {
+    if (window.confirm('Sei sicuro di voler riattivare questo utente per la votazione di questa partita?')) {
+
+
+      if (!userId || !currentMatch?.id) return;
+
+      // 🚫 CONTROLLO: Non permettere riattivazione se match è completato
+      if (currentMatch.status === 'completed') {
+        toast({
+          title: 'Operazione non permessa',
+          description: 'Non è possibile riattivare utenti per partite già completate.',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      try {
+        await dispatch(reactivateVoter({
+          matchId: currentMatch.id,
+          userId
+        })).unwrap();
+
+        toast({
+          title: 'Utente riattivato!',
+          description: 'L\'utente può ora votare per questa partita.'
+        });
+
+
+        // 🔄 REFRESH GLOBALE - Sincronizza tutti i dati app-wide
+        refreshData(); // Ricarica matches, users, sessions, playerCards
+
+        // FALLBACK specifico per match corrente (se refreshData fallisce)
+        dispatch(fetchMatchById(currentMatch.id));
+
+        // Se abbiamo una voting session, ricarica anche i dati del voto
+        if (currentMatch?.votingSession?.id) {
+          dispatch(fetchMatchVotingData(currentMatch.votingSession.id));
+        }
+
+      } catch (error) {
+        console.error('Errore riattivazione utente:', error);
+        toast({
+          title: 'Errore',
+          description: 'Non è stato possibile riattivare l\'utente.',
+          variant: 'destructive'
+        });
+      }
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="pb-24 lg:pb-8">
@@ -258,6 +311,8 @@ export default function MatchDetails() {
             </motion.div>
           )}
 
+
+
           {/* Match Details Card */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -265,7 +320,15 @@ export default function MatchDetails() {
             transition={{ delay: 0.1 }}
           >
             <MatchDetailsCard
-              match={currentMatch}
+              match={{
+                ...currentMatch,
+                field: currentMatch.field || '', // 🔧 Assicura che field sia sempre string
+                status: currentMatch.status as 'draft' | 'active' | 'completed' | 'cancelled', // 🔧 Type assertion per status
+                // 🎯 Aggiungo dati astenuti per badge integrato
+                hasAbstained: currentMatch.hasAbstained,
+                abstainedNames: currentMatch.abstainedNames,
+                abstainedUsers: currentMatch.abstainedUsers,
+              }}
               voting={{
                 isVotable: true,
                 hasVoted: false,
@@ -299,9 +362,16 @@ export default function MatchDetails() {
           field: currentMatch?.field || '',
           date: currentMatch?.date?.split('T')[0] || '',
           playersCount: currentMatch?.playersCount || 8,
-          notes: currentMatch?.notes || ''
+          notes: currentMatch?.notes || '',
+          // 🆕 Dati utenti astenuti
+          abstainedUsers: currentMatch?.abstainedUsers || [],
+          abstainedNames: currentMatch?.abstainedNames || [],
+          hasAbstained: currentMatch?.hasAbstained || false,
+          matchId: currentMatch?.id, // Serve per API riattivazione
+          status: currentMatch?.status // 🆕 Status per controllo riattivazione
         }}
         onSave={handleModalSave}
+        onReactivateUser={handleReactivateUser} // 🆕 Handler riattivazione
       />
     </DashboardLayout>
   );

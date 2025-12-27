@@ -62,7 +62,7 @@ class MatchService {
             });
 
             // 2. Auto-create voting session
-            const votingSession = await this.createAutoVotingSession(match, userId);
+            const votingSession = await this.createAutoVotingSession(match, userId, matchData.abstainedMembers || []);
 
             return {
                 success: true,
@@ -364,22 +364,36 @@ class MatchService {
     /**
      * Crea automaticamente una voting session per il match
      */
-    async createAutoVotingSession(match, userId) {
-        const votingSession = await this.votingSessionRepository.create({
-            type: 'match_rating',
-            targetType: 'match',
-            targetId: match._id,
-            teamId: match.teamId,
-            createdBy: userId,
-            title: `📊 Creazione sessione votazione per Partita a ${match.playersCount}`,
-            description: `Valuta i tuoi compagni nella partita a ${match.field} del ${new Date(match.date).toLocaleDateString('it-IT')}`,
-            status: 'active',
-            eligibleVoters: match.teamMemberIds || [userId],
-            tags: ['auto-generated', 'match-linked'],
-            environment: 'production'
-        });
+    async createAutoVotingSession(match, creatorId, abstainedMembers = []) {
+        try {
+            // TUTTI i membri del team sono eligible voters (anche chi si astiene)
+            const allMembers = match.teamMemberIds || [];
+            const eligibleVoters = allMembers; // ✅ Includi tutti, anche gli astenuti
 
-        return votingSession;
+            // Prepara gli abstained users con metadata
+            const abstainedUsers = abstainedMembers.map(abs => ({
+                userId: abs.userId,
+                abstainedBy: abs.abstainedBy || creatorId,
+                abstainedAt: new Date()
+            }));
+
+            const votingSession = await this.votingSessionRepository.create({
+                type: 'match_rating',
+                targetId: match._id,
+                teamId: match.teamId,
+                title: `⚽ Vota la partita del ${new Date(match.date).toLocaleDateString('it-IT')}`,
+                description: `Valuta le prestazioni dei tuoi compagni nella partita ${match.field ? `al ${match.field}` : ''}`,
+                eligibleVoters: eligibleVoters,
+                abstainedUsers: abstainedUsers,
+                requiredVotes: allMembers.length - abstainedMembers.length, // ✅ Numero di votanti richiesti (attivi)
+                createdBy: creatorId,
+                status: 'active'
+            });
+
+            return votingSession;
+        } catch (error) {
+            throw new AppError(`Failed to create voting session: ${error.message}`, 500);
+        }
     }
 
     /**
@@ -415,6 +429,19 @@ class MatchService {
         const date = new Date(matchData.date);
         if (isNaN(date.getTime())) {
             throw new AppError('Invalid date format', 400);
+        }
+
+        //  === VALIDAZIONE ASTENSIONI // ===
+        if (matchData.abstainedMembers && !Array.isArray(matchData.abstainedMembers)) {
+            throw new AppError('abstainedMembers must be an array', 400);
+        }
+
+        // Validazione minimo 2 partecipanti
+        const participatingCount = (matchData.teamMemberIds || []).length -
+            (matchData.abstainedMembers || []).length;
+
+        if (participatingCount < 2) {
+            throw new AppError('Almeno 2 giocatori devono partecipare alla votazione', 400);
         }
     }
 
@@ -484,6 +511,60 @@ class MatchService {
         } catch (error) {
             console.error('❌ Errore update match:', error.message);
             throw error;
+        }
+    }
+
+
+    /**
+ * Riattiva un utente astenuto in una sessione di voto
+ * @param {string} matchId - ID del match  
+ * @param {string} userIdToReactivate - ID utente da riattivare
+ * @param {string} reactivatingUserId - ID utente che riattiva
+ * @returns {Promise<Object>} Risultato operazione
+ */
+    async reactivateVoter(matchId, userIdToReactivate, reactivatingUserId) {
+        try {
+            // 1. Trova il match
+            const match = await this.matchRepository.findById(matchId);
+            if (!match) {
+                throw new AppError('Match not found', 404);
+            }
+
+            // 2. Verifica che il riattivatore sia membro del team
+            if (!match.teamMemberIds.includes(reactivatingUserId)) {
+                throw new AppError('Access denied', 403);
+            }
+
+            // 3. Trova la sessione di votazione
+            const votingSession = await this.votingSessionRepository.findOne({
+                type: 'match_rating',
+                targetId: matchId,
+                status: 'active'
+            });
+
+            if (!votingSession) {
+                throw new AppError('Nessuna sessione di votazione attiva trovata', 404);
+            }
+
+            // 4. Verifica che l'utente sia effettivamente astenuto
+            if (!votingSession.isUserAbstained(userIdToReactivate)) {
+                throw new AppError('L\'utente non è astenuto', 400);
+            }
+
+            // 5. Riattiva l'utente
+            votingSession.reactivateUser(userIdToReactivate, reactivatingUserId);
+            await this.votingSessionRepository.save(votingSession);
+
+            return {
+                success: true,
+                message: 'Utente riattivato con successo',
+                sessionId: votingSession._id,
+                reactivatedUserId: userIdToReactivate
+            };
+
+        } catch (error) {
+            if (error instanceof AppError) throw error;
+            throw new AppError(`Failed to reactivate voter: ${error.message}`, 500);
         }
     }
 

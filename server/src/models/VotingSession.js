@@ -43,19 +43,7 @@ const VotingSessionSchema = new mongoose.Schema({
     index: true
   },
 
-  // === METADATI DESCRITTIVI ===
 
-  title: {
-    type: String,
-    required: true,
-    maxlength: 200,
-    // Esempi: "Vota partita vs Juventus", "Valuta Mario Rossi"
-  },
-
-  description: {
-    type: String,
-    maxlength: 1000,
-  },
 
   // === CONFIGURAZIONE PARTECIPANTI ===
 
@@ -65,18 +53,35 @@ const VotingSessionSchema = new mongoose.Schema({
     required: true
   }],
 
+  // === ASTENSIONE PARTECIPANTI ===
+  abstainedUsers: [{
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    abstainedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    abstainedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+
   requiredVotes: {
     type: Number,
-    default: function () {
-      return this.eligibleVoters.length;
-    },
+    // ✅ RIMUOVI il default - lascia che sia impostato esplicitamente
+    // dal MatchService che conosce gli astenuti
     min: 1
   },
 
   allowSelfVoting: {
     type: Boolean,
     default: false
-    // Sempre false per match_rating, può essere true per player_card
+
   },
 
   // === GESTIONE TEMPORALE ===
@@ -97,7 +102,21 @@ const VotingSessionSchema = new mongoose.Schema({
     index: true
   },
 
-  // Traccia HOW la sessione è stata completata
+  // === METADATI DESCRITTIVI ===
+
+  title: {
+    type: String,
+    required: true,
+    maxlength: 200,
+    // Esempi: "Vota partita vs Juventus", "Valuta Mario Rossi"
+  },
+
+  description: {
+    type: String,
+    maxlength: 1000,
+  },
+
+  // Traccia COME la sessione è stata completata
   completionType: {
     type: String,
     enum: ['manual', 'automatic'],
@@ -193,10 +212,58 @@ VotingSessionSchema.virtual('progressPercentage').get(function () {
   return Math.round((this.summary.totalSubmissions / this.requiredVotes) * 100);
 });
 
+
+
+// === METODI ASTENSIONE ===
+
+
+// Verifica se un utente è astenuto
+VotingSessionSchema.methods.isUserAbstained = function (userId) {
+  return this.abstainedUsers.some(abs => abs.userId.equals(userId));
+};
+
+// Conta gli eligible voters reali (esclusi gli astenuti)
+VotingSessionSchema.virtual('realEligibleVotersCount').get(function () {
+  return this.eligibleVoters.length;
+});
+
+// Riattiva un utente astenuto
+VotingSessionSchema.methods.reactivateUser = function (userId, reactivatedBy) {
+  this.abstainedUsers = this.abstainedUsers.filter(abs => !abs.userId.equals(userId));
+  if (!this.eligibleVoters.includes(userId)) {
+    this.eligibleVoters.push(userId);
+  }
+};
+
+// Astieni un utente
+VotingSessionSchema.methods.abstainUser = function (userId, abstainedBy) {
+  // Rimuovi da eligible voters se presente
+  this.eligibleVoters = this.eligibleVoters.filter(id => !id.equals(userId));
+
+  // Aggiungi agli astenuti se non già presente
+  if (!this.isUserAbstained(userId)) {
+    this.abstainedUsers.push({
+      userId: userId,
+      abstainedBy: abstainedBy,
+      abstainedAt: new Date()
+    });
+  }
+};
+
+
+
+
+
+
+
+
+
+
 // === METODI ISTANZA ===
 
 VotingSessionSchema.methods.canUserVote = function (userId) {
   if (!this.eligibleVoters.includes(userId)) return false;
+  if (this.isUserAbstained(userId)) return false;
   if (!this.isActive) return false;
   if (this.isExpired) return false;
 
@@ -212,7 +279,14 @@ VotingSessionSchema.methods.updateSummary = async function () {
   });
 
   const submittedVoters = submissions.map(s => s.voterId);
-  const pendingVoters = this.eligibleVoters.filter(
+
+  // Calcola gli utenti attivi (elegibili - astenuti)
+  const abstainedUserIds = this.abstainedUsers.map(u => u.userId.toString());
+  const activeVoters = this.eligibleVoters.filter(
+    voter => !abstainedUserIds.includes(voter.toString())
+  );
+
+  const pendingVoters = activeVoters.filter(
     voter => !submittedVoters.includes(voter)
   );
 
@@ -220,17 +294,21 @@ VotingSessionSchema.methods.updateSummary = async function () {
     ? submissions.reduce((sum, s) => sum + (s.timeSpent || 0), 0) / submissions.length
     : 0;
 
+  // UPDATE CON CONSIDERAZIONE DEGLI ASTENUTI:
   this.summary = {
     totalSubmissions: submissions.length,
     pendingVoters,
-    participationRate: Math.round((submissions.length / this.eligibleVoters.length) * 100),
+    participationRate: Math.round((submissions.length / activeVoters.length) * 100),
     averageTimeToVote: Math.round(avgTime),
     lastActivity: submissions.length > 0 ? submissions[submissions.length - 1].submittedAt : this.createdAt
   };
 
-  if (submissions.length >= this.requiredVotes && this.status === 'active') {
+  // Auto-completion basata su votanti attivi (esclusi gli astenuti)
+  if (submissions.length >= activeVoters.length && this.status === 'active') {
     this.status = 'completed';
     this.completedAt = new Date();
+    this.completionType = 'automatic';
+    console.log(`🎯 Sessione completata automaticamente: ${submissions.length}/${activeVoters.length} voti ricevuti`);
   }
 
   await this.save();

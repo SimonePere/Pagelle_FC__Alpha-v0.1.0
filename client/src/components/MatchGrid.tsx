@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
-import useAppData from '@/hooks/useAppData';
+import useEnrichedMatches from '@/hooks/useEnrichedMatches';
 
 
 
@@ -143,15 +143,28 @@ function MatchCard({ match, index }: MatchCardProps) {
             </div>
           </div>
         )}
+
+        {/* 🧪 TEST: Sezione Astenuti - NUOVA */}
+        {match.hasAbstained && (
+          <div className="px-6 pb-6">
+            <div className="flex items-start gap-2 text-sm">
+              <Users className="w-4 h-4 flex-shrink-0 mt-0.5 text-orange-500" />
+              <span className="text-orange-700 dark:text-orange-400 font-medium">
+                {match.abstainedNames.join(', ')} astenuto/i dalla votazione
+              </span>
+            </div>
+          </div>
+        )}
       </Card>
     </motion.div>
   );
 }
 
 const MatchGrid: React.FC<MatchGridProps> = ({ showStats = true }) => {
-  // 🎯 NUOVO APPROCCIO: Hook centralizzato
-  const { matches, isLoading } = useAppData();
-  // 🔄 ENTERPRISE: Usa loading granulare (solo matches per questa componente)
+
+  // 🧪 TEST: Sostituiamo useAppData con useEnrichedMatches
+  const { matches, isLoading } = useEnrichedMatches();
+
   const matchesAreLoading = isLoading.matches;
 
   // Controllo di sicurezza per l'array matches

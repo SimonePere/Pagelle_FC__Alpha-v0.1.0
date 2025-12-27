@@ -93,40 +93,16 @@ export interface VotingSession {
   canVote: boolean;
   eligibleVotersCount: number;
 
-  // 🔄 FUTURE FEATURES (da implementare)
-  // allowSelfVoting?: boolean;     // dal backend schema
-  // requiredVotes?: number;        // dal backend schema
-  // voteConfig?: any;              // dal backend schema (configurazioni specifiche)
-  // version?: number;              // dal backend schema
 
-  // 🚫 DEPRECATED (da rimuovere - sostituiti da targetId/teamId)
-  // target?: VotingTarget;         // → sostituito da targetId
-  // isAnonymous?: boolean;         // → spostato in voteConfig.anonymousVoting
-  // allowMultipleSubmissions?: boolean; // → spostato in voteConfig.allowVoteModification
-  // requiresApproval?: boolean;    // → non nel backend attuale
-  // startsAt?: string;             // → sostituito da startedAt
-  // endsAt?: string;               // → sostituito da deadline
+  // 🟢 Giocatori astenuti da votazione
+  abstainedUsers?: Array<{
+    userId: string;
+    abstainedBy: string;
+  }>;
 
-  // Results e submissions - da implementare con endpoint separati
-  // result?: VotingResult;
-  // userSubmission?: VoteSubmission;
 }
 
-// 🚫 DEPRECATO - sostituito da targetId nel VotingSession
-// export interface VotingTarget {
-//   type: 'player' | 'match' | 'team';
-//   entityId: string;  // playerId, matchId, teamId
-//   // Metadata aggiuntivi per UI
-//   playerName?: string;
-//   matchTitle?: string;
-//   teamName?: string;
-//   // Context info per diverse tipologie
-//   matchDate?: string;
-//   position?: string;
-//   jerseyNumber?: number;
-// }
 
-// 🔄 FUTURE: Metadata UI saranno recuperati via populate nel backend
 
 export interface VoteSubmission {
   id: string;

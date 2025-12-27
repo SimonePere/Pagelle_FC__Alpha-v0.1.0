@@ -33,16 +33,19 @@ import {
   AlertCircle,
   FileText
 } from 'lucide-react';
-
-// Componenti di votazione reali
 import { PlayerCardVote } from '../components/voting/index';
 import { MatchRatingVote } from '../components/voting/index';
-
-// 🗳️ Nuovo componente VoteCard
 import { VoteCard } from '../components/VoteCard';
+
+// Giocatori astenuti da votazione helper
+const isUserAbstained = (session: VotingSession, userId: string): boolean => {
+  if (!userId || !session.abstainedUsers?.length) return false;
+  return session.abstainedUsers.some(abstained => abstained.userId === userId);
+};
 
 const Vote: React.FC = () => {
   const { user } = useSelector((state: RootState) => state.auth);
+
   const {
     sessions,
     isLoading,
@@ -55,6 +58,8 @@ const Vote: React.FC = () => {
   const activeSessions = useSelector(selectActiveVotingSessions);
   const pendingSessions = useSelector(selectPendingVoteSessions);
   const stats = useSelector(selectVotingDashboardStats);
+
+
 
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
@@ -226,10 +231,11 @@ const Vote: React.FC = () => {
                       </Card>
                     ) : (
                       sessions.map((session, index) => {
+                        const isAbstained = isUserAbstained(session, user?.id || '');
                         const mappedMatch = mapSessionToMatch(session);
                         const realMatch = matches?.find(match => match.id === session.targetId);
 
-                        // 🎯 Calcolo corretto della percentuale voti
+                        // Calcolo corretto della percentuale voti
                         const totalMembers = mappedMatch.teamMemberIds.length;
                         const votesReceived = Math.round((session.participationRate || 0) / 100 * session.eligibleVotersCount);
                         const correctProgress = totalMembers > 0 ? Math.round((votesReceived / totalMembers) * 100) : 0;
@@ -239,14 +245,15 @@ const Vote: React.FC = () => {
                             key={session.id}
                             match={mappedMatch}
                             voting={{
-                              isVotable: session.status === 'active',
-                              hasVoted: session.hasVoted || false,
+                              isVotable: session.status === 'active',           // Manteniamo sempre true se active
+                              hasVoted: session.hasVoted || false,              // Stato votazione normale
+                              isAbstained: isAbstained,                         // NUOVO FLAG
                               votingDeadline: session.deadline,
                               votingProgress: correctProgress
                             }}
                             index={index}
                             onClick={() => handleSessionInfo(session)}
-                            onVoteClick={session.hasVoted ? undefined : () => handleEnterSession(session)}
+                            onVoteClick={isAbstained ? undefined : () => handleEnterSession(session)} // MODIFICATO
                           />
                         );
                       })

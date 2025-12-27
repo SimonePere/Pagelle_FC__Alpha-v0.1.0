@@ -27,7 +27,7 @@ export function BottomNav() {
       const users = JSON.parse(localStorage.getItem('users') || '[]');
 
       // Get user team ID
-      const userTeamId = user.teams?.[0]?.id || user.teamId;
+      const userTeamId = user.teams?.[0]?.id;
       if (!userTeamId) return;
 
       const teamMembers = users.filter((u: any) => u.teamId === userTeamId);

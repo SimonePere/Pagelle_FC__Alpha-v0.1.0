@@ -230,7 +230,9 @@ class PlayerCardService {
                     eligibleVoters: session.eligibleVoters,
                     eligibleVotersCount: session.eligibleVoters.length,
                     submissionsCount,
-                    participationRate: Math.round((submissionsCount / session.eligibleVoters.length) * 100),
+                    participationRate: Math.round((submissionsCount /
+                        Math.max(1, session.eligibleVoters.length - session.abstainedUsers.length)) * 100),
+                    // considera solo votanti attivi
                     isActive: session.status === 'active',
                     hasVoted: !!hasVoted,
                     canVote: session.status === 'active' && !hasVoted,
@@ -318,7 +320,9 @@ class PlayerCardService {
                     targetPlayerInfo: session.targetId,
                     eligibleVoters: session.eligibleVoters,
                     submissionsCount,
-                    participationRate: Math.round((submissionsCount / session.eligibleVoters.length) * 100),
+                    participationRate: Math.round((submissionsCount /
+                        Math.max(1, session.eligibleVoters.length - session.abstainedUsers.length)) * 100),
+                    // considera solo votanti attivi
                     hasVoted: !!hasVoted,
                     canVote: session.status === 'active' && !hasVoted
                 }

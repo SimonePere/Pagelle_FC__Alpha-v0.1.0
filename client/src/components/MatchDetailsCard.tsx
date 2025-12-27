@@ -40,6 +40,14 @@ interface VoteCardProps {
     teamMemberIds?: string[];
     teamMembers?: { id: string; name: string; }[];  // 🆕 Per mapping nomi
     notes?: string;             // 📝 Note partita
+    // 🆕 Campi astenuti (opzionali)
+    hasAbstained?: boolean;
+    abstainedNames?: string[];
+    abstainedUsers?: Array<{
+      userId: string;
+      abstainedBy: string;
+      abstainedAt?: string;
+    }>;
   };
 
   // 🗳️ Props specifiche per votazioni  
@@ -291,6 +299,16 @@ export const MatchDetailsCard: React.FC<VoteCardProps> = ({
                     )}
                   </div>
                 </div>
+
+                {/* 🚫 Sezione Astenuti - Dopo Giocatori Partecipanti */}
+                {match.hasAbstained && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Users className="w-4 h-4 flex-shrink-0 text-orange-500" />
+                    <span className="text-orange-700 dark:text-orange-400 font-medium">
+                      {match.abstainedNames?.join(', ')} astenuto/i dalla votazione
+                    </span>
+                  </div>
+                )}
 
 
 

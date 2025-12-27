@@ -187,6 +187,10 @@ export interface CreateMatchRequest {
   playersCount: 5 | 8 | 11;   // Numero giocatori (richiesto)
   notes?: string;             // Note (opzionale)
   teamMemberIds: string[];    // Array ID membri che hanno giocato
+  abstainedMembers?: Array<{
+    userId: string;
+    abstainedBy: string;
+  }>;                         // Array ID membri assenti (opzionale)
 }
 
 export interface SubmitRatingsRequest {

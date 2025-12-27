@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 import { useToast } from '@/hooks/use-toast';
-import { User, Lock, Calendar, Trophy, Check, X } from 'lucide-react';
+import { User, Lock, Calendar, Trophy, Check, X, Users } from 'lucide-react';
 
 interface EditModalProps {
     isOpen: boolean;
@@ -13,9 +13,10 @@ interface EditModalProps {
     type: 'user-profile' | 'user-password' | 'match';
     data?: any;
     onSave: (data: any) => Promise<{ success: boolean; error?: string } | void>;
+    onReactivateUser?: (userId: string) => Promise<void>; // 🆕 Handler riattivazione
 }
 
-const EditModal = ({ isOpen, onClose, type, data, onSave }: EditModalProps) => {
+const EditModal = ({ isOpen, onClose, type, data, onSave, onReactivateUser }: EditModalProps) => {
     const [loading, setLoading] = useState(false);
     const { toast } = useToast();
 
@@ -323,6 +324,57 @@ const EditModal = ({ isOpen, onClose, type, data, onSave }: EditModalProps) => {
                                 maxLength={500}
                             />
                         </div>
+
+                        {/* 🆕 Sezione Utenti Astenuti */}
+                        {data?.hasAbstained && (
+                            <div className="space-y-2 pt-2 border-t border-border/50">
+                                <Label className="text-orange-700 dark:text-orange-400 font-medium flex items-center gap-2">
+                                    <Users className="w-4 h-4" />
+                                    Utenti Astenuti
+                                </Label>
+                                <div className="space-y-2">
+                                    <p className="text-xs text-muted-foreground">
+                                        Questi utenti si sono astenuti dal voto per questa partita:
+                                    </p>
+                                    <div className="space-y-2">
+                                        {data.abstainedNames?.map((userName, index) => {
+                                            const abstainedUser = data.abstainedUsers?.[index];
+                                            const isCompleted = data.status === 'completed';
+
+                                            return (
+                                                <div key={abstainedUser?.userId || index} className="flex items-center justify-between p-2 bg-orange-50/50 dark:bg-orange-950/20 rounded-md border border-orange-200/50 dark:border-orange-800/50">
+                                                    <span className="text-sm font-medium text-orange-700 dark:text-orange-400">
+                                                        {userName}
+                                                    </span>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        disabled={isCompleted}
+                                                        className="h-7 px-3 text-xs border-orange-300 text-orange-700 hover:bg-orange-100 dark:border-orange-700 dark:text-orange-400 dark:hover:bg-orange-950/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        onClick={async () => {
+                                                            if (!isCompleted && onReactivateUser && abstainedUser?.userId) {
+                                                                await onReactivateUser(abstainedUser.userId);
+                                                                onClose(); // Chiude il modal dopo riattivazione
+                                                            }
+                                                        }}
+                                                        title={isCompleted ? "Non è possibile riattivare utenti per partite completate" : "Riattiva questo utente"}
+                                                    >
+                                                        Riattiva
+                                                    </Button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        {data.status === 'completed' ? (
+                                            <>🚫 Partita completata: non è possibile riattivare utenti perché i calcoli sono già stati effettuati.</>
+                                        ) : (
+                                            <>Riattivando un utente, potrà votare nuovamente per questa partita.</>
+                                        )}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 );
 

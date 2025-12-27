@@ -115,6 +115,20 @@ export const createVotingSession = createAsyncThunk(
     }
 );
 
+// Riattiva un utente precedentemente astenuto a votare in una sessione fin quando non è completata
+export const reactivateVoter = createAsyncThunk(
+    'voting/reactivateVoter',
+    async ({ matchId, userId }: { matchId: string; userId: string }, { rejectWithValue }) => {
+        try {
+            const response = await api.post(`/matches/${matchId}/reactivate-voter/${userId}`);
+            return { matchId, userId, updatedSession: response.votingSession };
+        } catch (error: any) {
+            console.error('❌ Errore riattivazione votante:', error);
+            return rejectWithValue(error.message || 'Errore nella riattivazione del votante');
+        }
+    }
+);
+
 // Invia un voto per una sessione
 export const submitVote = createAsyncThunk(
     'voting/submitVote',

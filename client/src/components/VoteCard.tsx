@@ -29,6 +29,11 @@ interface VoteCardProps {
     status: 'completed' | 'active' | 'draft';
     playersCount?: number;      // 🏟️ Tipo di campo (5, 8, 11)
     teamMemberIds?: string[];
+    abstainedMembers?: Array<{
+      userId: string;
+      abstainedBy: string;
+    }>;
+
   };
 
   // 🗳️ Props specifiche per votazioni  
@@ -37,6 +42,7 @@ interface VoteCardProps {
     hasVoted?: boolean;         // Se l'utente ha già votato
     votingDeadline?: string;    // Scadenza votazione
     votingProgress?: number;    // % di voti ricevuti (0-100)
+    isAbstained?: boolean;     // Se l'utente è astenuto
   };
 
   // 🎨 Personalizzazione UI
@@ -92,6 +98,8 @@ export const VoteCard: React.FC<VoteCardProps> = ({
     return `⚽ Calcio a ${fieldType}`;
   };
 
+
+
   // 🎨 Colori stati (identico a MatchCard)
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -116,9 +124,17 @@ export const VoteCard: React.FC<VoteCardProps> = ({
     }
   };
 
-  // 🗳️ Badge per stato votazione
+  // 🗳️ Badge per stato votazione: mostra chi ha gia votato - chi deve votare - chi astenuto e non può votare
   const getVotingBadge = () => {
     if (!voting.isVotable) return null;
+
+    if (voting.isAbstained) {
+      return (
+        <Badge className="bg-muted text-muted-foreground border">
+          Astenuto
+        </Badge>
+      );
+    }
 
     if (voting.hasVoted) {
       return (
@@ -162,7 +178,9 @@ export const VoteCard: React.FC<VoteCardProps> = ({
       className={`group ${onClick || (onVoteClick && voting.isVotable && !voting.hasVoted) ? 'cursor-pointer' : ''}`}
     >
       <Card
-        className="bg-card/80 backdrop-blur-sm border-border shadow-card transition-all duration-300 relative"
+        className={`
+          bg-card/80 backdrop-blur-sm border-border shadow-card transition-all duration-300 relative${voting.isAbstained ? 'opacity-75 border-muted bg-muted/20'
+            : 'hover:shadow-lg'}`}
         onClick={handleCardClick}
       >
         {/* Numero nell'angolino sinistro */}
@@ -222,16 +240,33 @@ export const VoteCard: React.FC<VoteCardProps> = ({
                 </div>
               )}
 
-              {/* Pulsante Vota dedicato (se richiesto) */}
-              {showVoteButton && voting.isVotable && !voting.hasVoted && onVoteClick && (
-                <Button
-                  className="w-full"
-                  variant="default"
-                  onClick={handleVoteButtonClick}
-                >
-                  <VotingIcon className="w-4 h-4 mr-2" />
-                  Vota Ora
-                </Button>
+              {/* Button condizionale che controlla se utente astenuto:
+              non fa votare, altrimenti si */}
+              {showVoteButton && voting.isVotable && (
+                <>
+                  {voting.isAbstained ? (
+                    <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg border border-muted">
+                      <Badge variant="outline" className="flex items-center gap-1 text-muted-foreground">
+                        <Users className="h-3 w-3" />
+                        Astenuto dalla votazione
+                      </Badge>
+                    </div>
+                  ) : voting.hasVoted ? (
+                    <Badge variant="default" className="bg-green-500 text-green-50 w-full flex justify-center py-2">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Votato
+                    </Badge>
+                  ) : onVoteClick ? (
+                    <Button
+                      className="w-full"
+                      variant="default"
+                      onClick={handleVoteButtonClick}
+                    >
+                      <VotingIcon className="w-4 h-4 mr-2" />
+                      Vota Ora
+                    </Button>
+                  ) : null}
+                </>
               )}
             </div>
           )}

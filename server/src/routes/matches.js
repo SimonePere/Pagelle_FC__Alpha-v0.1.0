@@ -36,13 +36,18 @@ router.get('/:id', auth, matchController.getMatch);
 // 🆕 NUOVE ROUTE PER GESTIONE STATO MATCH
 // @route   PATCH /api/v1/matches/:id/activate
 // @desc    Activate match for voting
-// @access  Private (Admin only)
 router.patch('/:id/activate', auth, matchController.activateMatch);
 
 // @route   PATCH /api/v1/matches/:id/complete
 // @desc    Complete match
-// @access  Private (Admin only)
 router.patch('/:id/complete', auth, matchController.completeMatch);
+
+/**
+ * @desc    Riattiva un utente astenuto in una sessione di voto
+ * @route   POST /api/v1/matches/:matchId/reactivate-voter/:userId
+ * @access  Private
+ */
+router.post('/:matchId/reactivate-voter/:userId', auth, matchController.reactivateVoter);
 
 
 
