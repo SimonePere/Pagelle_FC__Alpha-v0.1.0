@@ -593,22 +593,64 @@ class MatchService {
             // 3. Valida dati input (se necessario)
             this.validateMatchId(matchId);
 
+            // 🗑️ ELIMINAZIONE CASCATA: Prima elimina i dati collegati per aggiornare automaticamente le statistiche
+            console.log(`📄 Eliminando dati collegati al match ${matchId}...`);
+
+            // Importa i modelli necessari
+            const VotingSession = require('../models/VotingSession');
+            const VoteResult = require('../models/VoteResult');
+            const VoteSubmission = require('../models/VoteSubmission');
+
+            // Trova tutte le sessioni di voto collegate al match
+            const votingSessions = await VotingSession.find({ targetId: matchId });
+            console.log(`📄 Trovate ${votingSessions.length} sessioni di voto da eliminare`);
+
+            let eliminatedVoteResults = 0;
+            let eliminatedVoteSubmissions = 0;
+
+            for (const session of votingSessions) {
+                // Elimina VoteResult (questo triggerà il pre-remove hook che aggiorna le leaderboard)
+                const voteResultDeleted = await VoteResult.deleteMany({ votingSessionId: session._id });
+                eliminatedVoteResults += voteResultDeleted.deletedCount;
+
+                // Elimina VoteSubmission
+                const voteSubmissionsDeleted = await VoteSubmission.deleteMany({ votingSessionId: session._id });
+                eliminatedVoteSubmissions += voteSubmissionsDeleted.deletedCount;
+
+                console.log(`📄 Eliminati ${voteResultDeleted.deletedCount} VoteResult e ${voteSubmissionsDeleted.deletedCount} VoteSubmission per sessione ${session._id}`);
+            }
+
+            // Elimina VotingSession
+            const votingSessionsDeleted = await VotingSession.deleteMany({ targetId: matchId });
+            console.log(`📄 Eliminate ${votingSessionsDeleted.deletedCount} VotingSession`);
+
+            console.log(`✅ PULIZIA CASCATA COMPLETATA:`)
+            console.log(`   📄 VoteResult: ${eliminatedVoteResults}`)
+            console.log(`   📄 VoteSubmission: ${eliminatedVoteSubmissions}`)
+            console.log(`   📄 VotingSession: ${votingSessionsDeleted.deletedCount}`)
+
             // 4. Elimina il match usando BaseRepository
             await this.matchRepository.deleteById(matchId);
 
             console.log(`🗑️ Match ${matchId} eliminato con successo da user ${userId}`);
 
-            // 🧹 CACHE INVALIDATION: Pulisce cache per team dopo delete match
+            // 🧹 CACHE INVALIDATION: Invalida TUTTO dopo delete match (come nel VotingService)
             try {
-                await CacheService.invalidateMatchCacheAfterVote(existingMatch.teamId);
-                console.log(`🧹 Cache match team ${existingMatch.teamId} invalidata dopo delete`);
+                // Converte i teamMemberIds in stringhe per sicurezza
+                const playerIds = existingMatch.teamMemberIds.map(id => id.toString());
+                console.log(`🔍 DEBUG CACHE: Invalidando cache per team ${existingMatch.teamId} e ${playerIds.length} giocatori:`, playerIds);
+
+                // Invalida leaderboard, match cache E playercard per tutti i giocatori coinvolti
+                await CacheService.invalidateAllAfterVote(existingMatch.teamId, playerIds);
+                console.log(`🧹 Cache completa invalidata per team ${existingMatch.teamId} dopo delete match`);
             } catch (cacheError) {
+                console.error(`❌ Cache invalidation fallita:`, cacheError.message);
                 console.warn(`⚠️ Cache invalidation fallita (non critico):`, cacheError.message);
             }
 
             return {
                 success: true,
-                message: 'Match eliminato con successo',
+                message: 'Match e dati collegati eliminati con successo',
                 deletedMatch: {
                     id: existingMatch._id,
                     field: existingMatch.field,
@@ -619,6 +661,11 @@ class MatchService {
                     teamId: existingMatch.teamId,
                     createdAt: existingMatch.createdAt,
                     deletedAt: new Date()
+                },
+                cascadeDeleted: {
+                    voteResults: eliminatedVoteResults,
+                    voteSubmissions: eliminatedVoteSubmissions,
+                    votingSessions: votingSessionsDeleted.deletedCount
                 }
             };
 

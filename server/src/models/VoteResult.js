@@ -399,4 +399,108 @@ VoteResultSchema.post('save', async function (doc) {
   }
 });
 
+// === PRE-DELETE HOOK ===
+// ⭐ RICALCOLA AUTOMATICAMENTE LE STATISTICHE LEADERBOARD PRIMA DELL'ELIMINAZIONE
+VoteResultSchema.pre('deleteMany', async function () {
+  try {
+    console.log('🗑️ VoteResult eliminazione - ricalcolo leaderboard automatico');
+
+    // Import modelli necessari
+    const PlayerLeaderboardStats = mongoose.model('PlayerLeaderboardStats');
+    const VotingSession = mongoose.model('VotingSession');
+
+    // Trova tutti i VoteResult che stanno per essere eliminati
+    const voteResultsToDelete = await this.model.find(this.getFilter());
+
+    if (!voteResultsToDelete || voteResultsToDelete.length === 0) {
+      console.log('💭 Nessun VoteResult da eliminare');
+      return;
+    }
+
+    console.log(`📋 Trovati ${voteResultsToDelete.length} VoteResult da eliminare - ricalcolo stats necessario`);
+
+    // Raccoglie tutti i giocatori e team coinvolti
+    const affectedPlayers = new Set();
+    const affectedTeams = new Set();
+
+    for (const voteResult of voteResultsToDelete) {
+      // Popola la sessione per ottenere il teamId
+      await voteResult.populate('votingSessionId');
+
+      if (voteResult.votingSessionId && voteResult.votingSessionId.teamId) {
+        affectedTeams.add(voteResult.votingSessionId.teamId.toString());
+      }
+
+      // Raccoglie tutti i player ID dal matchRatingResults
+      if (voteResult.matchRatingResults) {
+        for (const [playerId, playerData] of voteResult.matchRatingResults.entries()) {
+          affectedPlayers.add(playerId.toString());
+        }
+      }
+    }
+
+    console.log(`👥 Giocatori da ricalcolare: ${affectedPlayers.size}, Team: ${affectedTeams.size}`);
+
+    // Ricalcola le statistiche per ogni giocatore coinvolto
+    for (const playerId of affectedPlayers) {
+      try {
+        // Trova tutte le stats esistenti per questo giocatore (che non verranno eliminate)
+        const remainingVoteResults = await this.model.find({
+          _id: { $nin: voteResultsToDelete.map(vr => vr._id) },
+          'matchRatingResults': { $exists: true }
+        }).populate('votingSessionId');
+
+        // Filtra solo i VoteResult che contengono questo giocatore
+        const playerVoteResults = remainingVoteResults.filter(vr =>
+          vr.matchRatingResults && vr.matchRatingResults.has(playerId) &&
+          vr.votingSessionId && vr.votingSessionId.teamId
+        );
+
+        // Ricalcola statistiche da zero basandosi sui dati rimanenti
+        let totalMatches = playerVoteResults.length;
+        let totalGoals = 0;
+        let totalAssists = 0;
+        let totalRating = 0;
+        let recentMatches = [];
+
+        for (const vr of playerVoteResults) {
+          const playerData = vr.matchRatingResults.get(playerId);
+          if (playerData) {
+            totalGoals += playerData.goals || 0;
+            totalAssists += playerData.assists || 0;
+            totalRating += playerData.averageRating || 0;
+            recentMatches.push(playerData.averageRating || 0);
+          }
+        }
+
+        const averageRating = totalMatches > 0 ? (totalRating / totalMatches) : 0;
+
+        // Aggiorna le statistiche con i nuovi valori ricalcolati
+        await PlayerLeaderboardStats.updateOne(
+          { playerId: playerId },
+          {
+            $set: {
+              totalMatches: totalMatches,
+              totalGoals: totalGoals,
+              totalAssists: totalAssists,
+              averageRating: averageRating,
+              lastUpdatedAt: new Date()
+            }
+          }
+        );
+
+        console.log(`📊 Ricalcolate statistiche per giocatore ${playerId}: ${totalMatches} partite, ${totalGoals} gol, ${totalAssists} assist`);
+
+      } catch (playerError) {
+        console.error(`❌ Errore ricalcolo stats giocatore ${playerId}:`, playerError.message);
+      }
+    }
+
+    console.log(`✅ Ricalcolo leaderboard completato per ${affectedPlayers.size} giocatori`);
+
+  } catch (error) {
+    console.error('❌ Errore ricalcolo leaderboard pre-delete:', error);
+  }
+});
+
 module.exports = mongoose.model('VoteResult', VoteResultSchema);
