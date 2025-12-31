@@ -9,6 +9,9 @@ const {
     UserRepository
 } = require('../repositories');
 
+const NewsService = require('./NewsService');
+
+
 const { getZoneFromPosition, getWeightsForZone } = require('../utils/PositionWeights');
 
 const AppError = require('../utils/AppError');
@@ -44,6 +47,7 @@ class PlayerCardService {
         this.playerCardResultRepository = new PlayerCardResultRepository();
         this.teamRepository = new TeamRepository();
         this.userRepository = new UserRepository();
+        this.newsService = new NewsService();
     }
 
     /**
@@ -1410,6 +1414,14 @@ class PlayerCardService {
                 aggregatedData,
                 totalSubmissions
             );
+
+            await this.newsService.createNewsOnPlayerCardResult({
+                sessionId,
+                playerId: targetPlayerId,
+                aggregatedData,
+                totalSubmissions,
+                overallRating: result.overallRating
+            });
 
             return playerCardResult;
 

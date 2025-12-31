@@ -1,0 +1,908 @@
+{
+  "leaderboard": {
+    "new_leader": [
+      {
+        "text": "👑 NUOVO RE! {playerName} conquista il primo posto in classifica generale con una media voto di {averageRating}! La vetta ha finalmente un nuovo proprietario!",
+        "category": "leaderboard",
+        "type": "new_leader",
+        "priority": "high",
+        "icon": "👑",
+        "style": "success"
+      },
+      {
+        "text": "🏆 È FATTA! {playerName} completa la scalata e diventa il nuovo leader della classifica generale! Che ascesa spettacolare!",
+        "category": "leaderboard",
+        "type": "new_leader",
+        "priority": "high",
+        "icon": "🏆",
+        "style": "success"
+      },
+      {
+        "text": "⭐ CORONAZIONE! {playerName} raggiunge la vetta con prestazioni da vero campione! La classifica ha un nuovo re!",
+        "category": "leaderboard",
+        "type": "new_leader",
+        "priority": "high",
+        "icon": "⭐",
+        "style": "success"
+      }
+    ],
+    "position_gained": [
+      {
+        "text": "🔥 COLPO DI SCENA! {playerName} sorpassa {previousLeader} e conquista la vetta della classifica generale in una rimonta spettacolare!",
+        "category": "leaderboard",
+        "type": "position_gained",
+        "priority": "high",
+        "icon": "🔥",
+        "style": "warning"
+      },
+      {
+        "text": "⚡ RIMONTA SPETTACOLARE! {playerName} scala {positions} posizioni e si piazza al {newPosition}° posto! Che scalata incredibile!",
+        "category": "leaderboard",
+        "type": "position_gained",
+        "priority": "medium",
+        "icon": "⚡",
+        "style": "info"
+      },
+      {
+        "text": "🚀 {playerName} è inarrestabile! Balza dal {oldPosition}° al {newPosition}° posto in classifica generale con prestazioni da urlo!",
+        "category": "leaderboard",
+        "type": "position_gained",
+        "priority": "medium",
+        "icon": "🚀",
+        "style": "info"
+      }
+    ],
+    "goals_leader": [
+      {
+        "text": "⚽ CAPOCANNONIERE! {playerName} segna ancora e sale a {totalGoals} gol! Il re dei bomber non si ferma più!",
+        "category": "leaderboard",
+        "type": "goals_leader",
+        "priority": "high",
+        "icon": "⚽",
+        "style": "success"
+      },
+      {
+        "text": "🎯 MACCHINA DA GOL! {playerName} non si ferma più: {totalGoals} reti all'attivo! Le difese tremano al suo nome!",
+        "category": "leaderboard",
+        "type": "goals_leader",
+        "priority": "high",
+        "icon": "🎯",
+        "style": "success"
+      }
+    ],
+    "assists_leader": [
+      {
+        "text": "🎭 RE DEGLI ASSIST! {playerName} serve il suo {totalAssists}° passaggio vincente! Genio puro del gioco!",
+        "category": "leaderboard",
+        "type": "assists_leader",
+        "priority": "high",
+        "icon": "🎭",
+        "style": "success"
+      },
+      {
+        "text": "✨ GENIO DEL GIOCO! {playerName} raggiunge quota {totalAssists} assist! La sua visione di gioco è unica!",
+        "category": "leaderboard",
+        "type": "assists_leader",
+        "priority": "high",
+        "icon": "✨",
+        "style": "success"
+      }
+    ],
+    "competitive_leaderboard": [
+      {
+        "text": "🔥 CLASSIFICA IN FIAMME! Gap di soli {ratingGap} punti tra primo e ultimo - Battaglia serratissima tra {totalPlayers} gladiatori!",
+        "category": "leaderboard",
+        "type": "competitive_leaderboard",
+        "priority": "high",
+        "icon": "🔥",
+        "style": "warning"
+      },
+      {
+        "text": "⚔️ GUERRA TOTALE! {totalPlayers} giocatori in {ratingGap} punti - Tutto può succedere!",
+        "category": "leaderboard",
+        "type": "competitive_leaderboard",
+        "priority": "high",
+        "icon": "⚔️",
+        "style": "danger"
+      }
+    ],
+    "dominant_leader": [
+      {
+        "text": "👑 REGNO ASSOLUTO! {playerName} domina con {topRating} - Un vero imperatore del calcio!",
+        "category": "leaderboard",
+        "type": "dominant_leader",
+        "priority": "high",
+        "icon": "👑",
+        "style": "success"
+      },
+      {
+        "text": "🏰 FORTEZZA IMBATTIBILE! {playerName} costruisce il suo castello a {topRating} - Chi oserà sfidarlo?",
+        "category": "leaderboard",
+        "type": "dominant_leader",
+        "priority": "high",
+        "icon": "🏰",
+        "style": "success"
+      }
+    ],
+    "podium_battle": [
+      {
+        "text": "🥇🥈🥉 BATTAGLIA SUL PODIO! {first}, {second} e {third} separati da pochi decimi - Che tensione!",
+        "category": "leaderboard",
+        "type": "podium_battle",
+        "priority": "high",
+        "icon": "🏆",
+        "style": "warning"
+      },
+      {
+        "text": "🎪 CIRCO DEL PODIO! {first} vs {second} vs {third} - Tre gladiatori per tre gradini del tempio!",
+        "category": "leaderboard",
+        "type": "podium_battle",
+        "priority": "high",
+        "icon": "🎪",
+        "style": "success"
+      }
+    ]
+  },
+  "match_creation": {
+    "general": [
+      {
+        "text": "📅 NUOVO MATCH IN VISTA! Si prospetta una battaglia epica sul campo! I nostri gladiatori si preparano allo scontro!",
+        "category": "match_creation",
+        "type": "general",
+        "priority": "medium",
+        "icon": "📅",
+        "style": "info"
+      },
+      {
+        "text": "⚽ FISCHIO D'INIZIO! Un nuovo capitolo sta per essere scritto nella storia del team! Che cominci lo spettacolo!",
+        "category": "match_creation",
+        "type": "general",
+        "priority": "medium",
+        "icon": "⚽",
+        "style": "info"
+      },
+      {
+        "text": "🎯 ATTENZIONE: Il {date} si giocherà presso {field}! {playersCount} guerrieri si preparano alla battaglia!",
+        "category": "match_creation",
+        "type": "general",
+        "priority": "high",
+        "icon": "🎯",
+        "style": "info"
+      },
+      {
+        "text": "⚽ ULTIMORA: Match confermato per {date} al {field}! Saranno {playersCount} i gladiatori in campo!",
+        "category": "match_creation",
+        "type": "general",
+        "priority": "high",
+        "icon": "⚽",
+        "style": "success"
+      },
+      {
+        "text": "📢 FLASH: Nuovo match programmato! Appuntamento {date} al {field} per una sfida {playersType}!",
+        "category": "match_creation",
+        "type": "general",
+        "priority": "medium",
+        "icon": "📢",
+        "style": "info"
+      }
+    ],
+    "field": [
+      {
+        "text": "🏟️ Il campo di {field} si prepara ad accogliere i nostri campioni {date}! Che spettacolo ci aspetta!",
+        "category": "match_creation",
+        "type": "field",
+        "priority": "medium",
+        "icon": "🏟️",
+        "style": "info"
+      },
+      {
+        "text": "⚽ A {field} sarà il teatro della prossima battaglia {date}! Il campo della gloria!",
+        "category": "match_creation",
+        "type": "field",
+        "priority": "high",
+        "icon": "⚽",
+        "style": "success"
+      },
+      {
+        "text": "🌟 Il mitico {field} torna protagonista! Appuntamento {date} per la sfida {playersType}!",
+        "category": "match_creation",
+        "type": "field",
+        "priority": "medium",
+        "icon": "🌟",
+        "style": "info"
+      }
+    ],
+    "date_urgent": [
+      {
+        "text": "⏰ ATTENZIONE: Match IMMINENTE! Si gioca il {date} al {field}! Ultimi preparativi in corso!",
+        "category": "match_creation",
+        "type": "date_urgent",
+        "priority": "urgent",
+        "icon": "⏰",
+        "style": "warning"
+      },
+      {
+        "text": "🚨 ULTIM'ORA: Partita tra meno di 24 ore! {date} al {field}, siate pronti per la battaglia!",
+        "category": "match_creation",
+        "type": "date_urgent",
+        "priority": "urgent",
+        "icon": "🚨",
+        "style": "danger"
+      }
+    ],
+    "date_soon": [
+      {
+        "text": "📅 SAVE THE DATE: {date} al {field}! I nostri campioni si stanno già allenando!",
+        "category": "match_creation",
+        "type": "date_soon",
+        "priority": "medium",
+        "icon": "📅",
+        "style": "info"
+      },
+      {
+        "text": "⭐ MARK YOUR CALENDAR: {date} - {field} - La sfida {playersType} che tutti aspettano!",
+        "category": "match_creation",
+        "type": "date_soon",
+        "priority": "medium",
+        "icon": "⭐",
+        "style": "success"
+      }
+    ],
+    "participants_5v5": [
+      {
+        "text": "⚽ CALCETTO TIME! 5 vs 5, si gioca con il cuore e la tecnica! Ogni tocco sarà decisivo per la vittoria!",
+        "category": "match_creation",
+        "type": "participants",
+        "priority": "medium",
+        "icon": "⚽",
+        "style": "info"
+      },
+      {
+        "text": "🔥 SFIDA INTENSA! {playersCount} guerrieri 5vs5 al {field} il {date}! Preparatevi al duello!",
+        "category": "match_creation",
+        "type": "participants",
+        "priority": "high",
+        "icon": "🔥",
+        "style": "success"
+      }
+    ],
+    "participants_8v8": [
+      {
+        "text": "💪 MATCH EQUILIBRATO! 8 vs 8, la formazione perfetta per uno spettacolo di puro calcio!",
+        "category": "match_creation",
+        "type": "participants",
+        "priority": "medium",
+        "icon": "💪",
+        "style": "info"
+      },
+      {
+        "text": "⚡ BATTAGLIA EPICA! {playersCount} campioni 8vs8 al {field} il {date}! Il campo trema già!",
+        "category": "match_creation",
+        "type": "participants",
+        "priority": "high",
+        "icon": "⚡",
+        "style": "success"
+      }
+    ],
+    "participants_11v11": [
+      {
+        "text": "🏆 GRANDE MATCH! 11 vs 11, si gioca come i veri professionisti! Sarà spettacolo puro!",
+        "category": "match_creation",
+        "type": "participants",
+        "priority": "medium",
+        "icon": "🏆",
+        "style": "info"
+      },
+      {
+        "text": "🌟 SFIDA LEGGENDARIA! {playersCount} gladiatori 11vs11 al {field} il {date}! Storia del calcio in scrittura!",
+        "category": "match_creation",
+        "type": "participants",
+        "priority": "high",
+        "icon": "🌟",
+        "style": "success"
+      }
+    ],
+    "time_evening": [
+      {
+        "text": "🌙 MATCH NOTTURNO! {date} al {field} - I riflettori illumineranno la gloria!",
+        "category": "match_creation",
+        "type": "time_evening",
+        "priority": "medium",
+        "icon": "🌙",
+        "style": "info"
+      },
+      {
+        "text": "⭐ SFIDA SERALE! {date} - {field} si trasforma in un palcoscenico magico!",
+        "category": "match_creation",
+        "type": "time_evening",
+        "priority": "high",
+        "icon": "⭐",
+        "style": "success"
+      }
+    ],
+    "time_morning": [
+      {
+        "text": "🌅 ALBA DI GLORIA! Match mattutino del {date} al {field}! I primi raggi illuminano i campioni!",
+        "category": "match_creation",
+        "type": "time_morning",
+        "priority": "medium",
+        "icon": "🌅",
+        "style": "info"
+      },
+      {
+        "text": "☀️ FRESH START! {date} - Chi dice che i campioni non si alzano presto? {field} vi aspetta!",
+        "category": "match_creation",
+        "type": "time_morning",
+        "priority": "high",
+        "icon": "☀️",
+        "style": "success"
+      }
+    ],
+    "time_lunch": [
+      {
+        "text": "🍽️ CALCIO A PRANZO! {date} al {field}! Si gioca tra un panino e l'altro!",
+        "category": "match_creation",
+        "type": "time_lunch",
+        "priority": "medium",
+        "icon": "🍽️",
+        "style": "info"
+      },
+      {
+        "text": "⏰ LUNCH BREAK EPICO! {date} - {field} ospita la sfida più gustosa!",
+        "category": "match_creation",
+        "type": "time_lunch",
+        "priority": "high",
+        "icon": "⏰",
+        "style": "warning"
+      }
+    ],
+    "weekend": [
+      {
+        "text": "🎉 WEEKEND WARRIORS! {date} al {field} - Il fine settimana si tinge di calcio!",
+        "category": "match_creation",
+        "type": "weekend",
+        "priority": "high",
+        "icon": "🎉",
+        "style": "success"
+      },
+      {
+        "text": "🏖️ CALCIO DEL WEEKEND! {date} - {field} diventa il centro dell'universo calcistico!",
+        "category": "match_creation",
+        "type": "weekend",
+        "priority": "medium",
+        "icon": "🏖️",
+        "style": "info"
+      }
+    ],
+    "weather": [
+      {
+        "text": "🌤️ METEO REPORT: Previsioni {weather} per {date} al {field}! Il tempo è dalla nostra parte!",
+        "category": "match_creation",
+        "type": "weather",
+        "priority": "low",
+        "icon": "🌤️",
+        "style": "info"
+      },
+      {
+        "text": "⛅ BOLLETTINO METEO: {weather} previsto per {date} - {field} pronto a qualsiasi condizione!",
+        "category": "match_creation",
+        "type": "weather",
+        "priority": "low",
+        "icon": "⛅",
+        "style": "secondary"
+      }
+    ],
+    "high_participation": [
+      {
+        "text": "🔥 BOOM DI ISCRIZIONI! {playersCount} campioni confermati per {date} al {field}! Il calcio chiama, loro rispondono!",
+        "category": "match_creation",
+        "type": "high_participation",
+        "priority": "high",
+        "icon": "🔥",
+        "style": "success"
+      },
+      {
+        "text": "📈 PARTECIPAZIONE RECORD! {playersCount} guerrieri per la sfida {playersType} - {field} non ha mai visto tanto talento!",
+        "category": "match_creation",
+        "type": "high_participation",
+        "priority": "high",
+        "icon": "📈",
+        "style": "success"
+      }
+    ],
+    "low_participation": [
+      {
+        "text": "🎯 SFIDA INTIMA! Solo {playersCount} coraggiosi per {date} al {field} - La qualità supera la quantità!",
+        "category": "match_creation",
+        "type": "low_participation",
+        "priority": "medium",
+        "icon": "🎯",
+        "style": "warning"
+      },
+      {
+        "text": "💎 GRUPPO SELEZIONATO! {playersCount} diamanti grezzi per la sfida {playersType} - Pochi ma buoni!",
+        "category": "match_creation",
+        "type": "low_participation",
+        "priority": "medium",
+        "icon": "💎",
+        "style": "info"
+      }
+    ],
+    "special_notes": [
+      {
+        "text": "📝 NOTE SPECIALI: '{notes}' - Il {date} al {field} sarà memorabile!",
+        "category": "match_creation",
+        "type": "special_notes",
+        "priority": "high",
+        "icon": "📝",
+        "style": "info"
+      },
+      {
+        "text": "💡 DETTAGLIO IMPORTANTE: {notes} - {field}, {date}, preparatevi a qualcosa di speciale!",
+        "category": "match_creation",
+        "type": "special_notes",
+        "priority": "medium",
+        "icon": "💡",
+        "style": "warning"
+      }
+    ],
+    "funny_abstainers": [
+      {
+        "text": "🤷‍♂️ MISTERO: Alcuni giocatori sono spariti nel nulla... Forse stanno ancora decidendo se partecipare al {date}!",
+        "category": "match_creation",
+        "type": "funny_abstainers",
+        "priority": "low",
+        "icon": "🤷‍♂️",
+        "style": "secondary"
+      },
+      {
+        "text": "👻 FANTASMI DEL CALCIO: Alcuni giocatori sono in modalità invisibile... Chi si materializzerà al {field} il {date}?",
+        "category": "match_creation",
+        "type": "funny_abstainers",
+        "priority": "low",
+        "icon": "👻",
+        "style": "secondary"
+      },
+      {
+        "text": "🎭 INDECISI CRONICI: C'è chi non sa ancora cosa fare {date}... Il {field} aspetta le loro decisioni!",
+        "category": "match_creation",
+        "type": "funny_abstainers",
+        "priority": "low",
+        "icon": "🎭",
+        "style": "secondary"
+      },
+      {
+        "text": "🔮 ORACOLO: La sfera di cristallo prevede che qualcuno si sveglierà all'ultimo momento per {date} al {field}!",
+        "category": "match_creation",
+        "type": "funny_abstainers",
+        "priority": "low",
+        "icon": "🔮",
+        "style": "secondary"
+      }
+    ],
+    "motivational": [
+      {
+        "text": "💪 CHIAMATA ALLE ARMI! {date} al {field} - È l'ora di dimostrare di cosa siamo fatti!",
+        "category": "match_creation",
+        "type": "motivational",
+        "priority": "medium",
+        "icon": "💪",
+        "style": "success"
+      },
+      {
+        "text": "🚀 MISSIONE {playersType}: {playersCount} eroi, un solo obiettivo - dominare il {field} il {date}!",
+        "category": "match_creation",
+        "type": "motivational",
+        "priority": "high",
+        "icon": "🚀",
+        "style": "success"
+      },
+      {
+        "text": "⚡ ENERGIA PURA: {date} - {field} si prepara a contenere tutta la nostra potenza!",
+        "category": "match_creation",
+        "type": "motivational",
+        "priority": "medium",
+        "icon": "⚡",
+        "style": "info"
+      }
+    ],
+    "weather_december": [
+      {
+        "text": "🎄 Dicembre magico, Natale si avvicina e con lui i regali più belli: gol e vittorie sul campo!",
+        "category": "match_creation",
+        "type": "weather",
+        "priority": "low",
+        "icon": "🎄",
+        "style": "default"
+      },
+      {
+        "text": "❄️ Ultimo mese dell'anno, prime grandi soddisfazioni! Il freddo non ferma la nostra passione!",
+        "category": "match_creation",
+        "type": "weather",
+        "priority": "low",
+        "icon": "❄️",
+        "style": "default"
+      }
+    ],
+    "absences": [
+      {
+        "text": "😅 {playerName} dà forfait! Chi raccoglierà la sua eredità e porterà avanti il suo spirito combattivo?",
+        "category": "match_creation",
+        "type": "absence",
+        "priority": "low",
+        "icon": "😅",
+        "style": "warning"
+      }
+    ],
+    "full_squad": [
+      {
+        "text": "💯 SQUADRA AL COMPLETO! Tutti presenti, battaglia totale! Nessun assente, massima potenza di fuoco!",
+        "category": "match_creation",
+        "type": "full_squad",
+        "priority": "medium",
+        "icon": "💯",
+        "style": "success"
+      }
+    ]
+  },
+  "match_completed": {
+    "mvp_performance": [
+      {
+        "text": "⭐ MASTERCLASS! {playerName} domina la partita con un {rating} da standing ovation! Prestazione da manuale del calcio!",
+        "category": "match_completed",
+        "type": "mvp_performance",
+        "priority": "high",
+        "icon": "⭐",
+        "style": "success"
+      },
+      {
+        "text": "🌟 PRESTAZIONE LEGGENDARIA! {rating} per {playerName} che porta la squadra sulle spalle! Semplicemente perfetto!",
+        "category": "match_completed",
+        "type": "mvp_performance",
+        "priority": "high",
+        "icon": "🌟",
+        "style": "success"
+      }
+    ],
+    "flop_performance": [
+      {
+        "text": "😅 Giornata da dimenticare per {playerName}: {rating} e qualche rimpianto... Ma i campioni sanno come rialzarsi!",
+        "category": "match_completed",
+        "type": "flop_performance",
+        "priority": "medium",
+        "icon": "😅",
+        "style": "warning"
+      }
+    ],
+    "team_performance": [
+      {
+        "text": "🚀 SQUADRA IN FORMA SMAGLIANTE! Media di squadra da {teamAverage} - che spettacolo di gioco collettivo!",
+        "category": "match_completed",
+        "type": "team_performance",
+        "priority": "high",
+        "icon": "🚀",
+        "style": "success"
+      }
+    ],
+    "goals_fest": [
+      {
+        "text": "⚽ FESTIVAL DEL GOL! {totalGoals} reti in una partita da sogno! Le reti cadono come gocce di pioggia!",
+        "category": "match_completed",
+        "type": "goals_fest",
+        "priority": "high",
+        "icon": "⚽",
+        "style": "success"
+      }
+    ],
+    "top_scorer": [
+      {
+        "text": "🥅 GOLEADOR SCATENATO! {playerName} segna {goals} gol e trascina la squadra alla vittoria! Che bomber!",
+        "category": "match_completed",
+        "type": "top_scorer",
+        "priority": "high",
+        "icon": "🥅",
+        "style": "success"
+      },
+      {
+        "text": "⚽ CECCHINO DI AREA! {goals} reti per {playerName} che non sbaglia un colpo! Istinto del killer!",
+        "category": "match_completed",
+        "type": "top_scorer",
+        "priority": "high",
+        "icon": "⚽",
+        "style": "success"
+      }
+    ],
+    "assist_man": [
+      {
+        "text": "🎯 REGISTA SUPREMO! {playerName} confeziona {assists} assist perfetti! Che visione di gioco!",
+        "category": "match_completed",
+        "type": "assist_man",
+        "priority": "high",
+        "icon": "🎯",
+        "style": "success"
+      },
+      {
+        "text": "🧙‍♂️ MAGO DEL PASSAGGIO! {assists} assist magici di {playerName} che fa brillare i compagni! Geniale!",
+        "category": "match_completed",
+        "type": "assist_man",
+        "priority": "high",
+        "icon": "🧙‍♂️",
+        "style": "success"
+      }
+    ],
+    "high_scoring": [
+      {
+        "text": "🎯 FESTIVAL DEL GOL! {totalGoals} reti in un match {matchType} - Che spettacolo incredibile!",
+        "category": "match_completed",
+        "type": "high_scoring",
+        "priority": "high",
+        "icon": "🎯",
+        "style": "success"
+      },
+      {
+        "text": "⚽ CHE SPETTACOLO! {totalGoals} gol e {totalAssists} assist - I {totalPlayers} protagonisti hanno fatto magia!",
+        "category": "match_completed",
+        "type": "high_scoring",
+        "priority": "high",
+        "icon": "⚽",
+        "style": "success"
+      }
+    ],
+    "low_scoring": [
+      {
+        "text": "🛡️ BATTAGLIA TATTICA! Solo {totalGoals} gol in una sfida {matchType} - Difese impenetrabili e nervi saldi!",
+        "category": "match_completed",
+        "type": "low_scoring",
+        "priority": "medium",
+        "icon": "🛡️",
+        "style": "info"
+      },
+      {
+        "text": "⚔️ DUELLO DI FERRO! Match {matchType} concluso con {totalGoals} reti - Pura tensione allo stato puro!",
+        "category": "match_completed",
+        "type": "low_scoring",
+        "priority": "medium",
+        "icon": "⚔️",
+        "style": "warning"
+      }
+    ],
+    "late_night": [
+      {
+        "text": "🌙 BATTAGLIA NOTTURNA! Match concluso - I guerrieri della notte non si fermano mai!",
+        "category": "match_completed",
+        "type": "late_night",
+        "priority": "medium",
+        "icon": "🌙",
+        "style": "info"
+      },
+      {
+        "text": "🌃 SFIDA UNDER THE LIGHTS! Quando la passione non conosce orari - {totalGoals} gol nella notte!",
+        "category": "match_completed",
+        "type": "late_night",
+        "priority": "medium",
+        "icon": "🌃",
+        "style": "success"
+      }
+    ],
+    "funny_stats": [
+      {
+        "text": "📊 STATISTICHE PAZZE! Match {matchType} con {totalGoals} gol e {totalAssists} assist - I numeri raccontano storie epiche!",
+        "category": "match_completed",
+        "type": "funny_stats",
+        "priority": "low",
+        "icon": "📊",
+        "style": "secondary"
+      },
+      {
+        "text": "🤓 CURIOSITÀ: {totalPlayers} giocatori, {totalGoals} gol di pura adrenalina - Matematicamente perfetto!",
+        "category": "match_completed",
+        "type": "funny_stats",
+        "priority": "low",
+        "icon": "🤓",
+        "style": "secondary"
+      }
+    ],
+    "balanced_performance": [
+      {
+        "text": "⚖️ EQUILIBRIO PERFETTO! Tutti i {totalPlayers} giocatori con prestazioni omogenee - Differenza voti di soli {ratingSpread}!",
+        "category": "match_completed",
+        "type": "balanced_performance",
+        "priority": "medium",
+        "icon": "⚖️",
+        "style": "info"
+      },
+      {
+        "text": "🤝 SQUADRA VERA! Match {matchType} dove tutti hanno dato il massimo - Team spirit perfetto!",
+        "category": "match_completed",
+        "type": "balanced_performance",
+        "priority": "medium",
+        "icon": "🤝",
+        "style": "success"
+      }
+    ]
+  },
+  "playercard_creation": {
+    "session_started": [
+      {
+        "text": "📊 VALUTAZIONE IN CORSO! È arrivato il momento di giudicare {playerName}! Tutti pronti con carta e penna?",
+        "category": "playercard_creation",
+        "type": "session_started",
+        "priority": "medium",
+        "icon": "📊",
+        "style": "info"
+      }
+    ],
+    "high_rating": [
+      {
+        "text": "🌟 PLAYERCARD STELLARE! {playerName} conquista un {overallRating} da vero campione! Che valutazione magnifica!",
+        "category": "playercard_creation",
+        "type": "high_rating",
+        "priority": "high",
+        "icon": "🌟",
+        "style": "success"
+      }
+    ],
+    "rookie_player": [
+      {
+        "text": "🌱 BENVENUTO ROOKIE! {playerName} inizia con {overallRating} - Tanto margine di crescita per questo {consensusPosition}!",
+        "category": "playercard_creation",
+        "type": "rookie_player",
+        "priority": "medium",
+        "icon": "🌱",
+        "style": "info"
+      },
+      {
+        "text": "🎯 NUOVA PROMESSA! {playerName} debutta con {overallRating} - I grandi viaggi iniziano con un piccolo passo!",
+        "category": "playercard_creation",
+        "type": "rookie_player",
+        "priority": "medium",
+        "icon": "🎯",
+        "style": "success"
+      }
+    ],
+    "balanced_player": [
+      {
+        "text": "⚖️ EQUILIBRIO PERFETTO! {playerName} è un {consensusPosition} completo - Top attribute: {topAttribute} a {topAttributeValue}!",
+        "category": "playercard_creation",
+        "type": "balanced_player",
+        "priority": "medium",
+        "icon": "⚖️",
+        "style": "success"
+      },
+      {
+        "text": "🎭 JOLLY UNIVERSALE! {playerName} ha tutto: {overallRating} overall senza punti deboli - Che versatilità!",
+        "category": "playercard_creation",
+        "type": "balanced_player",
+        "priority": "medium",
+        "icon": "🎭",
+        "style": "info"
+      }
+    ],
+    "specialist_player": [
+      {
+        "text": "🎯 SPECIALISTA PURO! {playerName} domina in {topAttribute} con {topAttributeValue} - Un vero esperto del {consensusPosition}!",
+        "category": "playercard_creation",
+        "type": "specialist_player",
+        "priority": "high",
+        "icon": "🎯",
+        "style": "success"
+      },
+      {
+        "text": "⚡ MASTER OF {topAttribute}! {playerName} eccelle nella sua specialità - {topAttributeValue} è un valore da campioni!",
+        "category": "playercard_creation",
+        "type": "specialist_player",
+        "priority": "high",
+        "icon": "⚡",
+        "style": "success"
+      }
+    ],
+    "special_position": [
+      {
+        "text": "🏆 RUOLO SPECIALE! {playerName} è stato valutato come {consensusPosition} - Una posizione che richiede talento unico!",
+        "category": "playercard_creation",
+        "type": "special_position",
+        "priority": "high",
+        "icon": "🏆",
+        "style": "success"
+      },
+      {
+        "text": "👑 POSIZIONE DA RE! {consensusPosition} {playerName} con {overallRating} overall - I ruoli speciali per giocatori speciali!",
+        "category": "playercard_creation",
+        "type": "special_position",
+        "priority": "high",
+        "icon": "👑",
+        "style": "success"
+      }
+    ],
+    "welcome_player": [
+      {
+        "text": "🤝 BENVENUTO IN FAMIGLIA! {playerName} entra nel team - Siamo pronti a vederti in azione!",
+        "category": "playercard_creation",
+        "type": "welcome_player",
+        "priority": "medium",
+        "icon": "🤝",
+        "style": "success"
+      },
+      {
+        "text": "🎉 NUOVO MEMBRO! {playerName} ({consensusPosition}) si unisce alla famiglia - {overallRating} di puro talento!",
+        "category": "playercard_creation",
+        "type": "welcome_player",
+        "priority": "medium",
+        "icon": "🎉",
+        "style": "info"
+      }
+    ],
+    "balanced_rating": [
+      {
+        "text": "⚖️ VALUTAZIONE EQUILIBRATA! {playerName} ottiene {overallRating}, un voto solido che fotografa perfettamente il suo valore!",
+        "category": "playercard_creation",
+        "type": "balanced_rating",
+        "priority": "medium",
+        "icon": "⚖️",
+        "style": "info"
+      }
+    ]
+  },
+  "streaks": {
+    "winning_streak": [
+      {
+        "text": "🔥 {playerName} è una macchina perfetta! {streakCount} prestazioni consecutive sopra il {threshold}! Inarrestabile!",
+        "category": "streaks",
+        "type": "winning_streak",
+        "priority": "high",
+        "icon": "🔥",
+        "style": "success"
+      }
+    ],
+    "record_broken": [
+      {
+        "text": "📈 NUOVO RECORD PERSONALE! {playerName} stabilisce il suo massimo storico: {newRecord}! Che prestazione!",
+        "category": "streaks",
+        "type": "record_broken",
+        "priority": "high",
+        "icon": "📈",
+        "style": "success"
+      }
+    ]
+  },
+  "debuts": [
+    {
+      "text": "👋 BENVENUTO NEL TEAM! {playerName} esordisce con un promettente {rating}! Che belle speranze per il futuro!",
+      "category": "debuts",
+      "type": "debut",
+      "priority": "medium",
+      "icon": "👋",
+      "style": "info"
+    }
+  ],
+  "milestones": [
+    {
+      "text": "🎉 TRAGUARDO STORICO! {playerName} raggiunge le {totalMatches} presenze in squadra! Fedeltà e dedizione premiati!",
+      "category": "milestones",
+      "type": "milestone",
+      "priority": "medium",
+      "icon": "🎉",
+      "style": "success"
+    }
+  ],
+  "rivalries": [
+    {
+      "text": "⚔️ SFIDA EPICA! {player1} ({rating1}) vs {player2} ({rating2}) - che duello spettacolare! Nessuno molla un centimetro!",
+      "category": "rivalries",
+      "type": "rivalry",
+      "priority": "high",
+      "icon": "⚔️",
+      "style": "warning"
+    }
+  ],
+  "fun_facts": [
+    {
+      "text": "🎲 LO SAPEVI CHE...? {playerName} è statisticamente il più fortunato negli scontri diretti! Scaramanzia a mille!",
+      "category": "fun_facts",
+      "type": "fun_fact",
+      "priority": "low",
+      "icon": "🎲",
+      "style": "default"
+    }
+  ]
+}

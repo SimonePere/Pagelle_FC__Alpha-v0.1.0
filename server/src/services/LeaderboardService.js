@@ -5,6 +5,9 @@ const {
     PlayerLeaderboardStatsRepository
 } = require('../repositories');
 
+const NewsService = require('./NewsService');
+
+
 const AppError = require('../utils/AppError');
 
 /**
@@ -29,6 +32,8 @@ class LeaderboardService {
     constructor() {
         // Inizializza i repository per accesso dati
         this.playerStatsRepository = new PlayerLeaderboardStatsRepository();
+        this.newsService = new NewsService();
+
 
         // Standard fields per consistency
         this.STANDARD_FIELDS = 'playerId playerName totalMatches totalGoals totalAssists averageRating playerCardTOT playerCardAverage formRating recentForm';

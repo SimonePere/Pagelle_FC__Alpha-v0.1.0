@@ -9,6 +9,8 @@ const {
     PlayerLeaderboardStatsRepository
 } = require('../repositories');
 
+const NewsService = require('./NewsService');
+
 /**
  * VotingService - Business Logic Layer per Gestione Votazioni
  * 
@@ -38,31 +40,14 @@ class VotingService {
         this.teamRepository = new TeamRepository();
         this.userRepository = new UserRepository();
         this.playerStatsRepository = new PlayerLeaderboardStatsRepository();
+        this.newsService = new NewsService();
     }
 
     // ====================
     // 1. VALIDATION METHODS
     // ====================
 
-    /**
-     * Valida i dati per creazione sessione votazione
-     * @param {Object} data - Dati sessione da validare
-     * @throws {Error} Se validation fallisce
-     */
-    validateSessionCreation(data) {
-        // TODO: Implementare validation
-    }
 
-    /**
-     * Valida submission voto per una sessione
-     * @param {string} sessionId - ID sessione votazione  
-     * @param {string} userId - ID utente votante
-     * @param {Object} voteData - Dati voto da validare
-     * @throws {Error} Se validation fallisce
-     */
-    validateVoteSubmission(sessionId, userId, voteData) {
-        // TODO: Implementare validation
-    }
 
     /**
      * Valida rating giocatore (range 1-10)
@@ -268,6 +253,13 @@ class VotingService {
         console.log('👤 User ID:', userId);
 
         try {
+
+            // 0.5. Recupera nome del votante per miglior logging
+            const voter = await this.userRepository.findById(userId);
+            if (voter) {
+                console.log('👤 Voter Name:', voter.name);
+            }
+
             // 1. Verifica autorizzazione (include tutte le validazioni di sessione)
             const session = await this.checkSessionAuthorization(sessionId, userId);
 
@@ -304,6 +296,7 @@ class VotingService {
 
             console.log('🟣 === FINE SUBMIT VOTE (SERVICE) ===\n');
 
+
             // 6. Restituisce risultato completo per il controller
             return {
                 success: true,
@@ -312,7 +305,11 @@ class VotingService {
                     submittedAt: newVote.createdAt,
                     type: 'match_rating',
                     playersRated: transformedVoteData.playerRatings.length,
-                    badgesAwarded: transformedVoteData.badges.length
+                    badgesAwarded: transformedVoteData.badges.length,
+                    voterInfo: voter ? {
+                        id: voter._id,
+                        name: voter.name
+                    } : { id: userId }
                 },
                 autoCompletion: autoCompletionResult,
                 message: autoCompletionResult.autoCompleted
@@ -370,11 +367,29 @@ class VotingService {
                     console.log('📊 Giocatori elaborati:', completionResult.playersCount);
                     console.log('🗳️ Votanti totali:', completionResult.votersCount);
 
+                    // 🗞️ NEWS: Genera news per match completato
+                    await this.newsService.createNewsOnCompleteMatch({
+                        matchId: session.targetId,
+                        teamId: session.teamId,
+                        totalPlayers: completionResult.playersCount,
+                        totalGoals: Object.values(completionResult.officialResults).reduce((sum, p) => sum + (p.goals || 0), 0),
+                        totalAssists: Object.values(completionResult.officialResults).reduce((sum, p) => sum + (p.assists || 0), 0),
+                        playerCards: Object.entries(completionResult.officialResults).map(([id, stats]) => ({
+                            playerId: id,
+                            name: stats.playerName,
+                            averageRating: stats.averageRating,
+                            goals: stats.goals || 0,
+                            assists: stats.assists || 0,
+                            badges: stats.badges || []
+                        }))
+                    }).catch(err => console.error('⚠️ Errore news:', err.message));
+
                     return {
                         autoCompleted: true,
                         completionResult: completionResult,
                         message: 'Sessione completata automaticamente!'
                     };
+
 
                 } catch (error) {
                     console.error('❌ Errore durante auto-complete:', error.message);
@@ -558,12 +573,13 @@ class VotingService {
      * @param {Array} submissions - Lista submissions
      * @returns {Object} Stats aggregate per player
      */
-    aggregatePlayerStats(submissions) {
+    async aggregatePlayerStats(submissions) {
         if (!Array.isArray(submissions) || submissions.length === 0) {
             throw new Error('Valid submissions array is required');
         }
 
         const playerStats = {};
+        const playerNames = {}; // Cache per i nomi dei giocatori
 
         // Aggrega tutti i dati dai submissions
         submissions.forEach(submission => {
@@ -605,6 +621,22 @@ class VotingService {
             });
         });
 
+        // Recupera i nomi dei giocatori
+        const playerIds = Object.keys(playerStats);
+        for (const playerId of playerIds) {
+            try {
+                const player = await this.userRepository.findById(playerId);
+                if (player) {
+                    playerNames[playerId] = player.name;
+                } else {
+                    playerNames[playerId] = `Player ${playerId.substring(0, 8)}`;
+                }
+            } catch (error) {
+                console.log(`⚠️ Errore recupero nome per player ${playerId}:`, error.message);
+                playerNames[playerId] = `Player ${playerId.substring(0, 8)}`;
+            }
+        }
+
         // Calcola risultati finali con statistiche avanzate
         const finalResults = {};
         Object.keys(playerStats).forEach(playerId => {
@@ -621,6 +653,8 @@ class VotingService {
                     : sortedRatings[Math.floor(sortedRatings.length / 2)];
 
                 finalResults[playerId] = {
+                    playerId: playerId,
+                    playerName: playerNames[playerId] || `Player ${playerId.substring(0, 8)}`,
                     averageRating: parseFloat(average.toFixed(1)),
                     medianRating: parseFloat(median.toFixed(1)),
                     goals: stats.selfReportedGoals,
@@ -859,6 +893,16 @@ class VotingService {
                         updateFields
                     );
                     console.log(`✅ Best/worst rating aggiornati per ${playerStats.playerName}`);
+
+                    // 🗞️ NEWS: Genera news per record personali
+                    await this.newsService.createNewsOnLeaderboardChanges({
+                        playerId: playerId,
+                        playerName: playerStats.playerName,
+                        teamId: playerStats.teamId,
+                        changes: updateFields,
+                        newRating: newRating,
+                        matchContext: 'rating_update'
+                    }).catch(err => console.error('⚠️ Errore news leaderboard:', err.message));
                 }
 
             } catch (error) {
