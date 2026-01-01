@@ -1,129 +1,42 @@
-import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState, AppDispatch } from '@/redux/store/store';
-import { loadEnrichedUserData } from '@/redux/slices/authSlice';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/redux/store/store';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Trophy, Medal, Target, TrendingUp, Crown, AlertCircle, Star, Goal, Users, BarChart3, Circle, Footprints, Hand } from 'lucide-react';
+import { Trophy, Medal, Target, TrendingUp, Crown, AlertCircle, Star, Goal, BarChart3, Hand } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { FakeNews } from '@/components/FakeNews';
 import { BadgesSection } from '@/components/BadgesSection';
-import { Match } from '@/types/match';
-import { User } from '@/types/api';
-import { PlayerCard } from '@/types/playerCard';
-// import { calculateOverallRating } from '@/utils/playerCardCalculations';
 import MatchCard from '@/components/MatchCard';
-import { api } from '@/lib/api';
 import { OnboardingTutorial } from '@/components/OnboardingTutorial';
+import useHomeDashboard from '@/hooks/useHomeDashboard';
 
-interface PlayerStats {
-  playerId: string;
-  playerName: string;
-  averageRating: number;
-  totalGoals: number;
-  totalAssists: number;
-  totalMatches: number;
-  playerCardAverage?: number; // Player card average rating
-  formRating?: number; // Form rating for last 5 matches
-}
-
+// Types now handled by useHomeDashboard hook
 type LeaderboardType = 'rating' | 'goals' | 'assists' | 'playercard' | 'form';
 
 const Home = () => {
   const { user } = useSelector((state: RootState) => state.auth);
-  const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const [leaderboard, setLeaderboard] = useState<PlayerStats[]>([]);
-  const [pendingMatches, setPendingMatches] = useState<Match[]>([]);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [playerCards, setPlayerCards] = useState<PlayerCard[]>([]);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [activeLeaderboard, setActiveLeaderboard] = useState<LeaderboardType>('rating');
-  const [loading, setLoading] = useState(false); // Cambiato da true a false
-  const [error, setError] = useState<string | null>(null);
 
-  const loadLeaderboard = async (type: LeaderboardType, teamId: string) => {
-    if (!teamId) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await api.get(`/leaderboards/${teamId}/${type}`);
-
-      // L'API restituisce direttamente l'oggetto con success/data
-      if (response.success) {
-        setLeaderboard(response.data || []);
-      } else {
-        setError('Errore nel caricamento della classifica');
-      }
-    } catch (err) {
-      console.error(`❌ Error loading ${type} leaderboard:`, err);
-      setError('Errore di connessione');
-      // Fallback to empty array instead of demo data
-      setLeaderboard([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Load enriched data once when user first loads
-  useEffect(() => {
-    if (user && (!user.teams || !user.personalStats)) {
-      dispatch(loadEnrichedUserData());
-    }
-  }, [user?.id, dispatch]); // Solo quando cambia l'ID utente
-
-  // Main useEffect for component initialization  
-  useEffect(() => {
-    if (user) {
-      const hasSeenOnboarding = localStorage.getItem(`onboarding_${user._id}`);
-      if (!hasSeenOnboarding) {
-        setShowOnboarding(true);
-      }
-
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const currentTeamId = user.teams?.[0]?.id;
-      const teammates = users.filter((u: any) => u.teamId === currentTeamId);
-      setAllUsers(teammates);
-
-      const cards = JSON.parse(localStorage.getItem('playerCards') || '[]') as PlayerCard[];
-      const teamCards = cards.filter(c => c.teamId === currentTeamId);
-      setPlayerCards(teamCards);
-
-      loadPendingMatches();
-    }
-  }, [user?.id]); // Solo quando cambia l'ID utente
-
-  // Separate useEffect for leaderboard changes
-  useEffect(() => {
-    const currentTeamId = user?.teams?.[0]?.id;
-    if (currentTeamId) {
-      loadLeaderboard(activeLeaderboard, currentTeamId);
-    }
-  }, [activeLeaderboard, user?.teams?.[0]?.id]);
-
-  const handleOnboardingComplete = () => {
-    if (user) {
-      localStorage.setItem(`onboarding_${user._id}`, 'true');
-    }
-    setShowOnboarding(false);
-  };
-
-  const loadPendingMatches = () => {
-    if (!user) return;
-    const matches: Match[] = JSON.parse(localStorage.getItem('matches') || '[]');
-    const currentTeamId = user.teams?.[0]?.id;
-    const teamMatches = matches.filter(m => m.teamId === currentTeamId);
-    const pending = teamMatches.filter(m => m.status === 'active');
-    setPendingMatches(pending);
-  };
+  // 🎯 Usa useHomeDashboard invece di logica duplicata
+  const {
+    news,
+    leaderboard,
+    pendingMatches,
+    allUsers,
+    showOnboarding,
+    activeLeaderboard,
+    isLoading,
+    error,
+    setActiveLeaderboard,
+    handleOnboardingComplete,
+    loadLeaderboard
+  } = useHomeDashboard();
 
   const handleTabChange = (newTab: LeaderboardType) => {
     setActiveLeaderboard(newTab);
-    // useEffect will trigger loadLeaderboard automatically
+    // useHomeDashboard gestisce automaticamente il caricamento
   };
 
   if (!user) return null;
@@ -164,7 +77,7 @@ const Home = () => {
   };
 
   // Funzione per ottenere il valore primario in base al tipo di classifica
-  const getPrimaryValue = (player: PlayerStats, type: LeaderboardType) => {
+  const getPrimaryValue = (player: any, type: LeaderboardType) => {
     switch (type) {
       case 'rating':
         return player.averageRating ? player.averageRating.toFixed(1) : '0.0';
@@ -174,7 +87,7 @@ const Home = () => {
         return (player.totalAssists || 0).toString();
       case 'playercard':
         // Il campo corretto è playerCardTOT
-        const cardValue = (player as any).playerCardTOT || player.playerCardAverage;
+        const cardValue = player.playerCardTOT || player.playerCardAverage;
         return cardValue ? Math.round(cardValue).toString() : 'N/A';
       case 'form':
         return player.formRating ? player.formRating.toFixed(1) : '0.0';
@@ -207,8 +120,6 @@ const Home = () => {
     if (index === 2) return <Medal className="w-6 h-6 text-amber-600 drop-shadow-glow" />;
     return null;
   };
-
-  const users = JSON.parse(localStorage.getItem('users') || '[]');
 
   return (
     <DashboardLayout>
@@ -320,7 +231,7 @@ const Home = () => {
           )}
 
           {/* Fake News - Prominent Section */}
-          <FakeNews />
+          <FakeNews news={news} />
 
           {/* Leaderboard with Tabs - HERO SECTION */}
           <motion.div
@@ -364,7 +275,7 @@ const Home = () => {
                   </TabsList>
 
                   <TabsContent value={activeLeaderboard} className="space-y-0">
-                    {loading ? (
+                    {isLoading.leaderboard ? (
                       <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -373,7 +284,7 @@ const Home = () => {
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
                         <p className="text-muted-foreground">Caricamento classifica...</p>
                       </motion.div>
-                    ) : error ? (
+                    ) : error.leaderboard ? (
                       <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -381,9 +292,9 @@ const Home = () => {
                       >
                         <AlertCircle className="w-12 h-12 text-destructive mb-4" />
                         <p className="text-destructive font-semibold mb-2">Errore di caricamento</p>
-                        <p className="text-muted-foreground mb-4">{error}</p>
+                        <p className="text-muted-foreground mb-4">{error.leaderboard}</p>
                         <button
-                          onClick={() => loadLeaderboard(activeLeaderboard, user.teams?.[0]?.id)}
+                          onClick={() => loadLeaderboard(activeLeaderboard, user?.teams?.[0]?.id)}
                           className="px-4 py-2 bg-primary text-primary-foreground rounded-lg"
                         >
                           Riprova

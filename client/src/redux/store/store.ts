@@ -5,6 +5,8 @@ import matchReducer from "../slices/matchSlice";
 import votingReducer from "../slices/votingSlice";
 import usersReducer from "../slices/usersSlice";
 import playerCardsReducer from "../slices/playerCardsSlice";
+import newsReducer from "../slices/newsSlice";
+
 
 
 const store = configureStore({
@@ -15,6 +17,7 @@ const store = configureStore({
         voting: votingReducer,                  // 🆕 Sistema votazione
         users: usersReducer,                    // 🆕 Gestione utenti
         playerCards: playerCardsReducer,       // 🆕 Gestione giocatori
+        news: newsReducer                      // 🆕 Gestione notizie
     },
     devTools: process.env.NODE_ENV !== 'production',
     middleware: (getDefaultMiddleware) =>

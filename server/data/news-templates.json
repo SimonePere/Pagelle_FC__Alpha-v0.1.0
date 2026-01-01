@@ -146,7 +146,7 @@
   "match_creation": {
     "general": [
       {
-        "text": "📅 NUOVO MATCH IN VISTA! Si prospetta una battaglia epica sul campo! I nostri gladiatori si preparano allo scontro!",
+        "text": "📅 NUOVO MATCH IN VISTA! Si prospetta una battaglia epica sul campo del {field}! I nostri gladiatori si preparano allo scontro!",
         "category": "match_creation",
         "type": "general",
         "priority": "medium",
@@ -170,7 +170,7 @@
         "style": "info"
       },
       {
-        "text": "⚽ ULTIMORA: Match confermato per {date} al {field}! Saranno {playersCount} i gladiatori in campo!",
+        "text": "⚽ ULTIMORA: Match confermato! Si gioca il {date} al {field} Stadium! Saranno {playersCount} i gladiatori in campo!",
         "category": "match_creation",
         "type": "general",
         "priority": "high",
@@ -178,7 +178,7 @@
         "style": "success"
       },
       {
-        "text": "📢 FLASH: Nuovo match programmato! Appuntamento {date} al {field} per una sfida {playersType}!",
+        "text": "📢 FLASH: Nuovo match programmato! Appuntamento il {date} al {field} Arena per una sfida {playersType}!",
         "category": "match_creation",
         "type": "general",
         "priority": "medium",
@@ -188,7 +188,7 @@
     ],
     "field": [
       {
-        "text": "🏟️ Il campo di {field} si prepara ad accogliere i nostri campioni {date}! Che spettacolo ci aspetta!",
+        "text": "🏟️ Il campo di {field} si prepara ad accogliere i nostri campioni, appuntamento il {date}! Che spettacolo ci aspetta!",
         "category": "match_creation",
         "type": "field",
         "priority": "medium",
@@ -196,7 +196,7 @@
         "style": "info"
       },
       {
-        "text": "⚽ A {field} sarà il teatro della prossima battaglia {date}! Il campo della gloria!",
+        "text": "⚽ Al {field} Stadium sarà il teatro della prossima battaglia il {date}! Il campo della gloria!",
         "category": "match_creation",
         "type": "field",
         "priority": "high",
@@ -204,7 +204,7 @@
         "style": "success"
       },
       {
-        "text": "🌟 Il mitico {field} torna protagonista! Appuntamento {date} per la sfida {playersType}!",
+        "text": "🌟 Il mitico Giuseppe {field} Meazza torna protagonista! Appuntamento il {date} per la sfida {playersType}!",
         "category": "match_creation",
         "type": "field",
         "priority": "medium",
@@ -214,7 +214,7 @@
     ],
     "date_urgent": [
       {
-        "text": "⏰ ATTENZIONE: Match IMMINENTE! Si gioca il {date} al {field}! Ultimi preparativi in corso!",
+        "text": "⏰ ATTENZIONE: Match IMMINENTE! Si gioca il {date} al {field} Stadium! Ultimi preparativi in corso!",
         "category": "match_creation",
         "type": "date_urgent",
         "priority": "urgent",
@@ -222,7 +222,7 @@
         "style": "warning"
       },
       {
-        "text": "🚨 ULTIM'ORA: Partita tra meno di 24 ore! {date} al {field}, siate pronti per la battaglia!",
+        "text": "🚨 ULTIM'ORA: Partita tra meno di 24 ore!  Il {date} al {field} Arena, siate pronti per la battaglia!",
         "category": "match_creation",
         "type": "date_urgent",
         "priority": "urgent",
@@ -232,7 +232,7 @@
     ],
     "date_soon": [
       {
-        "text": "📅 SAVE THE DATE: {date} al {field}! I nostri campioni si stanno già allenando!",
+        "text": "📅 SAVE THE DATE: Il {date} al {field} Olimpico! I nostri campioni si stanno già allenando!",
         "category": "match_creation",
         "type": "date_soon",
         "priority": "medium",
@@ -240,7 +240,7 @@
         "style": "info"
       },
       {
-        "text": "⭐ MARK YOUR CALENDAR: {date} - {field} - La sfida {playersType} che tutti aspettano!",
+        "text": "⭐ MARK YOUR CALENDAR: Il {date} - {field} Estadio Comunal - La sfida {playersType} che tutti aspettano!",
         "category": "match_creation",
         "type": "date_soon",
         "priority": "medium",
@@ -258,7 +258,7 @@
         "style": "info"
       },
       {
-        "text": "🔥 SFIDA INTENSA! {playersCount} guerrieri 5vs5 al {field} il {date}! Preparatevi al duello!",
+        "text": "🔥 SFIDA INTENSA! {playersCount} guerrieri 5vs5 al {field} Center il {date}! Preparatevi al duello!",
         "category": "match_creation",
         "type": "participants",
         "priority": "high",
@@ -276,7 +276,7 @@
         "style": "info"
       },
       {
-        "text": "⚡ BATTAGLIA EPICA! {playersCount} campioni 8vs8 al {field} il {date}! Il campo trema già!",
+        "text": "⚡ BATTAGLIA EPICA! {playersCount} campioni 8vs8 al {field} Complex il {date}! Il campo trema già!",
         "category": "match_creation",
         "type": "participants",
         "priority": "high",
@@ -294,7 +294,7 @@
         "style": "info"
       },
       {
-        "text": "🌟 SFIDA LEGGENDARIA! {playersCount} gladiatori 11vs11 al {field} il {date}! Storia del calcio in scrittura!",
+        "text": "🌟 SFIDA LEGGENDARIA! {playersCount} gladiatori 11vs11 al {field} Megastadio il {date}! Storia del calcio in scrittura!",
         "category": "match_creation",
         "type": "participants",
         "priority": "high",
@@ -302,63 +302,11 @@
         "style": "success"
       }
     ],
-    "time_evening": [
-      {
-        "text": "🌙 MATCH NOTTURNO! {date} al {field} - I riflettori illumineranno la gloria!",
-        "category": "match_creation",
-        "type": "time_evening",
-        "priority": "medium",
-        "icon": "🌙",
-        "style": "info"
-      },
-      {
-        "text": "⭐ SFIDA SERALE! {date} - {field} si trasforma in un palcoscenico magico!",
-        "category": "match_creation",
-        "type": "time_evening",
-        "priority": "high",
-        "icon": "⭐",
-        "style": "success"
-      }
-    ],
-    "time_morning": [
-      {
-        "text": "🌅 ALBA DI GLORIA! Match mattutino del {date} al {field}! I primi raggi illuminano i campioni!",
-        "category": "match_creation",
-        "type": "time_morning",
-        "priority": "medium",
-        "icon": "🌅",
-        "style": "info"
-      },
-      {
-        "text": "☀️ FRESH START! {date} - Chi dice che i campioni non si alzano presto? {field} vi aspetta!",
-        "category": "match_creation",
-        "type": "time_morning",
-        "priority": "high",
-        "icon": "☀️",
-        "style": "success"
-      }
-    ],
-    "time_lunch": [
-      {
-        "text": "🍽️ CALCIO A PRANZO! {date} al {field}! Si gioca tra un panino e l'altro!",
-        "category": "match_creation",
-        "type": "time_lunch",
-        "priority": "medium",
-        "icon": "🍽️",
-        "style": "info"
-      },
-      {
-        "text": "⏰ LUNCH BREAK EPICO! {date} - {field} ospita la sfida più gustosa!",
-        "category": "match_creation",
-        "type": "time_lunch",
-        "priority": "high",
-        "icon": "⏰",
-        "style": "warning"
-      }
-    ],
+
+
     "weekend": [
       {
-        "text": "🎉 WEEKEND WARRIORS! {date} al {field} - Il fine settimana si tinge di calcio!",
+        "text": "🎉 WEEKEND WARRIORS! Il {date} al {field} Stadium - Il fine settimana si tinge di calcio!",
         "category": "match_creation",
         "type": "weekend",
         "priority": "high",
@@ -366,7 +314,7 @@
         "style": "success"
       },
       {
-        "text": "🏖️ CALCIO DEL WEEKEND! {date} - {field} diventa il centro dell'universo calcistico!",
+        "text": "🏖️ CALCIO DEL WEEKEND! Il {date} - Campo Sportivo {field} diventa il centro dell'universo calcistico!",
         "category": "match_creation",
         "type": "weekend",
         "priority": "medium",
@@ -374,81 +322,12 @@
         "style": "info"
       }
     ],
-    "weather": [
-      {
-        "text": "🌤️ METEO REPORT: Previsioni {weather} per {date} al {field}! Il tempo è dalla nostra parte!",
-        "category": "match_creation",
-        "type": "weather",
-        "priority": "low",
-        "icon": "🌤️",
-        "style": "info"
-      },
-      {
-        "text": "⛅ BOLLETTINO METEO: {weather} previsto per {date} - {field} pronto a qualsiasi condizione!",
-        "category": "match_creation",
-        "type": "weather",
-        "priority": "low",
-        "icon": "⛅",
-        "style": "secondary"
-      }
-    ],
-    "high_participation": [
-      {
-        "text": "🔥 BOOM DI ISCRIZIONI! {playersCount} campioni confermati per {date} al {field}! Il calcio chiama, loro rispondono!",
-        "category": "match_creation",
-        "type": "high_participation",
-        "priority": "high",
-        "icon": "🔥",
-        "style": "success"
-      },
-      {
-        "text": "📈 PARTECIPAZIONE RECORD! {playersCount} guerrieri per la sfida {playersType} - {field} non ha mai visto tanto talento!",
-        "category": "match_creation",
-        "type": "high_participation",
-        "priority": "high",
-        "icon": "📈",
-        "style": "success"
-      }
-    ],
-    "low_participation": [
-      {
-        "text": "🎯 SFIDA INTIMA! Solo {playersCount} coraggiosi per {date} al {field} - La qualità supera la quantità!",
-        "category": "match_creation",
-        "type": "low_participation",
-        "priority": "medium",
-        "icon": "🎯",
-        "style": "warning"
-      },
-      {
-        "text": "💎 GRUPPO SELEZIONATO! {playersCount} diamanti grezzi per la sfida {playersType} - Pochi ma buoni!",
-        "category": "match_creation",
-        "type": "low_participation",
-        "priority": "medium",
-        "icon": "💎",
-        "style": "info"
-      }
-    ],
-    "special_notes": [
-      {
-        "text": "📝 NOTE SPECIALI: '{notes}' - Il {date} al {field} sarà memorabile!",
-        "category": "match_creation",
-        "type": "special_notes",
-        "priority": "high",
-        "icon": "📝",
-        "style": "info"
-      },
-      {
-        "text": "💡 DETTAGLIO IMPORTANTE: {notes} - {field}, {date}, preparatevi a qualcosa di speciale!",
-        "category": "match_creation",
-        "type": "special_notes",
-        "priority": "medium",
-        "icon": "💡",
-        "style": "warning"
-      }
-    ],
+
+
+
     "funny_abstainers": [
       {
-        "text": "🤷‍♂️ MISTERO: Alcuni giocatori sono spariti nel nulla... Forse stanno ancora decidendo se partecipare al {date}!",
+        "text": "🤷‍♂️ MISTERO: Alcuni giocatori sono spariti nel nulla... Forse stanno ancora decidendo se partecipare al match del il {date}!",
         "category": "match_creation",
         "type": "funny_abstainers",
         "priority": "low",
@@ -456,7 +335,7 @@
         "style": "secondary"
       },
       {
-        "text": "👻 FANTASMI DEL CALCIO: Alcuni giocatori sono in modalità invisibile... Chi si materializzerà al {field} il {date}?",
+        "text": "👻 FANTASMI DEL CALCIO: Alcuni giocatori sono in modalità invisibile... Chi si materializzerà al big match del {field} Palace il {date}?",
         "category": "match_creation",
         "type": "funny_abstainers",
         "priority": "low",
@@ -464,7 +343,7 @@
         "style": "secondary"
       },
       {
-        "text": "🎭 INDECISI CRONICI: C'è chi non sa ancora cosa fare {date}... Il {field} aspetta le loro decisioni!",
+        "text": "🎭 INDECISI CRONICI: C'è chi non sa ancora cosa fare il {date}... Il {field} Ground aspetta le loro decisioni!",
         "category": "match_creation",
         "type": "funny_abstainers",
         "priority": "low",
@@ -472,7 +351,7 @@
         "style": "secondary"
       },
       {
-        "text": "🔮 ORACOLO: La sfera di cristallo prevede che qualcuno si sveglierà all'ultimo momento per {date} al {field}!",
+        "text": "🔮 ORACOLO: La sfera di cristallo prevede che qualcuno si sveglierà all'ultimo momento per il {date} al {field} Villa!",
         "category": "match_creation",
         "type": "funny_abstainers",
         "priority": "low",
@@ -482,7 +361,7 @@
     ],
     "motivational": [
       {
-        "text": "💪 CHIAMATA ALLE ARMI! {date} al {field} - È l'ora di dimostrare di cosa siamo fatti!",
+        "text": "💪 CHIAMATA ALLE ARMI! Il {date} al {field} Sports Park - È l'ora di dimostrare di cosa siamo fatti!",
         "category": "match_creation",
         "type": "motivational",
         "priority": "medium",
@@ -490,7 +369,7 @@
         "style": "success"
       },
       {
-        "text": "🚀 MISSIONE {playersType}: {playersCount} eroi, un solo obiettivo - dominare il {field} il {date}!",
+        "text": "🚀 MISSIONE {playersType}: {playersCount} eroi, un solo obiettivo - dominare il {field} Comunale il {date}!",
         "category": "match_creation",
         "type": "motivational",
         "priority": "high",
@@ -506,11 +385,209 @@
         "style": "info"
       }
     ],
+    "weather_january": [
+      {
+        "text": "❄️ Gennaio gelido ma cuori caldi! Il nuovo anno inizia con tanta passione calcistica!",
+        "category": "match_creation",
+        "type": "weather_january",
+        "priority": "low",
+        "icon": "❄️",
+        "style": "default"
+      },
+      {
+        "text": "🗓️ Primo mese dell'anno, prime grandi sfide! Buoni propositi e gol spettacolari!",
+        "category": "match_creation",
+        "type": "weather_january",
+        "priority": "low",
+        "icon": "🗓️",
+        "style": "default"
+      }
+    ],
+    "weather_february": [
+      {
+        "text": "💕 Febbraio, mese dell'amore... e dell'amore per il calcio! San Valentino con il pallone!",
+        "category": "match_creation",
+        "type": "weather_february",
+        "priority": "low",
+        "icon": "💕",
+        "style": "default"
+      },
+      {
+        "text": "🌨️ Febbraio tra neve e pallone - I veri guerrieri non temono il freddo!",
+        "category": "match_creation",
+        "type": "weather_february",
+        "priority": "low",
+        "icon": "🌨️",
+        "style": "default"
+      }
+    ],
+    "weather_march": [
+      {
+        "text": "🌸 Marzo porta la primavera e nuove energie! Sbocciano i talenti sul campo!",
+        "category": "match_creation",
+        "type": "weather_march",
+        "priority": "low",
+        "icon": "🌸",
+        "style": "default"
+      },
+      {
+        "text": "🌿 Marzo, risveglio della natura e del nostro calcio! L'aria è più mite, i gol più belli!",
+        "category": "match_creation",
+        "type": "weather_march",
+        "priority": "low",
+        "icon": "🌿",
+        "style": "default"
+      }
+    ],
+    "weather_april": [
+      {
+        "text": "🌦️ Aprile con le sue piogge prepara il terreno per grandi vittorie!",
+        "category": "match_creation",
+        "type": "weather_april",
+        "priority": "low",
+        "icon": "🌦️",
+        "style": "default"
+      },
+      {
+        "text": "🌈 Aprile dolce dormire... ma noi preferiamo correre e segnare!",
+        "category": "match_creation",
+        "type": "weather_april",
+        "priority": "low",
+        "icon": "🌈",
+        "style": "default"
+      }
+    ],
+    "weather_may": [
+      {
+        "text": "🌻 Maggio esplosivo! Il sole scalda il campo e accende i nostri cuori!",
+        "category": "match_creation",
+        "type": "weather_may",
+        "priority": "low",
+        "icon": "🌻",
+        "style": "default"
+      },
+      {
+        "text": "🌺 Maggio in fiore, come i nostri talenti che sbocciano partita dopo partita!",
+        "category": "match_creation",
+        "type": "weather_may",
+        "priority": "low",
+        "icon": "🌺",
+        "style": "default"
+      }
+    ],
+    "weather_june": [
+      {
+        "text": "☀️ Giugno soleggiato, perfetto per il calcio all'aperto! Il sole è il nostro dodicesimo uomo!",
+        "category": "match_creation",
+        "type": "weather_june",
+        "priority": "low",
+        "icon": "☀️",
+        "style": "default"
+      },
+      {
+        "text": "🏖️ Giugno, si avvicina l'estate ma la passione non va in vacanza!",
+        "category": "match_creation",
+        "type": "weather_june",
+        "priority": "low",
+        "icon": "🏖️",
+        "style": "default"
+      }
+    ],
+    "weather_july": [
+      {
+        "text": "🔥 Luglio bollente sul campo! Il caldo non ferma i veri campioni!",
+        "category": "match_creation",
+        "type": "weather_july",
+        "priority": "low",
+        "icon": "🔥",
+        "style": "default"
+      },
+      {
+        "text": "🌡️ Luglio torrido ma la passione è ancora più calda del sole!",
+        "category": "match_creation",
+        "type": "weather_july",
+        "priority": "low",
+        "icon": "🌡️",
+        "style": "default"
+      }
+    ],
+    "weather_august": [
+      {
+        "text": "🏝️ Agosto, molti in vacanza ma noi in campo! Il calcio non va mai in ferie!",
+        "category": "match_creation",
+        "type": "weather_august",
+        "priority": "low",
+        "icon": "🏝️",
+        "style": "default"
+      },
+      {
+        "text": "🌅 Agosto, ultimi scampoli d'estate dedicati al nostro sport preferito!",
+        "category": "match_creation",
+        "type": "weather_august",
+        "priority": "low",
+        "icon": "🌅",
+        "style": "default"
+      }
+    ],
+    "weather_september": [
+      {
+        "text": "🍂 Settembre, si torna alla routine e si riparte con il calcio! Nuova stagione, nuovi obiettivi!",
+        "category": "match_creation",
+        "type": "weather_september",
+        "priority": "low",
+        "icon": "🍂",
+        "style": "default"
+      },
+      {
+        "text": "📚 Settembre, finite le vacanze si ricomincia con più grinta che mai!",
+        "category": "match_creation",
+        "type": "weather_september",
+        "priority": "low",
+        "icon": "📚",
+        "style": "default"
+      }
+    ],
+    "weather_october": [
+      {
+        "text": "🎃 Ottobre dolce e malinconico, perfetto per match emozionanti!",
+        "category": "match_creation",
+        "type": "weather_october",
+        "priority": "low",
+        "icon": "🎃",
+        "style": "default"
+      },
+      {
+        "text": "🍁 Ottobre, le foglie cadono ma i nostri sogni volano sempre più in alto!",
+        "category": "match_creation",
+        "type": "weather_october",
+        "priority": "low",
+        "icon": "🍁",
+        "style": "default"
+      }
+    ],
+    "weather_november": [
+      {
+        "text": "🌫️ Novembre grigio ma il calcio colora sempre le nostre giornate!",
+        "category": "match_creation",
+        "type": "weather_november",
+        "priority": "low",
+        "icon": "🌫️",
+        "style": "default"
+      },
+      {
+        "text": "🦃 Novembre, mese del ringraziamento... grazie calcio per la gioia che ci dai!",
+        "category": "match_creation",
+        "type": "weather_november",
+        "priority": "low",
+        "icon": "🦃",
+        "style": "default"
+      }
+    ],
     "weather_december": [
       {
         "text": "🎄 Dicembre magico, Natale si avvicina e con lui i regali più belli: gol e vittorie sul campo!",
         "category": "match_creation",
-        "type": "weather",
+        "type": "weather_december",
         "priority": "low",
         "icon": "🎄",
         "style": "default"
@@ -518,7 +595,7 @@
       {
         "text": "❄️ Ultimo mese dell'anno, prime grandi soddisfazioni! Il freddo non ferma la nostra passione!",
         "category": "match_creation",
-        "type": "weather",
+        "type": "weather_december",
         "priority": "low",
         "icon": "❄️",
         "style": "default"
@@ -562,7 +639,31 @@
         "priority": "high",
         "icon": "🌟",
         "style": "success"
-      }
+      },
+      {
+        "text": "⭐ UOMO PARTITA! {playerName} illumina il campo con un {rating}! Prestazione da ricordare!",
+        "category": "match_completed",
+        "type": "mvp_performance",
+        "priority": "medium",
+        "icon": "⭐",
+        "style": "success"
+    },
+    {
+        "text": "🌟 MASTERCLASS! {playerName} domina la partita con un {rating} da standing ovation! Prestazione da manuale!",
+        "category": "match_completed",
+        "type": "mvp_performance",
+        "priority": "medium",
+        "icon": "🌟",
+        "style": "success"
+    },
+    {
+        "text": "👑 RE DEL CAMPO! {playerName} si prende la scena con un {rating} spettacolare! Che classe!",
+        "category": "match_completed",
+        "type": "mvp_performance",
+        "priority": "medium",
+        "icon": "👑",
+        "style": "success"
+    }
     ],
     "flop_performance": [
       {
@@ -576,7 +677,7 @@
     ],
     "team_performance": [
       {
-        "text": "🚀 SQUADRA IN FORMA SMAGLIANTE! Media di squadra da {teamAverage} - che spettacolo di gioco collettivo!",
+        "text": "🚀 {teamName} FC IN FORMA SMAGLIANTE! Media di squadra da {teamAverage} - che spettacolo di gioco collettivo al {field} Stadium!",
         "category": "match_completed",
         "type": "team_performance",
         "priority": "high",
@@ -719,6 +820,64 @@
         "icon": "🤝",
         "style": "success"
       }
+    ],
+    "multiple_high_ratings": [
+      {
+        "text": "🌟 COSTELLAZIONE DI STELLE! {player1} ({rating1}) e {player2} ({rating2}) brillano insieme - Che spettacolo di talento collettivo!",
+        "category": "match_completed",
+        "type": "multiple_high_ratings",
+        "priority": "high",
+        "icon": "🌟",
+        "style": "success"
+      },
+      {
+        "text": "🔥 DOPPIA MAGIA! {player1} con {rating1} e {player2} con {rating2} - Due gladiatori, un'unica eccellenza!",
+        "category": "match_completed",
+        "type": "multiple_high_ratings",
+        "priority": "high",
+        "icon": "🔥",
+        "style": "success"
+      },
+      {
+        "text": "⚡ TRIO ELETTRIZZANTE! {player1} ({rating1}), {player2} ({rating2}) e {player3} ({rating3}) - Che prestazioni monumentali!",
+        "category": "match_completed",
+        "type": "multiple_high_ratings",
+        "priority": "high",
+        "icon": "⚡",
+        "style": "success"
+      },
+      {
+        "text": "👑 NOBILTÀ IN CAMPO! {player1} e {player2} con {rating1} e {rating2} - Due re che dominano il loro regno!",
+        "category": "match_completed",
+        "type": "multiple_high_ratings",
+        "priority": "high",
+        "icon": "👑",
+        "style": "success"
+      },
+      {
+        "text": "🎭 TEATRO DELLA PERFEZIONE! {player1} ({rating1}) e {player2} ({rating2}) mettono in scena uno spettacolo indimenticabile!",
+        "category": "match_completed",
+        "type": "multiple_high_ratings",
+        "priority": "high",
+        "icon": "🎭",
+        "style": "success"
+      },
+      {
+        "text": "🌟 SPETTACOLO COLLETTIVO! {playersCount} giocatori con voto 8+! Che squadra fantastica!",
+        "category": "match_completed",
+        "type": "multiple_high_ratings",
+        "priority": "high",
+        "icon": "🌟",
+        "style": "success"
+    },
+    {
+        "text": "🔥 PRESTAZIONI STELLARI! Ben {playersCount} giocatori sopra l'8! Livello altissimo in campo!",
+        "category": "match_completed",
+        "type": "multiple_high_ratings",
+        "priority": "high",
+        "icon": "🔥",
+        "style": "success"
+    }
     ]
   },
   "playercard_creation": {

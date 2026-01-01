@@ -7,6 +7,8 @@ const {
     VotingSessionRepository
 } = require('../repositories');
 
+const NewsService = require('./NewsService');
+
 const AppError = require('../utils/AppError');
 const CacheService = require('./CacheService'); // 🆕 Cache invalidation per match updates
 
@@ -33,6 +35,7 @@ class MatchService {
         this.matchRepository = new MatchRepository();
         this.teamRepository = new TeamRepository();
         this.votingSessionRepository = new VotingSessionRepository();
+        this.newsService = new NewsService();
     }
 
     /**
@@ -63,6 +66,28 @@ class MatchService {
 
             // 2. Auto-create voting session
             const votingSession = await this.createAutoVotingSession(match, userId, matchData.abstainedMembers || []);
+
+            // 3. 🗞️ Genera news per creazione match
+            console.log(`✅ Match creato con ID ${match._id} e VotingSession ${votingSession._id} da user ${userId}`);
+
+            try {
+                const newsData = {
+                    teamId: match.teamId,
+                    matchId: match._id,
+                    field: match.field,
+                    playersCount: match.playersCount,
+                    date: match.date,
+                    createdBy: userId,
+                    teamMemberIds: match.teamMemberIds,
+                    type: 'general' // Default type, può essere parametrizzato
+                };
+
+                const creationNews = await this.newsService.createNewsOnCreateMatch(newsData);
+                console.log('🎉 News creazione match generata:', creationNews?._id || 'News created');
+            } catch (newsError) {
+                console.error('⚠️ Errore generazione news creazione match:', newsError.message);
+                // Non bloccare la creazione match per errori news
+            }
 
             return {
                 success: true,

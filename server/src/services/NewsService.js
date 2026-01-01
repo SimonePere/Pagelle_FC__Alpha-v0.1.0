@@ -42,48 +42,116 @@ class NewsService {
      */
 
     async createNewsOnCreateMatch(newsData) {
-        const { field, date, playersCount, notes, teamMemberIds } = newsData;
-
-        // TODO: aggiungere logica per varianti di news:
-        // - news diversa per numero partecipanti
-        // - meteo diverso
 
         try {
-            // Prepariamo l'oggetto per creare la news
-            newsToGenerate = {
-                teamId: teamId,
-                field: field || 'campo',
-                playersCount: playersCount || teamMemberIds?.length || 0,
-                date: new Date(date).toLocaleDateString('it-IT'),
-                notes: notes,
-                teamMemberIds: teamMemberIds,
-                notes: notes || ''
-            }
+            const { field, date, playersCount, teamId } = newsData;
 
-            // Diamo l'oggetto creato al generatore per ottenere il testo della news
-            const newsData =
-                this.newsGenerator.generateMatchCreationNews(newsToGenerate);
+            // TODO: aggiungere logica per varianti di news:
+            // - news diversa per numero partecipanti
+            // - meteo diverso
+            // ✅ Genera news multiple per creazione match
+            const newsItems = [];
 
-            // Crea oggetto news
-            const news = {
-                teamId: teamId,
-                category: 'match_creation',
-                title: '⚽ Nuova News match creata!',
-                content: newsData,
-                priority: 'normal',
-                icon: '⚽',
-                style: 'primary',
-                relatedEntityId: newsToGenerate._id,
-                relatedEntityType: 'match',
-                isRead: false,
-                createdAt: new Date()
+            console.log("DEBUG - createNewsOnCreateMatch === Tutto il newsData ricevuto:", newsData);
+
+            // Helper per formattare la data in italiano
+            const formatDateItalian = (dateString) => {
+                const months = [
+                    'gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno',
+                    'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'
+                ];
+                const dateObj = new Date(dateString);
+                const day = dateObj.getDate();
+                const month = months[dateObj.getMonth()];
+                return `${day} ${month}`;
             };
 
-            // Salva nel database
-            const savedNews = await this.createNews(news);
-            console.log('✅ Create-Match-News created successfully:', savedNews._id);
+            // Helper per descrizione tipo di partita
+            const getPlayersTypeDescription = (playersCount) => {
+                if (playersCount <= 5) return 'calcio a 5';
+                if (playersCount <= 8) return 'calcio a 8';
+                return 'calcio a 11';
+            };
 
-            return savedNews;
+            // Placeholder comuni
+            const commonPlaceholders = {
+                teamId: teamId,
+                playersCount: playersCount, // campo a 5, 8, 11
+                playersType: getPlayersTypeDescription(playersCount),
+                date: formatDateItalian(date),
+                field: field,
+            };
+
+            // 1. News principale creazione
+            const mainNews = this.newsGenerator.generateMatchCreationNews({
+                ...commonPlaceholders,
+                type: 'general'
+            });
+
+            console.log('xxxxxx   ==>>>  DEBUG CREATEnewsOnCreateMatch COMMON PLACEHOLDERS :', commonPlaceholders);
+
+
+            if (mainNews) {
+                const mainNewsData = {
+                    teamId: teamId,
+                    text: mainNews.text,
+                    category: mainNews.category,
+                    type: mainNews.type,
+                    priority: mainNews.priority,
+                    icon: mainNews.icon,
+                    style: mainNews.style,
+                    eventData: newsData
+                };
+                const savedMainNews = await this.newsRepository.create(mainNewsData);
+                newsItems.push(savedMainNews);
+            }
+
+            // 2. News stagionale/tempo se appropriato
+            const currentMonth = new Date().getMonth() + 1; // 1-12
+
+            // Mapping diretto mese -> type specifico
+            const monthlyTypes = [
+                'weather_january',    // 1
+                'weather_february',   // 2
+                'weather_march',      // 3
+                'weather_april',      // 4
+                'weather_may',        // 5
+                'weather_june',       // 6
+                'weather_july',       // 7
+                'weather_august',     // 8
+                'weather_september',  // 9
+                'weather_october',    // 10
+                'weather_november',   // 11
+                'weather_december'    // 12
+            ];
+
+            const seasonalType = monthlyTypes[currentMonth - 1]; // -1 perché array è 0-indexed
+
+            if (seasonalType && Math.random() < 0.3) { // 30% chance
+                const seasonalNews = this.newsGenerator.generateMatchCreationNews({
+                    ...commonPlaceholders,
+                    type: seasonalType
+                });
+                if (seasonalNews) {
+                    const seasonalNewsData = {
+                        teamId: teamId,
+                        text: seasonalNews.text,
+                        category: seasonalNews.category,
+                        type: seasonalNews.type,
+                        priority: seasonalNews.priority,
+                        icon: seasonalNews.icon,
+                        style: seasonalNews.style,
+                        eventData: { matchId: null, field, date, playersCount }
+                    };
+                    const savedSeasonalNews = await this.newsRepository.create(seasonalNewsData);
+                    newsItems.push(savedSeasonalNews);
+                }
+            }
+
+
+
+            console.log(`✅ Generated ${newsItems.length} match creation news items`);
+            return newsItems; // Ritorna tutto l'array
 
         } catch (error) {
             console.error('❌ Error handling match creation news:', error);
@@ -103,22 +171,65 @@ class NewsService {
     async createNewsOnCompleteMatch(completitionData) {
 
         try {
-            const { matchId, teamId, totalPlayers, totalGoals, totalAssists, playerCards } = completitionData;
+            const { matchId, teamId, teamName, teamMemberIds, playersCount, field, date, totalGoals, totalAssists, playerCards } = completitionData;
 
-            // Converti playerCards in array se necessario
+            console.log("DEBUG - createNewsOnCompleteMatch === Tutto il completitionData ricevuto:", completitionData);
+
+            // Calcola totalPlayers contando i teamMemberIds effettivi
+            const totalPlayers = teamMemberIds?.length || 0;
+
+            // Converti playerCards in array se necessario e validazione
             const playerArray = Array.isArray(playerCards) ? playerCards : Object.values(playerCards || {});
+
+            // Validazione: se non ci sono giocatori, evita calcoli
+            if (!playerArray || playerArray.length === 0) {
+                console.log('⚠️ Nessun giocatore trovato per generare news di completamento match');
+                return [];
+            }
+
+            // Helper per formattare la data in italiano
+            const formatDateItalian = (dateString) => {
+                const months = [
+                    'gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno',
+                    'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'
+                ];
+                const dateObj = new Date(dateString);
+                const day = dateObj.getDate();
+                const month = months[dateObj.getMonth()];
+                return `${day} ${month}`;
+            };
+
+            // Helper per descrizione tipo di partita
+            const getPlayersTypeDescription = (playersCount) => {
+                if (playersCount <= 5) return 'calcio a 5';
+                if (playersCount <= 8) return 'calcio a 8';
+                return 'calcio a 11';
+            };
+
+
 
             // Placeholder comuni
             const commonPlaceholders = {
+                teamName,
+                teamMemberIds: teamMemberIds,
+                field: field,
                 totalPlayers,
-                matchType: totalPlayers >= 10 ? '11vs11' : totalPlayers >= 6 ? '7vs7' : '5vs5',
+                matchType: playersCount >= 10 ? '11vs11' : playersCount >= 6 ? '8vs8' : '5vs5',
                 totalGoals,
                 totalAssists,
-                playersCount: totalPlayers
+                playersCount: playersCount,
+                playersType: getPlayersTypeDescription(playersCount),
+                date: formatDateItalian(date)
+
             };
 
             // Ordina per rating (dal più alto al più basso)
             const sortedByRating = playerArray.sort((a, b) => b.averageRating - a.averageRating);
+
+            // Calcola media squadra - VALIDAZIONE per evitare NaN
+            const teamAverage = playerArray.length > 0
+                ? playerArray.reduce((sum, p) => sum + (p.averageRating || 0), 0) / playerArray.length
+                : 0;
 
             // Trova migliore e peggiore
             const bestPlayer = sortedByRating[0];
@@ -130,40 +241,134 @@ class NewsService {
             // Placeholder specifici
             const specificPlaceholders = {
                 ...commonPlaceholders,
-                teamAverage: teamAverage.toFixed(1),
+                teamAverage: (isNaN(teamAverage) ? 0 : teamAverage).toFixed(1),
                 bestPlayerName: bestPlayer?.name || 'Sconosciuto',
-                bestPlayerRating: bestPlayer?.averageRating?.toFixed(1) || '0.0',
+                bestPlayerRating: bestPlayer?.averageRating ? bestPlayer.averageRating.toFixed(1) : '0.0',
                 worstPlayerName: worstPlayer?.name || 'Sconosciuto',
-                worstPlayerRating: worstPlayer?.averageRating?.toFixed(1) || '0.0',
+                worstPlayerRating: worstPlayer?.averageRating ? worstPlayer.averageRating.toFixed(1) : '0.0',
                 nonVotersCount: nonVoters.length,
                 nonVotersList: nonVoters.map(p => p.name).join(', '),
                 playersWithGoals: playerArray.filter(p => p.goals > 0).length,
                 playersWithAssists: playerArray.filter(p => p.assists > 0).length
             };
 
-            // Genera il testo della news
-            const newsText = this.newsGenerator.generateMatchCompletedNews(specificPlaceholders);
+            console.log('🔍 DEBUG commonPlaceholders:', commonPlaceholders);
+            console.log('🔍 DEBUG specificPlaceholders:', specificPlaceholders);
 
-            // Crea oggetto news
-            const newsData = {
-                teamId: teamId,
-                category: 'match_completed',
-                title: '🏆 Match completato!',
-                content: newsText,
-                priority: 'high',
-                icon: '🏆',
-                style: 'success',
-                relatedEntityId: matchId,
-                relatedEntityType: 'match',
-                isRead: false,
-                createdAt: new Date()
-            };
+            // ✅ GENERIAMO DIVERSI TIPI DI NEWS PER IL COMPLETAMENTO MATCH
+            const newsItems = [];
 
-            // Salva nel database
-            const savedNews = await this.createNews(newsData);
-            console.log('✅ Match completion news created successfully:', savedNews._id);
+            // 1. News principale completamento match
+            const mainNews = this.newsGenerator.generateMatchCompletedNews({
+                ...specificPlaceholders,
+                type: 'team_performance'
+            });
+            if (mainNews) {
+                const mainNewsData = {
+                    teamId,
+                    text: mainNews.text,
+                    category: mainNews.category,
+                    type: mainNews.type,
+                    priority: mainNews.priority,
+                    icon: mainNews.icon,
+                    style: mainNews.style,
+                    eventData: { matchId }
+                };
+                const savedMainNews = await this.newsRepository.create(mainNewsData);
+                newsItems.push(savedMainNews);
+            }
 
-            return savedNews;
+
+            // 2. News miglior giocatore (se esiste)
+            console.log('🔍 DEBUG bestPlayer:', bestPlayer);
+            console.log('🔍 DEBUG bestPlayer.averageRating:', bestPlayer ? bestPlayer.averageRating : 'Non arriva il bestplayer average rating');
+            if (bestPlayer && bestPlayer.averageRating >= 7.5) {
+                const bestPlayerNews = this.newsGenerator.generateMatchCompletedNews({
+                    ...specificPlaceholders,
+                    type: 'mvp_performance',
+                    playerName: bestPlayer.name,
+                    rating: bestPlayer.averageRating ? bestPlayer.averageRating.toFixed(1) : '0.0'
+                });
+
+                console.log('🔍 DEBUG bestPlayerNews:', bestPlayerNews);
+                if (bestPlayerNews) {
+                    const bestPlayerNewsData = {
+                        teamId,
+                        text: bestPlayerNews.text,
+                        category: bestPlayerNews.category,
+                        type: bestPlayerNews.type,
+                        priority: bestPlayerNews.priority,
+                        icon: bestPlayerNews.icon,
+                        style: bestPlayerNews.style,
+                        eventData: { matchId }
+                    };
+                    const savedBestPlayerNews = await this.newsRepository.create(bestPlayerNewsData);
+                    newsItems.push(savedBestPlayerNews);
+                }
+            }
+
+            // 3. News riassunto gol (se ci sono gol)
+            if (totalGoals > 5) {
+                const goalScorerCount = playerArray.filter(p => p.goals > 0).length;
+                const goalsNews = this.newsGenerator.generateMatchCompletedNews({
+                    ...specificPlaceholders,
+                    // oppure type "high_scoring"
+                    type: 'goals_fest',
+                    goals: totalGoals,
+                    goalScorerCount,
+                    playersCount: goalScorerCount
+                });
+                if (goalsNews) {
+                    const goalsNewsData = {
+                        teamId,
+                        text: goalsNews.text,
+                        category: goalsNews.category,
+                        type: goalsNews.type,
+                        priority: goalsNews.priority,
+                        icon: goalsNews.icon,
+                        style: goalsNews.style,
+                        eventData: { matchId }
+                    };
+                    const savedGoalsNews = await this.newsRepository.create(goalsNewsData);
+                    newsItems.push(savedGoalsNews);
+                }
+            }
+
+            // 4. News prestazione eccezionale (se 2+ giocatori con voto 8+)
+            const excellentPlayers = playerArray.filter(p => p.averageRating >= 8.0);
+            if (excellentPlayers.length >= 2) {
+                const exceptionalNews = this.newsGenerator.generateMatchCompletedNews({
+                    ...specificPlaceholders,
+                    type: 'multiple_high_ratings',
+                    player1: excellentPlayers[0]?.name || 'Giocatore',
+                    rating1: excellentPlayers[0]?.averageRating ? excellentPlayers[0].averageRating.toFixed(1) : '0.0',
+                    player2: excellentPlayers[1]?.name || 'Giocatore',
+                    rating2: excellentPlayers[1]?.averageRating ? excellentPlayers[1].averageRating.toFixed(1) : '0.0',
+                    player3: excellentPlayers[2]?.name || 'Giocatore',
+                    rating3: excellentPlayers[2]?.averageRating ? excellentPlayers[2].averageRating.toFixed(1) : '0.0'
+                });
+                if (exceptionalNews) {
+                    const exceptionalNewsData = {
+                        teamId,
+                        text: exceptionalNews.text,
+                        category: exceptionalNews.category,
+                        type: exceptionalNews.type,
+                        priority: exceptionalNews.priority,
+                        icon: exceptionalNews.icon,
+                        style: exceptionalNews.style,
+                        eventData: { matchId }
+                    };
+                    const savedExceptionalNews = await this.newsRepository.create(exceptionalNewsData);
+                    newsItems.push(savedExceptionalNews);
+                }
+            }
+
+            console.log(`✅ Generated ${newsItems.length} match completion news items`);
+
+
+            return newsItems;
+
+
         } catch (error) {
             console.error('❌ Error handling match completion news:', error);
             throw error;
@@ -181,54 +386,77 @@ class NewsService {
      */
     async createNewsOnLeaderboardChanges(leaderboardData) {
         try {
-            console.log('📈 Generating news for leaderboard changes:', leaderboardData.teamId);
+            const { teamId, playerId, playerName, newRating } = leaderboardData;
+            console.log('📈 Generating news for leaderboard changes:', teamId);
 
-            const {
-                teamId,
-                topPerformers,
-                underPerformers,
-                newLeader,
-                biggestGainer,
-                totalPlayers,
-                averageTeamRating
-            } = leaderboardData;
+            // 🔍 STEP 1: Recupera dati classifica tramite repository
+            const [leaderboard, teamStats, topPerformers, underPerformers] = await Promise.all([
+                this.newsRepository.getTeamLeaderboard(teamId, 10),
+                this.newsRepository.getTeamAggregateStats(teamId),
+                this.newsRepository.getTopPerformers(teamId, 8.0, 5),
+                this.newsRepository.getUnderPerformers(teamId, 6.0, 3)
+            ]);
 
-            // Crea placeholder per il template  
-            const placeholders = {
+            // 🧮 STEP 2: Calcola elementi chiave per le news
+            const newLeader = leaderboard[0]; // Il primo della classifica
+            const biggestGainer = leaderboard.find(p => p.playerId._id.toString() === playerId) || null;
+
+            console.log('🔍 DEBUG - Leaderboard data retrieved:', {
+                totalPlayers: teamStats.totalPlayers,
+                averageRating: teamStats.averageTeamRating,
+                newLeader: newLeader?.playerId?.name || 'None',
+                topPerformersCount: topPerformers.length,
+                triggeredByPlayer: playerName
+            });
+
+            // 🏗️ STEP 3: Costruisci placeholder per template
+            const specificPlaceholders = {
                 teamId,
-                totalPlayers: totalPlayers || 0,
-                averageTeamRating: averageTeamRating?.toFixed(1) || '0.0',
-                newLeaderName: newLeader?.name || 'Il giocatore',
-                newLeaderRating: newLeader?.averageRating?.toFixed(1) || '0.0',
-                biggestGainerName: biggestGainer?.name || 'Il giocatore',
-                biggestGainerImprovement: biggestGainer?.improvement?.toFixed(1) || '0.0',
-                topPerformersCount: topPerformers?.length || 0,
-                topPerformersList: topPerformers?.map(p => `${p.name} (${p.averageRating?.toFixed(1)})`).join(', ') || '',
-                underPerformersCount: underPerformers?.length || 0,
-                underPerformersList: underPerformers?.map(p => `${p.name} (${p.averageRating?.toFixed(1)})`).join(', ') || ''
+                totalPlayers: teamStats.totalPlayers || 0,
+                averageTeamRating: teamStats.averageTeamRating?.toFixed(1) || '0.0',
+                playerName: newLeader?.playerId?.name || playerName || 'Il giocatore',
+                averageRating: newLeader?.averageRating?.toFixed(1) || newRating?.toFixed(1) || '0.0',
+                biggestGainerName: biggestGainer?.playerId?.name || playerName || 'Il giocatore',
+                biggestGainerImprovement: newRating?.toFixed(1) || '0.0',
+                topPerformersCount: topPerformers.length || 0,
+                topPerformersList: topPerformers?.map(p => `${p.playerId.name} (${p.averageRating?.toFixed(1)})`).join(', ') || '',
+                underPerformersCount: underPerformers.length || 0,
+                underPerformersList: underPerformers?.map(p => `${p.playerId.name} (${p.averageRating?.toFixed(1)})`).join(', ') || ''
             };
 
-            // Genera il testo della news
-            const newsText = this.newsGenerator.generateLeaderboardNews(placeholders);
+            // 🎯 STEP 4: Genera news tramite template
+            const newsText = this.newsGenerator.generateLeaderboardNews({
+                ...specificPlaceholders,
+                type: 'new_leader'
+            });
+
+            console.log('🔍 DEBUG newsText from generator:', newsText);
+
+            // 🔍 STEP 5: Verifica output template
+            if (!newsText) {
+                console.log('⚠️ NewsGenerator returned null (probably duplicate), skipping...');
+                return null;
+            }
 
             // Crea oggetto news
             const newsData = {
                 teamId: teamId,
-                category: 'leaderboard',
-                title: '📊 Aggiornamento classifica!',
-                content: newsText,
-                priority: 'medium',
-                icon: '📊',
-                style: 'info',
+                category: newsText.category,
+                type: newsText.type,
+                priority: newsText.priority,
+                text: newsText.text,
+                icon: newsText.icon,
+                style: newsText.style,
+
                 relatedEntityId: null,
                 relatedEntityType: 'leaderboard',
                 isRead: false,
-                createdAt: new Date()
+                createdAt: new Date(),
             };
 
             // Salva nel database
-            const savedNews = await this.createNews(newsData);
-            console.log('✅ Leaderboard news created successfully:', savedNews._id);
+            const savedNews = await this.newsRepository.create(newsData);
+            console.log('✅ Leaderboard change news created successfully:', savedNews._id);
 
             return savedNews;
         } catch (error) {
@@ -274,7 +502,7 @@ class NewsService {
                 teamId: teamId,
                 category: 'playercard_creation',
                 title: '👤 Nuova player card creata!',
-                content: newsText,
+                text: newsText,
                 priority: 'low',
                 icon: '👤',
                 style: 'secondary',
@@ -285,7 +513,7 @@ class NewsService {
             };
 
             // Salva nel database
-            const savedNews = await this.createNews(newsData);
+            const savedNews = await this.newsRepository.create(newsData);
             console.log('✅ Player card creation news created successfully:', savedNews._id);
 
             return savedNews;
@@ -317,8 +545,6 @@ class NewsService {
     */
     async getRecentNews(teamId, limit = 20) {
         // Input validation
-        teamId = this.validateTeamId(teamId);
-
         if (limit > 50) {
             throw new AppError('Limit cannot exceed 50', 400);
         }
@@ -355,8 +581,6 @@ class NewsService {
     */
     async getNewsByCategory(teamId, options = {}) {
         // Input validation
-        teamId = this.validateTeamId(teamId);
-
         const { limit = 10, category = null, priority = null } = options;
 
         if (limit > 50) {

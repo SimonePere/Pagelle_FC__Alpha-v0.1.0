@@ -342,7 +342,31 @@ class VotingService {
             }
 
             // 1. Trova la sessione
-            const session = await this.votingSessionRepository.findById(sessionId);
+            const session = await this.votingSessionRepository.findById(sessionId, {
+                populate: [{ path: 'targetId', select: 'field teamId playersCount teamMemberIds date' }]
+            });
+
+            // 🔍 DEBUG POPULATE
+            console.log('🔍 DEBUG session.targetId dopo populate:', session.targetId);
+            console.log('🔍 DEBUG tipo di session.targetId:', typeof session.targetId);
+            console.log('🔍 DEBUG session.targetId è ObjectId?', session.targetId instanceof require('mongoose').Types.ObjectId);
+
+            // 🔧 STEP 2: POPULATE MANUALE SE FALLISCE
+            if (session && session.targetId instanceof require('mongoose').Types.ObjectId && session.type === 'match_rating') {
+                console.log('🔧 Populate automatica fallita, provo populate manuale per Match...');
+                try {
+                    const Match = require('../models/Match');
+                    const matchData = await Match.findById(session.targetId).select('field teamId playersCount teamMemberIds date');
+                    if (matchData) {
+                        console.log('✅ Match data recuperato manualmente:', matchData);
+                        // Sostituisci l'ObjectId con l'oggetto popolato
+                        session.targetId = matchData;
+                    }
+                } catch (error) {
+                    console.log('❌ Errore nel populate manuale:', error.message);
+                }
+            }
+
             if (!session || session.status !== 'active') {
                 console.log('⚠️ Sessione non trovata o non attiva, skip auto-complete');
                 return false;
@@ -364,14 +388,35 @@ class VotingService {
                     const completionResult = await this.completeSession(sessionId, 'automatic');
 
                     console.log('✅ Auto-complete completato con successo!');
-                    console.log('📊 Giocatori elaborati:', completionResult.playersCount);
+                    console.log('📊 Tipo di campo da gioco:', completionResult.playersCount);
                     console.log('🗳️ Votanti totali:', completionResult.votersCount);
 
-                    // 🗞️ NEWS: Genera news per match completato
+                    const team = await this.teamRepository.findById(session.teamId);
+                    const teamName = team?.name || 'La squadra';
+
+                    // 5. RECUPERA DATI MATCH MANUALMENTE per news generation
+                    const match = await this.matchRepository.findById(session.targetId);
+                    if (!match) {
+                        console.error('⚠️ Match non trovato per news generation');
+                        return { success: false, error: 'Match not found for news generation' };
+                    }
+
+                    console.log('📍 Dati Match per news:', {
+                        field: match.field,
+                        playersCount: match.playersCount,
+                        teamMemberIds: match.teamMemberIds?.length || 'undefined'
+                    });
+
+                    // 6. CREA NOTIZIA DI MATCH COMPLETED 
+
                     await this.newsService.createNewsOnCompleteMatch({
                         matchId: session.targetId,
                         teamId: session.teamId,
-                        totalPlayers: completionResult.playersCount,
+                        teamName: teamName,
+                        teamMemberIds: match.teamMemberIds,
+                        playersCount: match.playersCount, // campo da gioco (5,8,11)
+                        field: match.field,
+                        date: match.date,
                         totalGoals: Object.values(completionResult.officialResults).reduce((sum, p) => sum + (p.goals || 0), 0),
                         totalAssists: Object.values(completionResult.officialResults).reduce((sum, p) => sum + (p.assists || 0), 0),
                         playerCards: Object.entries(completionResult.officialResults).map(([id, stats]) => ({
@@ -383,6 +428,7 @@ class VotingService {
                             badges: stats.badges || []
                         }))
                     }).catch(err => console.error('⚠️ Errore news:', err.message));
+
 
                     return {
                         autoCompleted: true,
@@ -552,7 +598,7 @@ class VotingService {
         }
 
         // 4. Usa il metodo esistente per aggregazione
-        const playerResults = this.aggregatePlayerStats(submissions);
+        const playerResults = await this.aggregatePlayerStats(submissions);
 
         console.log('✅ Calcoli match rating live completati per', Object.keys(playerResults).length, 'giocatori');
         console.log('🧮 === FINE CALCULATE VOTING RESULTS (SERVICE) ===\n');
@@ -621,19 +667,38 @@ class VotingService {
             });
         });
 
-        // Recupera i nomi dei giocatori
+        // Recupera i nomi dei giocatori - VERSIONE BATCH EFFICIENTE
         const playerIds = Object.keys(playerStats);
-        for (const playerId of playerIds) {
+
+
+        if (playerIds.length > 0) {
             try {
-                const player = await this.userRepository.findById(playerId);
-                if (player) {
-                    playerNames[playerId] = player.name;
-                } else {
-                    playerNames[playerId] = `Player ${playerId.substring(0, 8)}`;
-                }
+                // UNA SOLA QUERY per tutti i giocatori invece di N query
+                const players = await this.userRepository.findAll({
+                    _id: { $in: playerIds }
+                }, {
+                    select: 'name'
+                });
+
+                // Mappa i risultati
+                players.forEach(player => {
+                    playerNames[player._id.toString()] = player.name;
+                });
+
+                // Fallback per giocatori non trovati
+                playerIds.forEach(playerId => {
+                    if (!playerNames[playerId]) {
+                        playerNames[playerId] = `Player ${playerId.substring(0, 8)}`;
+                        console.log(`⚠️ Player non trovato, uso fallback: ${playerId}`);
+                    }
+                });
+
             } catch (error) {
-                console.log(`⚠️ Errore recupero nome per player ${playerId}:`, error.message);
-                playerNames[playerId] = `Player ${playerId.substring(0, 8)}`;
+                console.error('❌ Errore recupero nomi giocatori:', error.message);
+                // Fallback completo se query fallisce
+                playerIds.forEach(playerId => {
+                    playerNames[playerId] = `Player ${playerId.substring(0, 8)}`;
+                });
             }
         }
 
@@ -664,7 +729,6 @@ class VotingService {
                 };
             }
         });
-
         return finalResults;
     }
 
@@ -692,6 +756,7 @@ class VotingService {
         if (!sessionId) {
             throw new Error('Session ID is required');
         }
+
 
         // 1. Verifica che la sessione esista e sia match_rating
         const session = await this.votingSessionRepository.findById(sessionId);
@@ -737,7 +802,7 @@ class VotingService {
         }
 
         // 4. Aggrega risultati usando il metodo esistente
-        const finalResults = this.aggregatePlayerStats(submissions);
+        const finalResults = await this.aggregatePlayerStats(submissions);
 
         // 5. Salva risultati ufficiali con struttura corretta VoteResult
         const voteResultData = {
@@ -894,7 +959,7 @@ class VotingService {
                     );
                     console.log(`✅ Best/worst rating aggiornati per ${playerStats.playerName}`);
 
-                    // 🗞️ NEWS: Genera news per record personali
+                    // 🗞️ NEWS: Genera news per record personali (ATTUALMENTE ATTIVO)
                     await this.newsService.createNewsOnLeaderboardChanges({
                         playerId: playerId,
                         playerName: playerStats.playerName,
@@ -903,6 +968,39 @@ class VotingService {
                         newRating: newRating,
                         matchContext: 'rating_update'
                     }).catch(err => console.error('⚠️ Errore news leaderboard:', err.message));
+
+                    // 🚧 TODO: FUTURE NEWS CATEGORIES (DA IMPLEMENTARE)
+                    // 
+                    // 👑 LEADERSHIP CHANGES:
+                    // - Nuovo leader generale classifica (chi conquista il #1)
+                    // - Cambio podio (chi entra/esce dal top 3)  
+                    // - Sorpassi significativi (+3 posizioni in una partita)
+                    //
+                    // 🎯 MILESTONE & ACHIEVEMENTS:
+                    // - Traguardi numerici (100 gol, 50 assist, 200 partite)
+                    // - Streak positivi/negativi (5 partite consecutive >8.0)
+                    // - Record di squadra (miglior media stagionale)
+                    //
+                    // 🏆 PERFORMANCE CATEGORIES:  
+                    // - Dominio categoria (leader gol + assist stesso giocatore)
+                    // - Breakthrough (da ultimo posto a top 5)
+                    // - Consistency (10 partite consecutive >7.0)
+                    //
+                    // 🔥 RIVALRIES & TRENDS:
+                    // - Duelli serrati (2 giocatori alternano leadership)
+                    // - Rimonte clamorose (da -5 posizioni a +5)
+                    // - Form del momento (miglior media ultimi 5 match)
+                    //
+                    // 🎲 FUN FACTS:
+                    // - Statistiche curiose (più gol negli ultimi 10 minuti)
+                    // - Pattern particolari (sempre MVP nei derby)
+                    // - Coincidenze numeriche (esattamente 7.5 di media)
+                    //
+                    // 📊 UTILIZZO:
+                    // - Chiamare dopo aggiornamento classifiche generali
+                    // - Confrontare posizioni pre/post match
+                    // - Analizzare trend multipartita
+                    // - Rilevare pattern comportamentali
                 }
 
             } catch (error) {

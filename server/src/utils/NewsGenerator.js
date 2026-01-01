@@ -24,7 +24,7 @@ class NewsGenerator {
     generateMatchCreationNews(eventData) {
         const matchCreationTemplates = this.loadTemplates().match_creation || {};
 
-        templates = matchCreationTemplates[eventData.type]
+        const templates = matchCreationTemplates[eventData.type]
 
         const cacheKey = `match_creation_${eventData.type || 'random'}_${eventData.playersCount || ''}`;
         return this.selectAndProcessTemplate(templates, eventData, cacheKey);
@@ -34,16 +34,23 @@ class NewsGenerator {
     generateMatchCompletedNews(eventData) {
         const matchCompletedTemplates = this.loadTemplates().match_completed || {};
 
-        templates = matchCompletedTemplates[eventData.type]
+        // ✅ Gestisci type con fallback
+        const newsType = eventData.type || 'team_performance';
+        const templates = matchCompletedTemplates[newsType];
 
-        const cacheKey = `match_completed_${eventData.type || 'random'}_${eventData.winnerId || ''}`;
+        if (!templates || !Array.isArray(templates) || templates.length === 0) {
+            console.warn(`⚠️ Nessun template disponibile per match_completed.${newsType}`);
+            return null;
+        }
+
+        const cacheKey = `match_completed_${newsType}_${eventData.matchId || Date.now()}`;
         return this.selectAndProcessTemplate(templates, eventData, cacheKey);
     }
 
     generateLeaderboardNews(eventData) {
         const leaderboardTemplates = this.loadTemplates().leaderboard || {};
 
-        templates = leaderboardTemplates[eventData.type]
+        const templates = leaderboardTemplates[eventData.type]
 
         const cacheKey = `leaderboard_${eventData.type || 'random'}_${eventData.playerId || ''}`;
         return this.selectAndProcessTemplate(templates, eventData, cacheKey);
@@ -53,7 +60,7 @@ class NewsGenerator {
     generatePlayerCardCreationNews(eventData) {
         const playerCardTemplates = this.loadTemplates().player_card || {};
 
-        templates = playerCardTemplates[eventData.type]
+        const templates = playerCardTemplates[eventData.type]
 
         const cacheKey = `player_card_${eventData.type || 'random'}_${eventData.playerId || ''}`;
         return this.selectAndProcessTemplate(templates, eventData, cacheKey);

@@ -143,6 +143,81 @@ class NewsRepository extends BaseRepository {
             }
         ]);
     }
+
+    // =====================================
+    // 🏆 QUERY PER LEADERBOARD NEWS CONTEXT
+    // =====================================
+
+    /**
+     * 🏆 Recupera classifica generale team ordinata per rating
+     * @param {string} teamId - ID del team
+     * @param {number} limit - Numero massimo giocatori (default 10)
+     * @returns {Array} Classifica ordinata (migliore → peggiore)
+     */
+    async getTeamLeaderboard(teamId, limit = 10) {
+        const PlayerLeaderboardStats = require('../models/PlayerLeaderboardStats');
+        return PlayerLeaderboardStats.find({ teamId })
+            .populate('playerId', 'name email')
+            .sort({ averageRating: -1 })
+            .limit(limit);
+    }
+
+    /**
+     * 📊 Recupera statistiche aggregate del team
+     * @param {string} teamId - ID del team
+     * @returns {Object} {totalPlayers, averageTeamRating}
+     */
+    async getTeamAggregateStats(teamId) {
+        const PlayerLeaderboardStats = require('../models/PlayerLeaderboardStats');
+        const result = await PlayerLeaderboardStats.aggregate([
+            { $match: { teamId: teamId } },
+            {
+                $group: {
+                    _id: null,
+                    totalPlayers: { $sum: 1 },
+                    averageTeamRating: { $avg: "$averageRating" }
+                }
+            }
+        ]);
+
+        return result.length > 0 ? result[0] : { totalPlayers: 0, averageTeamRating: 0 };
+    }
+
+    /**
+     * 🔍 Trova top performers (rating alto)
+     * @param {string} teamId - ID del team
+     * @param {number} minRating - Rating minimo per essere top performer
+     * @param {number} limit - Numero massimo risultati
+     * @returns {Array} Top performers con dettagli
+     */
+    async getTopPerformers(teamId, minRating = 8.0, limit = 5) {
+        const PlayerLeaderboardStats = require('../models/PlayerLeaderboardStats');
+        return PlayerLeaderboardStats.find({
+            teamId,
+            averageRating: { $gte: minRating }
+        })
+            .populate('playerId', 'name')
+            .sort({ averageRating: -1 })
+            .limit(limit);
+    }
+
+    /**
+     * 📉 Trova under performers (rating basso)
+     * @param {string} teamId - ID del team  
+     * @param {number} maxRating - Rating massimo per essere under performer
+     * @param {number} limit - Numero massimo risultati
+     * @returns {Array} Under performers con dettagli
+     */
+    async getUnderPerformers(teamId, maxRating = 6.0, limit = 3) {
+        const PlayerLeaderboardStats = require('../models/PlayerLeaderboardStats');
+        return PlayerLeaderboardStats.find({
+            teamId,
+            averageRating: { $lte: maxRating, $gt: 0 } // Esclude rating 0 (non votati)
+        })
+            .populate('playerId', 'name')
+            .sort({ averageRating: 1 })
+            .limit(limit);
+    }
 }
 
 module.exports = NewsRepository;
