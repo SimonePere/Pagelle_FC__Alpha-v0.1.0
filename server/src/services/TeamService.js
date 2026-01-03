@@ -8,6 +8,8 @@ const {
 
 const AppError = require('../utils/AppError');
 
+const PlayerCardService = require('./PlayerCardService');
+
 /**
  * TEAM SERVICE
  * 
@@ -31,6 +33,7 @@ class TeamService {
         // Inizializza i repository per accesso dati
         this.teamRepository = new TeamRepository();
         this.userRepository = new UserRepository();
+        this.playerCardService = new PlayerCardService();
     }
 
     /**
@@ -206,12 +209,13 @@ class TeamService {
     }
 
     /**
-     * Unisce un utente a un team tramite codice invito
+     * Unisce un utente a un team tramite codice invito e crea automaticamente una PlayerCardSession
      * @param {string} userId - ID dell'utente
      * @param {string} inviteCode - Codice invito del team
-     * @returns {Promise<Object>} Risultato join team
+     * @returns {Promise<Object>} Risultato join team, creazione con playerCardRequest e votingSession
      */
     async joinTeam(userId, inviteCode) {
+
         // Input validation
         this.validateUserId(userId);
         this.validateInviteCode(inviteCode);
@@ -237,13 +241,29 @@ class TeamService {
             await this.teamRepository.save(team);
 
             // Update user's teamIds
-            await this.userRepository.findByIdAndUpdate(userId, {
+            await this.userRepository.updateById(userId, {
                 $addToSet: { teamIds: team._id }
             });
 
+            // 🎯 Crea in automatico PlayerCardSession
+            try {
+                await this.playerCardService.createPlayerCardSession(userId, {
+                    targetPlayerId: userId,
+                    title: `Benvenuto in ${team.name}! Valuta le tue abilità`,
+                    description: `Inizia a valutare le tue abilità nel team ${team.name}`,
+                    deadline: null,
+                    teamId: team._id
+                });
+            } catch (error) {
+                // Log ma non bloccare il join
+                console.error('Errore creazione PlayerCardSession:', error.message);
+            }
+
+
+
             return {
                 success: true,
-                message: `Successfully joined ${team.name}`,
+                message: `Utente aggiunto con successo al Team ${team.name} e creata PlayerCardSession `,
                 team: {
                     id: team._id,
                     name: team.name,
@@ -343,7 +363,7 @@ class TeamService {
             }
 
             // Update user's teamIds
-            await this.userRepository.findByIdAndUpdate(userId, {
+            await this.userRepository.updateById(userId, {
                 $pull: { teamIds: team._id }
             });
 

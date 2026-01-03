@@ -1054,6 +1054,116 @@
       "style": "warning"
     }
   ],
+  "playercard_completed": {
+    "high_total_points": [
+      {
+        "text": "🤔 ASPETTA UN ATTIMO... {playerName} ha accumulato {totalPoints} punti?! Ma come ha fatto a raggiungere questa cifra?",
+        "category": "playercard_completed",
+        "type": "high_total_points",
+        "priority": "high",
+        "icon": "🤔",
+        "style": "warning"
+      },
+      {
+        "text": "📊 NUMERI INCREDIBILI! {totalPoints} punti per {playerName}... Sto controllando due volte perché sembra impossibile!",
+        "category": "playercard_completed",
+        "type": "high_total_points",
+        "priority": "high",
+        "icon": "📊",
+        "style": "info"
+      }
+    ],
+    "perfect_attributes": [
+      {
+        "text": "⭐⭐⭐⭐⭐ PERFETTO! {playerName} ha 5 stelle in {attributeName}... Non si vedeva una cosa così da tempo!",
+        "category": "playercard_completed",
+        "type": "perfect_attributes",
+        "priority": "high",
+        "icon": "⭐",
+        "style": "success"
+      },
+      {
+        "text": "🔍 ANALISI SHOCK: {playerName} raggiunge la perfezione con 5/5 in {attributeName}! Roba da manuale...",
+        "category": "playercard_completed",
+        "type": "perfect_attributes",
+        "priority": "high",
+        "icon": "🔍",
+        "style": "success"
+      }
+    ],
+    "attribute_comparison": [
+      {
+        "text": "🧮 CONFRONTO INTERESSANTE: {playerName} ha {attributeValue} in {attributeName}, mentre la media degli altri è {averageValue}... Notevole gap!",
+        "category": "playercard_completed",
+        "type": "attribute_comparison",
+        "priority": "medium",
+        "icon": "🧮",
+        "style": "info"
+      },
+      {
+        "text": "📈 DATO CURIOSO: {attributeName} di {playerName} è a {attributeValue}, ben {difference} punti sopra la norma. Come è possibile?",
+        "category": "playercard_completed",
+        "type": "attribute_comparison",
+        "priority": "medium",
+        "icon": "📈",
+        "style": "warning"
+      }
+    ],
+    "low_points_analysis": [
+      {
+        "text": "🤨 QUALCOSA NON TORNA... {playerName} fermo a {totalPoints} punti. Dove sono finite le sue performance?",
+        "category": "playercard_completed",
+        "type": "low_points_analysis",
+        "priority": "medium",
+        "icon": "🤨",
+        "style": "warning"
+      },
+      {
+        "text": "📉 DATI PREOCCUPANTI: Solo {totalPoints} punti per {playerName}. È un periodo di transizione o c'è dell'altro?",
+        "category": "playercard_completed",
+        "type": "low_points_analysis",
+        "priority": "medium",
+        "icon": "📉",
+        "style": "secondary"
+      }
+    ],
+    "statistical_wonder": [
+      {
+        "text": "🎯 STATISTICHE PAZZE: {playerName} con {totalPoints} punti e {attributeName} a {attributeValue}... I numeri raccontano storie!",
+        "category": "playercard_completed",
+        "type": "statistical_wonder",
+        "priority": "low",
+        "icon": "🎯",
+        "style": "default"
+      },
+      {
+        "text": "🔢 MATEMATICAMENTE INTERESSANTE: {playerName} accumula {totalPoints} con una distribuzione di attributi... inaspettata!",
+        "category": "playercard_completed",
+        "type": "statistical_wonder",
+        "priority": "low",
+        "icon": "🔢",
+        "style": "info"
+      }
+    ],
+    "trend_analysis": [
+      {
+        "text": "📊 TENDENZA IN ATTO: {playerName} sta crescendo? {totalPoints} punti e {attributeName} in risalita a {attributeValue}...",
+        "category": "playercard_completed",
+        "type": "trend_analysis",
+        "priority": "medium",
+        "icon": "📊",
+        "style": "success"
+      },
+      {
+        "text": "🔍 PATTERN RILEVATO: {playerName} mostra segnali interessanti. {totalPoints} punti raccontano una storia precisa...",
+        "category": "playercard_completed",
+        "type": "trend_analysis",
+        "priority": "medium",
+        "icon": "🔍",
+        "style": "info"
+      }
+    ]
+  },
   "fun_facts": [
     {
       "text": "🎲 LO SAPEVI CHE...? {playerName} è statisticamente il più fortunato negli scontri diretti! Scaramanzia a mille!",

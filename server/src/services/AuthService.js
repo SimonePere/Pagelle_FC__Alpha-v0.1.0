@@ -13,6 +13,9 @@ const {
     TeamRepository
 } = require('../repositories');
 
+const TeamService = require('./TeamService');
+
+
 /**
  * AuthService - Business Logic Layer per Autenticazione
  * 
@@ -38,6 +41,7 @@ class AuthService {
         this.playerCardResultRepository = new PlayerCardResultRepository();
         this.playerStatsRepository = new PlayerLeaderboardStatsRepository();
         this.teamRepository = new TeamRepository();
+        this.teamService = new TeamService();
     }
     /**
      * Generate JWT Token
@@ -167,7 +171,7 @@ class AuthService {
      * @param {string} userData.existingTeamId - Existing team ID to join (optional)
      * @returns {Promise<Object>} Created user and token
      */
-    async registerUser({ name, email, password, birthdate, existingTeamId }) {
+    async registerUser({ name, email, password, birthdate, existingTeamId, inviteCode }) {
         // 1. Input validation
         this.validateRegistrationInput({ name, email, password });
 
@@ -199,10 +203,20 @@ class AuthService {
         // 6. Team join opzionale
         let teamJoined = null;
         if (existingTeamId) {
-            teamJoined = await this.joinUserToTeam(user._id, existingTeamId);
+            // Prima recupera il team per ottenere l'inviteCode
+            const team = await this.teamRepository.findById(existingTeamId);
+            if (!team) {
+                throw new Error('Team non trovato');
+            }
+            // Poi chiama joinTeam con l'inviteCode corretto
+            teamJoined = await this.teamService.joinTeam(user._id.toString(), team.inviteCode);
+            console.log(`✅ Utente ${user._id} unito al team ${existingTeamId} durante la registrazione`);
         }
 
+
+
         return {
+            message: "Utente creato con successo",
             token,
             user: {
                 id: user._id,
@@ -219,55 +233,6 @@ class AuthService {
         };
     }
 
-    /**
- * Unisce un utente a un team esistente (con validazione completa)
- * @param {string} userId - ID dell'utente 
- * @param {string} teamId - ID del team
- * @returns {Promise<Object>} Info del team unito
- */
-    async joinUserToTeam(userId, teamId) {
-        try {
-            // 1. Validazione input
-            if (!teamId || !mongoose.isValidObjectId(teamId)) {
-                throw new Error('Team ID non valido');
-            }
-
-            // 2. Verifica esistenza team
-            const team = await this.teamRepository.findById(teamId);
-            if (!team) {
-                throw new Error('Team non trovato');
-            }
-
-            // 3. Verifica che il team sia attivo e pubblico
-            if (!team.isActive) {
-                throw new Error('Team non attivo');
-            }
-            if (team.settings?.isPrivate === true) {
-                throw new Error('Team privato, usa il codice invito');
-            }
-
-            // 4. Aggiungi utente al team
-            await this.teamRepository.updateById(teamId, {
-                $addToSet: { memberIds: userId }
-            });
-
-            // 5. Aggiorna teamIds dell'utente  
-            await this.userRepository.updateById(userId, {
-                $addToSet: { teamIds: teamId }
-            });
-
-            // 6. Restituisci info team
-            return {
-                id: team._id,
-                name: team.name,
-                description: team.description,
-                totalMembers: (team.memberIds?.length || 0) + 1
-            };
-
-        } catch (error) {
-            throw new Error(`Errore team join: ${error.message}`);
-        }
-    }
 
     /**
  * Aggiorna il profilo utente

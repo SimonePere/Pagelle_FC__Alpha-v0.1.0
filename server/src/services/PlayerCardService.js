@@ -66,7 +66,7 @@ class PlayerCardService {
         }
 
         try {
-            // 1. VERIFICA TARGET PLAYER E TEAM
+            // VERIFICA TARGET PLAYER E TEAM
             const targetPlayer = await this.userRepository.findById(targetPlayerId);
             if (!targetPlayer) {
                 throw new AppError('Target player not found', 404);
@@ -88,7 +88,7 @@ class PlayerCardService {
                 throw new AppError('Team not found', 404);
             }
 
-            // 2. AUTO-CREA VOTING SESSION (COME MATCH)
+            // 1. Crea in maniera manuale la Player Card Session (VotingSession)
             const votingSession = await this.votingSessionRepository.create({
                 type: 'player_card_rating',
                 targetType: 'player',
@@ -1415,13 +1415,13 @@ class PlayerCardService {
                 totalSubmissions
             );
 
-            await this.newsService.createNewsOnPlayerCardResult({
-                sessionId,
-                playerId: targetPlayerId,
-                aggregatedData,
-                totalSubmissions,
-                overallRating: result.overallRating
-            });
+            // await this.newsService.createNewsOnCompletePlayerCard({
+            //     sessionId,
+            //     playerId: targetPlayerId,
+            //     aggregatedData,
+            //     totalSubmissions,
+            //     overallRating: result.overallRating
+            // });
 
             return playerCardResult;
 

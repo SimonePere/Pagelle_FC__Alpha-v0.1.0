@@ -471,7 +471,7 @@ class NewsService {
      * @param {Object} playerCardData - Dati della player card {playerId, overallRating, consensusPosition, attributes}
      * @returns {Promise<Object>} {success, generated, count, metadata}
      */
-    async createNewsOnPlayerCardCreation(playerCardData) {
+    async createNewsOnCreatePlayerCard(playerCardData) {
         try {
             console.log('👤 Analyzing player card creation for news generation:', playerCardData.playerId);
 
@@ -524,6 +524,19 @@ class NewsService {
             throw error;
         }
     }
+
+    /**     * 👤 ANALIZZA E GENERA NEWS PER COMPLETAMENTO PLAYER CARD
+     * Analizza dati player card completata e genera array di news items
+     * @param {Object} playerCardData - Dati della player card {playerId, overallRating, consensusPosition, attributes}
+     * @returns {Promise<Object>} {success, generated, count, metadata}
+     */
+    async createNewsOnCompletePlayerCard(playerCardData) { }
+
+
+
+
+
+
 
 
 
