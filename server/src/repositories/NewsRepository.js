@@ -104,44 +104,63 @@ class NewsRepository extends BaseRepository {
     }
 
     /**
-     * 🗑️ Rimuove notizie vecchie (cleanup automatico)
-     * @param {number} daysOld - Giorni di retention (default 30 giorni)
-     * @returns {number} Numero di notizie rimosse
-     */
-    async cleanupOldNews(daysOld = 30) {
-        const cutoffDate = new Date(Date.now() - daysOld * 24 * 60 * 60 * 1000);
-        const result = await this.model.deleteMany({
-            createdAt: { $lt: cutoffDate }
-        });
-        return result.deletedCount;
+ * 🔄 Sostituisce notizie di una categoria specifica per un team
+ * @param {string} teamId - ID del team  
+ * @param {string} category - Categoria da sostituire
+ * @param {Array} newsDataArray - Array di dati per nuove notizie
+ * @returns {Promise<Object>} Risultato operazione con conteggi
+ */
+    async deleteReplaceNewsByCategory(teamId, category, newsDataArray) {
+        try {
+            // FASE 1: Elimina notizie esistenti della categoria
+            const deleteResult = await this.model.deleteMany({
+                teamId: teamId,
+                category: category
+            });
+
+            // FASE 2: Inserisci le nuove notizie
+            const createdNews = [];
+            for (const newsData of newsDataArray) {
+                // Assicura che abbiano i campi obbligatori
+                const newsWithMeta = {
+                    ...newsData,
+                    teamId: teamId,
+                    category: category,
+                    createdAt: new Date()
+                };
+
+                const news = await this.model.create(newsWithMeta);
+                createdNews.push(news);
+            }
+
+            return {
+                deletedCount: deleteResult.deletedCount,
+                createdCount: createdNews.length,
+                createdNews: createdNews
+            };
+
+        } catch (error) {
+            throw new Error(`Errore deleteReplaceNewsByCategory in ${this.model.modelName}: ${error.message}`);
+        }
     }
 
     /**
-     * 📊 Conta notizie per categoria (per analytics)
+     * 🔍 Conta notizie per team e categoria (utility per business logic)
      * @param {string} teamId - ID del team
-     * @param {number} daysBack - Giorni di lookback per conteggio
+     * @param {string} category - Categoria (opzionale)
+     * @returns {Promise<number>} Numero notizie
      */
-    async getNewsStatsByCategory(teamId, daysBack = 7) {
-        const fromDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
-
-        return this.model.aggregate([
-            {
-                $match: {
-                    teamId: teamId,
-                    createdAt: { $gte: fromDate }
-                }
-            },
-            {
-                $group: {
-                    _id: '$category',
-                    count: { $sum: 1 },
-                    latestNews: { $max: '$createdAt' }
-                }
-            },
-            {
-                $sort: { count: -1 }
+    async countNewsByCategory(teamId, category = null) {
+        try {
+            const filter = { teamId };
+            if (category) {
+                filter.category = category;
             }
-        ]);
+
+            return await this.model.countDocuments(filter);
+        } catch (error) {
+            throw new Error(`Errore countNewsByCategory: ${error.message}`);
+        }
     }
 
     // =====================================

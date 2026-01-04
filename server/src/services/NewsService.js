@@ -8,6 +8,8 @@ const {
 
 const AppError = require('../utils/AppError');
 const NewsGenerator = require('../utils/NewsGenerator');
+const cacheService = require('./CacheService'); // 🆕 Cache invalidation per match updates
+
 
 /**
  * NEWS SERVICE
@@ -28,6 +30,7 @@ class NewsService {
         this.newsGenerator = new NewsGenerator();
         this.newsRepository = new NewsRepository();
         this.teamRepository = new TeamRepository();
+        this.cacheService = cacheService; // 🆕 Inizializza il servizio di cache
     }
 
 
@@ -42,7 +45,6 @@ class NewsService {
      */
 
     async createNewsOnCreateMatch(newsData) {
-
         try {
             const { field, date, playersCount, teamId } = newsData;
 
@@ -85,14 +87,14 @@ class NewsService {
             // 1. News principale creazione
             const mainNews = this.newsGenerator.generateMatchCreationNews({
                 ...commonPlaceholders,
-                type: 'general'
+                type: 'general' || 'date_soon' || "field"
             });
 
             console.log('xxxxxx   ==>>>  DEBUG CREATEnewsOnCreateMatch COMMON PLACEHOLDERS :', commonPlaceholders);
 
 
             if (mainNews) {
-                const mainNewsData = {
+                newsItems.push({
                     teamId: teamId,
                     text: mainNews.text,
                     category: mainNews.category,
@@ -101,9 +103,8 @@ class NewsService {
                     icon: mainNews.icon,
                     style: mainNews.style,
                     eventData: newsData
-                };
-                const savedMainNews = await this.newsRepository.create(mainNewsData);
-                newsItems.push(savedMainNews);
+                });
+
             }
 
             // 2. News stagionale/tempo se appropriato
@@ -133,7 +134,7 @@ class NewsService {
                     type: seasonalType
                 });
                 if (seasonalNews) {
-                    const seasonalNewsData = {
+                    newsItems.push({
                         teamId: teamId,
                         text: seasonalNews.text,
                         category: seasonalNews.category,
@@ -142,16 +143,24 @@ class NewsService {
                         icon: seasonalNews.icon,
                         style: seasonalNews.style,
                         eventData: { matchId: null, field, date, playersCount }
-                    };
-                    const savedSeasonalNews = await this.newsRepository.create(seasonalNewsData);
-                    newsItems.push(savedSeasonalNews);
+                    })
+
                 }
             }
 
+            // 📰 ========================================
+            // 🔄 SISTEMA "SOSTITUZIONE NOTIZIE INTELLIGENTE"
+            // ========================================
+            // Questo sistema sostituisce SOLO le notizie della categoria "match_creation"
+            // mantenendo intatte quelle di altre categorie (match_completed, leaderboard, ecc.)
+            // È come un giornale: le vecchie notizie di "creazione match" spariscono 
+            // quando arrivano quelle nuove, ma le altre sezioni rimangono
+            console.log(`📰 [REPLACE-SYSTEM] 🎯 CREAZIONE MATCH - Avvio sostituzione categoria 'match_creation'`);
+            console.log(`📰 [REPLACE-SYSTEM] 📊 Team: ${teamId} | Notizie da sostituire: ${newsItems.length}`);
+
+            return await this.deleteReplaceNewsByCategory(teamId, 'match_creation', newsItems);
 
 
-            console.log(`✅ Generated ${newsItems.length} match creation news items`);
-            return newsItems; // Ritorna tutto l'array
 
         } catch (error) {
             console.error('❌ Error handling match creation news:', error);
@@ -264,7 +273,7 @@ class NewsService {
                 type: 'team_performance'
             });
             if (mainNews) {
-                const mainNewsData = {
+                newsItems.push({
                     teamId,
                     text: mainNews.text,
                     category: mainNews.category,
@@ -273,9 +282,7 @@ class NewsService {
                     icon: mainNews.icon,
                     style: mainNews.style,
                     eventData: { matchId }
-                };
-                const savedMainNews = await this.newsRepository.create(mainNewsData);
-                newsItems.push(savedMainNews);
+                });
             }
 
 
@@ -292,7 +299,7 @@ class NewsService {
 
                 console.log('🔍 DEBUG bestPlayerNews:', bestPlayerNews);
                 if (bestPlayerNews) {
-                    const bestPlayerNewsData = {
+                    newsItems.push({
                         teamId,
                         text: bestPlayerNews.text,
                         category: bestPlayerNews.category,
@@ -301,9 +308,7 @@ class NewsService {
                         icon: bestPlayerNews.icon,
                         style: bestPlayerNews.style,
                         eventData: { matchId }
-                    };
-                    const savedBestPlayerNews = await this.newsRepository.create(bestPlayerNewsData);
-                    newsItems.push(savedBestPlayerNews);
+                    });
                 }
             }
 
@@ -319,7 +324,7 @@ class NewsService {
                     playersCount: goalScorerCount
                 });
                 if (goalsNews) {
-                    const goalsNewsData = {
+                    newsItems.push({
                         teamId,
                         text: goalsNews.text,
                         category: goalsNews.category,
@@ -328,9 +333,7 @@ class NewsService {
                         icon: goalsNews.icon,
                         style: goalsNews.style,
                         eventData: { matchId }
-                    };
-                    const savedGoalsNews = await this.newsRepository.create(goalsNewsData);
-                    newsItems.push(savedGoalsNews);
+                    });
                 }
             }
 
@@ -348,7 +351,7 @@ class NewsService {
                     rating3: excellentPlayers[2]?.averageRating ? excellentPlayers[2].averageRating.toFixed(1) : '0.0'
                 });
                 if (exceptionalNews) {
-                    const exceptionalNewsData = {
+                    newsItems.push({
                         teamId,
                         text: exceptionalNews.text,
                         category: exceptionalNews.category,
@@ -357,16 +360,21 @@ class NewsService {
                         icon: exceptionalNews.icon,
                         style: exceptionalNews.style,
                         eventData: { matchId }
-                    };
-                    const savedExceptionalNews = await this.newsRepository.create(exceptionalNewsData);
-                    newsItems.push(savedExceptionalNews);
+                    });
                 }
             }
 
-            console.log(`✅ Generated ${newsItems.length} match completion news items`);
+            // 📰 ========================================
+            // 🔄 SISTEMA "SOSTITUZIONE NOTIZIE INTELLIGENTE"
+            // ========================================
+            // Questo sistema sostituisce SOLO le notizie della categoria "match_completed"
+            // Le notizie di match_creation, leaderboard, ecc. rimangono intatte
+            // È il sistema "a giornale": ogni completamento match sostituisce le news precedenti
+            console.log(`📰 [REPLACE-SYSTEM] ⚽ MATCH COMPLETATO - Avvio sostituzione categoria 'match_completed'`);
+            console.log(`📰 [REPLACE-SYSTEM] 📊 Team: ${teamId} | Match: ${matchId} | Notizie generate: ${newsItems.length}`);
+            console.log(`📰 [REPLACE-SYSTEM] 🎯 Tipi generati: ${newsItems.map(n => n.type).join(', ')}`);
 
-
-            return newsItems;
+            return await this.deleteReplaceNewsByCategory(teamId, 'match_completed', newsItems);
 
 
         } catch (error) {
@@ -424,46 +432,56 @@ class NewsService {
                 underPerformersList: underPerformers?.map(p => `${p.playerId.name} (${p.averageRating?.toFixed(1)})`).join(', ') || ''
             };
 
+            let newsItems = [];
+
             // 🎯 STEP 4: Genera news tramite template
-            const newsText = this.newsGenerator.generateLeaderboardNews({
+            const mainNews = this.newsGenerator.generateLeaderboardNews({
                 ...specificPlaceholders,
                 type: 'new_leader'
             });
 
-            console.log('🔍 DEBUG newsText from generator:', newsText);
+            console.log('🔍 DEBUG mainNews from generator:', mainNews);
 
             // 🔍 STEP 5: Verifica output template
-            if (!newsText) {
+            if (!mainNews) {
                 console.log('⚠️ NewsGenerator returned null (probably duplicate), skipping...');
                 return null;
             }
+            if (mainNews) {
+                // Crea oggetto news
+                newsItems.push({
+                    teamId: teamId,
+                    category: mainNews.category,
+                    type: mainNews.type,
+                    priority: mainNews.priority,
+                    text: mainNews.text,
+                    icon: mainNews.icon,
+                    style: mainNews.style,
 
-            // Crea oggetto news
-            const newsData = {
-                teamId: teamId,
-                category: newsText.category,
-                type: newsText.type,
-                priority: newsText.priority,
-                text: newsText.text,
-                icon: newsText.icon,
-                style: newsText.style,
+                    relatedEntityId: null,
+                    relatedEntityType: 'leaderboard',
+                    isRead: false,
+                    createdAt: new Date(),
+                });
 
-                relatedEntityId: null,
-                relatedEntityType: 'leaderboard',
-                isRead: false,
-                createdAt: new Date(),
-            };
+                // 📰 ========================================
+                // 🔄 SISTEMA "SOSTITUZIONE NOTIZIE INTELLIGENTE"
+                // ========================================
+                // Sostituisce SOLO le notizie della categoria "leaderboard"
+                // Le news di match_creation e match_completed rimangono intatte
+                console.log(`📰 [REPLACE-SYSTEM] 🏆 CLASSIFICA CAMBIATA - Avvio sostituzione categoria 'leaderboard'`);
+                console.log(`📰 [REPLACE-SYSTEM] 📊 Team: ${teamId} | Giocatore: ${playerName} | Nuovo rating: ${newRating?.toFixed(1)}`);
+                console.log(`📰 [REPLACE-SYSTEM] 🎯 Tipo news: ${mainNews.type}`);
 
-            // Salva nel database
-            const savedNews = await this.newsRepository.create(newsData);
-            console.log('✅ Leaderboard change news created successfully:', savedNews._id);
-
-            return savedNews;
+                const result = await this.deleteReplaceNewsByCategory(teamId, 'leaderboard', newsItems);
+                return result.length > 0 ? result[0] : null; // Mantieni compatibilità
+            }
         } catch (error) {
             console.error('❌ Error handling leaderboard news:', error);
             throw error;
         }
     }
+
 
     /**
      * 👤 ANALIZZA E GENERA NEWS PER CREAZIONE PLAYER CARD
@@ -477,11 +495,13 @@ class NewsService {
 
             const {
                 playerId,
+                teamId,
                 overallRating,
                 consensusPosition,
                 attributes,
                 playerName,
-                position
+                position,
+                favoriteNumber
             } = playerCardData;
 
             // Crea placeholder per il template
@@ -525,12 +545,99 @@ class NewsService {
         }
     }
 
-    /**     * 👤 ANALIZZA E GENERA NEWS PER COMPLETAMENTO PLAYER CARD
+    /**
+     * 👤 ANALIZZA E GENERA NEWS PER COMPLETAMENTO PLAYER CARD
      * Analizza dati player card completata e genera array di news items
      * @param {Object} playerCardData - Dati della player card {playerId, overallRating, consensusPosition, attributes}
      * @returns {Promise<Object>} {success, generated, count, metadata}
      */
-    async createNewsOnCompletePlayerCard(playerCardData) { }
+    async createNewsOnCompletePlayerCard(playerCardData) {
+        // TODO: Implementare logica per completamento player card
+        return null;
+    }
+
+    /**
+     * �🔄 SISTEMA "SOSTITUZIONE NOTIZIE INTELLIGENTE"
+     * 
+     * 🎯 COSA FA:
+     * Sostituisce le notizie di una specifica categoria mantenendo intatte quelle delle altre categorie.
+     * È come un giornale con sezioni indipendenti:
+     * - Sezione "Sport" (match_completed) si aggiorna quando finisce una partita
+     * - Sezione "Eventi" (match_creation) si aggiorna quando si crea un nuovo match  
+     * - Sezione "Classifiche" (leaderboard) si aggiorna quando cambia la classifica
+     * 
+     * 🔄 LOGICA:
+     * 1. CANCELLA tutte le vecchie notizie della categoria specifica
+     * 2. INSERISCE le nuove notizie della stessa categoria
+     * 3. MANTIENE intatte le notizie di tutte le altre categorie
+     * 
+     * 💡 ESEMPIO PRATICO:
+     * - Team ha 8 notizie: 3 di "match_creation", 3 di "match_completed", 2 di "leaderboard"
+     * - Arriva nuovo match completato → Cancella le 3 "match_completed", inserisce 4 nuove "match_completed"
+     * - Risultato: 9 notizie totali (3 creation + 4 completed + 2 leaderboard)
+     * 
+     * @param {string} teamId - ID del team
+     * @param {string} category - Categoria da sostituire (match_creation, match_completed, leaderboard, ecc.)
+     * @param {Array} newsDataArray - Array delle nuove notizie da inserire
+     * @returns {Promise<Array>} Array delle notizie create
+     */
+    async deleteReplaceNewsByCategory(teamId, category, newsDataArray) {
+        try {
+            console.log(`📰 [REPLACE-SYSTEM] ====================================`);
+            console.log(`📰 [REPLACE-SYSTEM] 🚀 INIZIO SOSTITUZIONE CATEGORIA`);
+            console.log(`📰 [REPLACE-SYSTEM] ====================================`);
+            console.log(`📰 [REPLACE-SYSTEM] 🎯 Team: ${teamId}`);
+            console.log(`📰 [REPLACE-SYSTEM] 📂 Categoria: "${category.toUpperCase()}"`);
+            console.log(`📰 [REPLACE-SYSTEM] ➕ Nuove notizie da inserire: ${newsDataArray.length}`);
+
+            // Validazione business
+            if (!teamId || !category || !Array.isArray(newsDataArray)) {
+                const errorMsg = 'Parametri mancanti per sostituzione categoria notizie';
+                console.log(`📰 [REPLACE-SYSTEM] ❌ ERRORE VALIDAZIONE: ${errorMsg}`);
+                throw new Error(errorMsg);
+            }
+
+            if (newsDataArray.length === 0) {
+                console.log(`📰 [REPLACE-SYSTEM] ⚠️ NESSUNA NOTIZIA DA CREARE per categoria "${category}"`);
+                console.log(`📰 [REPLACE-SYSTEM] 🏁 FINE OPERAZIONE (nessuna modifica)`);
+                return [];
+            }
+
+            // Delega al repository l'operazione database
+            console.log(`📰 [REPLACE-SYSTEM] 🔄 Delego al Repository l'operazione database...`);
+            const result = await this.newsRepository.deleteReplaceNewsByCategory(teamId, category, newsDataArray);
+
+            // Business logic: logging dettagliato del risultato
+            console.log(`📰 [REPLACE-SYSTEM] ====================================`);
+            console.log(`📰 [REPLACE-SYSTEM] ✅ OPERAZIONE COMPLETATA CON SUCCESSO`);
+            console.log(`📰 [REPLACE-SYSTEM] ====================================`);
+            console.log(`📰 [REPLACE-SYSTEM] 🗑️ Notizie vecchie eliminate: ${result.deletedCount}`);
+            console.log(`📰 [REPLACE-SYSTEM] ➕ Notizie nuove inserite: ${result.createdCount}`);
+            console.log(`📰 [REPLACE-SYSTEM] 📊 Saldo operazione: ${result.createdCount - result.deletedCount} (positivo = più notizie, negativo = meno notizie)`);
+            console.log(`📰 [REPLACE-SYSTEM] 📂 Categoria interessata: "${category.toUpperCase()}"`);
+            console.log(`📰 [REPLACE-SYSTEM] 🎯 Team: ${teamId}`);
+
+            // Invalidazione cache per aggiornamenti news team
+            console.log(`📰 [REPLACE-SYSTEM] 🧹 Invalidazione cache in corso...`);
+            await this.cacheService.delete(`news:${teamId}:recent`);
+            await this.cacheService.delete(`news:${teamId}:category:${category}`);
+            console.log(`📰 [REPLACE-SYSTEM] ✅ Cache invalidata per team ${teamId}`);
+
+            console.log(`📰 [REPLACE-SYSTEM] 🏁 FINE OPERAZIONE - Sistema pronto per prossima sostituzione`);
+            return result.createdNews;
+
+        } catch (error) {
+            console.log(`📰 [REPLACE-SYSTEM] ====================================`);
+            console.log(`📰 [REPLACE-SYSTEM] ❌ ERRORE DURANTE SOSTITUZIONE`);
+            console.log(`📰 [REPLACE-SYSTEM] ====================================`);
+            console.log(`📰 [REPLACE-SYSTEM] 🎯 Team: ${teamId}`);
+            console.log(`📰 [REPLACE-SYSTEM] 📂 Categoria: "${category}"`);
+            console.log(`📰 [REPLACE-SYSTEM] ⚠️ Errore: ${error.message}`);
+            console.log(`📰 [REPLACE-SYSTEM] 🏁 OPERAZIONE FALLITA`);
+            throw error;
+        }
+    }
+
 
 
 
@@ -547,15 +654,14 @@ class NewsService {
      * Siccome le news vengono create internamente dal sistema,
      * Le API servono principalmente per il recupero delle stesse, che
      * vengono appunto create dal newsgenerator e salvate nel database.
-    /**
-     
-    
+     */
 
-    * Recupera le news recenti per un team specifico
-    * @param {string} teamId - ID del team
-    * @param {number} limit - Numero massimo di news da recuperare
-    * @returns {Promise<Object>} Array di news con metadata
-    */
+    /**
+     * Recupera le news recenti per un team specifico
+     * @param {string} teamId - ID del team
+     * @param {number} limit - Numero massimo di news da recuperare
+     * @returns {Promise<Object>} Array di news con metadata
+     */
     async getRecentNews(teamId, limit = 20) {
         // Input validation
         if (limit > 50) {
@@ -587,11 +693,11 @@ class NewsService {
 
 
     /**
-    * Recupera le news un team specifico con opzioni anche per categoria e priorità
-    * @param {string} teamId - ID del team
-    * @param {Object} options - Opzioni {limit, category, priority}
-    * @returns {Promise<Object>} Array di news con metadata
-    */
+     * Recupera le news un team specifico con opzioni anche per categoria e priorità
+     * @param {string} teamId - ID del team
+     * @param {Object} options - Opzioni {limit, category, priority}
+     * @returns {Promise<Object>} Array di news con metadata
+     */
     async getNewsByCategory(teamId, options = {}) {
         // Input validation
         const { limit = 10, category = null, priority = null } = options;
