@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, Users, CheckCircle2, Clock, Star } from "lucide-react";
+import { usePlayerSpecialties } from "@/hooks/usePlayerSpecialties";
+import { SpecialtiesBadgeList } from "@/components/SpecialtyBadge";
 
 // Types per il nuovo componente
 interface PlayerInfo {
@@ -188,7 +190,7 @@ export function PlayerCardNavigator({
   return (
     <div className="w-full space-y-6">
       {/* Main Card Area */}
-      <div className="relative h-[510px] overflow-hidden">
+      <div className="relative h-[610px] overflow-hidden">
         <AnimatePresence initial={false} custom={direction} mode="wait">
           <motion.div
             key={currentIndex}
@@ -432,6 +434,31 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
                   <AttributeBar label="Piazzamento" value={result.goalkeeperAttributes.pz} />
                   <AttributeBar label="Riflessi" value={result.goalkeeperAttributes.rf} />
                 </div>
+
+                {/* 🌟 SPECIALITÀ PORTIERE */}
+                {(() => {
+                  const specialties = usePlayerSpecialties(
+                    result.finalAttributes,
+                    result.goalkeeperAttributes
+                  );
+
+                  // 🎨 LOGICA BADGE RESPONSIVE: più specialità = badge più piccoli
+                  const getBadgeSize = (count: number): 'xs' | 'sm' | 'md' => {
+                    if (count <= 2) return 'md';  // Badge grandi per poche specialità
+                    if (count <= 4) return 'sm';  // Badge medi per media quantità
+                    return 'xs';                   // Badge piccoli per tante specialità
+                  };
+
+                  return specialties.length > 0 && (
+                    <div className="pt-4 border-t border-border/30">
+                      <div className="text-xs text-muted-foreground mb-2">Specialità</div>
+                      <SpecialtiesBadgeList
+                        specialties={specialties}
+                        size={getBadgeSize(specialties.length)}
+                      />
+                    </div>
+                  );
+                })()}
               </div>
             ) : (
               // UI GIOCATORI NORMALI - 10 attributi a DUE COLONNE + stelle
@@ -456,6 +483,31 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
                     <AttributeBar label="Pr. testa" value={result.finalAttributes.prt} />
                   </div>
                 </div>
+
+                {/* 🌟 SPECIALITÀ - TRA ATTRIBUTI E STELLE */}
+                {(() => {
+                  const specialties = usePlayerSpecialties(
+                    result.finalAttributes,
+                    null // Giocatori normali non hanno attributi portiere
+                  );
+
+                  // 🎨 LOGICA BADGE RESPONSIVE: più specialità = badge più piccoli
+                  const getBadgeSize = (count: number): 'xs' | 'sm' | 'md' => {
+                    if (count <= 2) return 'md';  // Badge grandi per poche specialità
+                    if (count <= 4) return 'sm';  // Badge medi per media quantità
+                    return 'xs';                   // Badge piccoli per tante specialità
+                  };
+
+                  return specialties.length > 0 && (
+                    <div className="pt-4 border-t border-border/30">
+                      <div className="text-xs text-muted-foreground mb-2">Specialità</div>
+                      <SpecialtiesBadgeList
+                        specialties={specialties}
+                        size={getBadgeSize(specialties.length)}
+                      />
+                    </div>
+                  );
+                })()}
 
                 {/* Star Ratings - Solo per giocatori normali */}
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
