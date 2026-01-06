@@ -67,6 +67,9 @@ class MatchService {
             // 2. Auto-create voting session
             const votingSession = await this.createAutoVotingSession(match, userId, matchData.abstainedMembers || []);
 
+            // 🆕 AGGIUNGI: Recupera i nomi dalla voting session appena creata
+            const sessionWithNames = await this.votingSessionRepository.findByIdWithUsernames(votingSession._id);
+
             // 3. 🗞️ Genera news per creazione match
             console.log(`✅ Match creato con ID ${match._id} e VotingSession ${votingSession._id} da user ${userId}`);
 
@@ -79,7 +82,9 @@ class MatchService {
                     date: match.date,
                     createdBy: userId,
                     teamMemberIds: match.teamMemberIds,
-                    type: 'general' // Default type, può essere parametrizzato
+                    type: 'general', // Default type, può essere parametrizzato
+                    eligibleVotersNames: sessionWithNames.eligibleVoters,
+                    abstainedUsersNames: sessionWithNames.abstainedUsers
                 };
 
                 const creationNews = await this.newsService.createNewsOnCreateMatch(newsData);
@@ -160,15 +165,11 @@ class MatchService {
             // Check team access
             await this.validateTeamAccess(teamId, userId);
 
-            // Get matches usando metodo specifico Repository invece di findAll generico
-            const matches = await this.matchRepository.findByTeam(teamId, {
-                populate: [
-                    { path: 'createdBy', select: 'name birthdate teamName' },
-                    { path: 'teamMemberIds', select: 'name birthdate profile.position teamName' }
-                ],
-                sort: { date: -1 },
-                skip: skip,
-                limit: limit
+            // 🎯 USA IL NUOVO METODO CON POPULATION AUTOMATICA
+            const matches = await this.matchRepository.findWithUsers({ teamId }, {
+                page,
+                limit,
+                sort: { date: -1 }
             });
 
             // Count total usando BaseRepository per consistency
@@ -230,12 +231,8 @@ class MatchService {
         this.validateUserId(userId);
 
         try {
-            const match = await this.matchRepository.findById(matchId, {
-                populate: [
-                    { path: 'createdBy', select: 'name email birthdate teamName' },
-                    { path: 'teamMemberIds', select: 'name email birthdate profile.position teamName' }
-                ]
-            });
+            // 🎯 USA IL NUOVO METODO SPECIFICO PER SINGOLO MATCH
+            const match = await this.matchRepository.findByIdWithUsers(matchId);
 
             if (!match) {
                 throw new AppError('Match not found', 404);

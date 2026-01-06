@@ -31,6 +31,14 @@ class NewsGenerator {
 
     };
 
+    generateVotingSessionNews(eventData) {
+        const votingSessionTemplates = this.loadTemplates().votingSession_creation || {};
+        const templates = votingSessionTemplates[eventData.type];
+        // Cache key unica per ogni match per evitare blocchi
+        const cacheKey = `votingSession_creation_${eventData.type || 'random'}_${eventData.matchId || Date.now()}`;
+        return this.selectAndProcessTemplate(templates, eventData, cacheKey);
+    }
+
     generateMatchCompletedNews(eventData) {
         const matchCompletedTemplates = this.loadTemplates().match_completed || {};
 

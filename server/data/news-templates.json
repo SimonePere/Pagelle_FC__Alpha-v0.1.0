@@ -146,7 +146,7 @@
   "match_creation": {
     "general": [
       {
-        "text": "📅 NUOVO MATCH IN VISTA! Si prospetta una battaglia epica sul campo del {field}! I nostri gladiatori si preparano allo scontro!",
+        "text": "📅 NUOVO MATCH IN VISTA! La squadra {teamName} si prepara a una battaglia epica sul campo del {field}! Riusciranno a confermarsi i migliori?",
         "category": "match_creation",
         "type": "general",
         "priority": "medium",
@@ -154,7 +154,7 @@
         "style": "info"
       },
       {
-        "text": "⚽ FISCHIO D'INIZIO! Un nuovo capitolo sta per essere scritto nella storia del team! Che cominci lo spettacolo!",
+        "text": "⚽ FISCHIO D'INIZIO! Un nuovo capitolo sta per essere scritto il {date} al {field}! Chi dominerà il campo?",
         "category": "match_creation",
         "type": "general",
         "priority": "medium",
@@ -162,7 +162,7 @@
         "style": "info"
       },
       {
-        "text": "🎯 ATTENZIONE: Il {date} si giocherà presso {field}! {playersCount} guerrieri si preparano alla battaglia!",
+        "text": "🎯 ATTENZIONE: Il {date} si giocherà presso {field}! Il team {teamName} atteso con ansia!",
         "category": "match_creation",
         "type": "general",
         "priority": "high",
@@ -170,7 +170,7 @@
         "style": "info"
       },
       {
-        "text": "⚽ ULTIMORA: Match confermato! Si gioca il {date} al {field} Stadium! Saranno {playersCount} i gladiatori in campo!",
+        "text": "⚽ ULTIMORA: Match confermato! Si gioca il {date} al {field} Stadium! Saranno i {teamName}-boys i più attesi!",
         "category": "match_creation",
         "type": "general",
         "priority": "high",
@@ -250,7 +250,7 @@
     ],
     "participants_5v5": [
       {
-        "text": "⚽ CALCETTO TIME! 5 vs 5, si gioca con il cuore e la tecnica! Ogni tocco sarà decisivo per la vittoria!",
+        "text": "⚽ CALCETTO TIME! 5 vs 5 al {field} il {date}! {playersCount} giocatori - ogni tocco sarà decisivo per la vittoria!",
         "category": "match_creation",
         "type": "participants",
         "priority": "medium",
@@ -258,7 +258,7 @@
         "style": "info"
       },
       {
-        "text": "🔥 SFIDA INTENSA! {playersCount} guerrieri 5vs5 al {field} Center il {date}! Preparatevi al duello!",
+        "text": "🔥 SFIDA INTENSA! I guerrieri 5vs5 al {field} Center il {date}! Preparatevi al duello!",
         "category": "match_creation",
         "type": "participants",
         "priority": "high",
@@ -268,7 +268,7 @@
     ],
     "participants_8v8": [
       {
-        "text": "💪 MATCH EQUILIBRATO! 8 vs 8, la formazione perfetta per uno spettacolo di puro calcio!",
+        "text": "💪 MATCH EQUILIBRATO! 8 vs 8 al {field} il {date} - {playersCount} atleti per uno spettacolo di puro calcio!",
         "category": "match_creation",
         "type": "participants",
         "priority": "medium",
@@ -286,7 +286,7 @@
     ],
     "participants_11v11": [
       {
-        "text": "🏆 GRANDE MATCH! 11 vs 11, si gioca come i veri professionisti! Sarà spettacolo puro!",
+        "text": "🏆 GRANDE MATCH! 11 vs 11 al {field} il {date} - {playersCount} professionisti per uno spettacolo puro!",
         "category": "match_creation",
         "type": "participants",
         "priority": "medium",
@@ -323,42 +323,6 @@
       }
     ],
 
-
-
-    "funny_abstainers": [
-      {
-        "text": "🤷‍♂️ MISTERO: Alcuni giocatori sono spariti nel nulla... Forse stanno ancora decidendo se partecipare al match del il {date}!",
-        "category": "match_creation",
-        "type": "funny_abstainers",
-        "priority": "low",
-        "icon": "🤷‍♂️",
-        "style": "secondary"
-      },
-      {
-        "text": "👻 FANTASMI DEL CALCIO: Alcuni giocatori sono in modalità invisibile... Chi si materializzerà al big match del {field} Palace il {date}?",
-        "category": "match_creation",
-        "type": "funny_abstainers",
-        "priority": "low",
-        "icon": "👻",
-        "style": "secondary"
-      },
-      {
-        "text": "🎭 INDECISI CRONICI: C'è chi non sa ancora cosa fare il {date}... Il {field} Ground aspetta le loro decisioni!",
-        "category": "match_creation",
-        "type": "funny_abstainers",
-        "priority": "low",
-        "icon": "🎭",
-        "style": "secondary"
-      },
-      {
-        "text": "🔮 ORACOLO: La sfera di cristallo prevede che qualcuno si sveglierà all'ultimo momento per il {date} al {field} Villa!",
-        "category": "match_creation",
-        "type": "funny_abstainers",
-        "priority": "low",
-        "icon": "🔮",
-        "style": "secondary"
-      }
-    ],
     "motivational": [
       {
         "text": "💪 CHIAMATA ALLE ARMI! Il {date} al {field} Sports Park - È l'ora di dimostrare di cosa siamo fatti!",
@@ -613,7 +577,7 @@
     ],
     "full_squad": [
       {
-        "text": "💯 SQUADRA AL COMPLETO! Tutti presenti, battaglia totale! Nessun assente, massima potenza di fuoco!",
+        "text": "💯 {teamName} FC AL COMPLETO! Tutti i giocatori presenti al {field} Stadium il {date}! Nessun assente, massima potenza di fuoco!",
         "category": "match_creation",
         "type": "full_squad",
         "priority": "medium",
@@ -622,6 +586,213 @@
       }
     ]
   },
+  "votingSession_creation": {
+    "session_opened": [
+      {
+        "text": "🗳️ VALUTAZIONE APERTA! La partita è pronta per essere giudicata da {eligibleVotersCount} esperti giocatori! {eligibleVotersNames} - chi avrà il coraggio di dare il primo voto?",
+        "category": "votingSession_creation",
+        "type": "session_opened",
+        "priority": "high",
+        "icon": "🗳️",
+        "style": "info"
+      },
+      {
+        "text": "⚖️ TRIBUNALE DEL CALCIO! I nostri giudici {eligibleVotersNames} sono pronti a emettere i loro verdetti! Chi sarà più severo?",
+        "category": "votingSession_creation",
+        "type": "session_opened",
+        "priority": "high",
+        "icon": "⚖️",
+        "style": "warning"
+      },
+      {
+        "text": "🎯 MOMENTO DELLA VERITÀ! {eligibleVotersNames} hanno in mano il destino dei voti - chi riuscirà a conquistare le loro preferenze?",
+        "category": "votingSession_creation",
+        "type": "session_opened",
+        "priority": "medium",
+        "icon": "🎯",
+        "style": "info"
+      }
+    ],
+    "participants_announced": [
+      {
+        "text": "👥 I NOSTRI GIUDICI! Ecco chi deciderà le sorti della votazione: {eligibleVotersNames}! Che sia un giudizio giusto ed equo!",
+        "category": "votingSession_creation",
+        "type": "participants_announced",
+        "priority": "medium",
+        "icon": "👥",
+        "style": "success"
+      },
+      {
+        "text": "🎪 PRESENTAZIONE GIURIA! Con voi questa sera i magnifici {eligibleVotersCount}: {eligibleVotersNames}! Applausi per i nostri valutatori!",
+        "category": "votingSession_creation",
+        "type": "participants_announced",
+        "priority": "medium",
+        "icon": "🎪",
+        "style": "info"
+      },
+      {
+        "text": "🌟 STELLE DELLA GIURIA! {eligibleVotersNames} si preparano a dispensare saggezza calcistica! Le loro valutazioni faranno storia!",
+        "category": "votingSession_creation",
+        "type": "participants_announced",
+        "priority": "low",
+        "icon": "🌟",
+        "style": "success"
+      }
+    ],
+    "voting_excitement": [
+      {
+        "text": "🔥 ADRENALINA PURA! {eligibleVotersNames} fremono dalla voglia di votare! Chi sarà il primo a premere quel magico tasto?",
+        "category": "votingSession_creation",
+        "type": "voting_excitement",
+        "priority": "medium",
+        "icon": "🔥",
+        "style": "warning"
+      },
+      {
+        "text": "⚡ ELETTRIZZANTE! L'aria si carica di tensione mentre {eligibleVotersNames} si preparano al grande momento del voto!",
+        "category": "votingSession_creation",
+        "type": "voting_excitement",
+        "priority": "medium",
+        "icon": "⚡",
+        "style": "info"
+      },
+      {
+        "text": "🚀 COUNTDOWN INIZIATO! {eligibleVotersNames} scaldano le dita per la maratona di voti che li aspetta!",
+        "category": "votingSession_creation",
+        "type": "voting_excitement",
+        "priority": "low",
+        "icon": "🚀",
+        "style": "info"
+      }
+    ],
+    "expert_panel": [
+      {
+        "text": "🎓 PANEL DI ESPERTI! {eligibleVotersNames} formano una giuria di prim'ordine! Con loro non si scherza, conoscono il calcio meglio di Guardiola!",
+        "category": "votingSession_creation",
+        "type": "expert_panel",
+        "priority": "medium",
+        "icon": "🎓",
+        "style": "success"
+      },
+      {
+        "text": "🧠 CERVELLI CALCISTICI! {eligibleVotersNames} metteranno al servizio della votazione tutta la loro esperienza sul campo!",
+        "category": "votingSession_creation",
+        "type": "expert_panel",
+        "priority": "medium",
+        "icon": "🧠",
+        "style": "info"
+      },
+      {
+        "text": "📚 ENCICLOPEDIE VIVENTI! Con {eligibleVotersNames} alla votazione, ogni voto sarà frutto di profonda conoscenza tattica!",
+        "category": "votingSession_creation",
+        "type": "expert_panel",
+        "priority": "low",
+        "icon": "📚",
+        "style": "success"
+      }
+    ],
+    "funny_abstainers": [
+      {
+        "text": "🤷‍♂️ MISTERO VOTAZIONE! {abstainedUsersNames} hanno scelto la via del silenzio... Forse stanno meditando su filosofie calcistiche superiori?",
+        "category": "votingSession_creation",
+        "type": "funny_abstainers",
+        "priority": "low",
+        "icon": "🤷‍♂️",
+        "style": "default"
+      },
+      {
+        "text": "👻 FANTASMI DEL VOTO! {abstainedUsersNames} sono spariti nel nulla proprio quando serviva il loro giudizio! Dove saranno finiti?",
+        "category": "votingSession_creation",
+        "type": "funny_abstainers",
+        "priority": "low",
+        "icon": "👻",
+        "style": "default"
+      },
+      {
+        "text": "🎭 INDECISI CRONICI! {abstainedUsersNames} ancora non sanno se votare... Nel frattempo il mondo gira e i gol si segnano!",
+        "category": "votingSession_creation",
+        "type": "funny_abstainers",
+        "priority": "low",
+        "icon": "🎭",
+        "style": "default"
+      },
+      {
+        "text": "🔮 ORACOLO PREDICE! La sfera magica dice che {abstainedUsersNames} si sveglieranno all'ultimo secondo utile per votare!",
+        "category": "votingSession_creation",
+        "type": "funny_abstainers",
+        "priority": "low",
+        "icon": "🔮",
+        "style": "default"
+      },
+      {
+        "text": "😴 DORMIGLIONI! {abstainedUsersNames} devono ancora svegliarsi dal sogno della partita... Sveglia, è ora di votare!",
+        "category": "votingSession_creation",
+        "type": "funny_abstainers",
+        "priority": "low",
+        "icon": "😴",
+        "style": "default"
+      }
+    ],
+    "comeback_voters": [
+      {
+        "text": "🎉 GRANDE RITORNO! {reIncludedPlayersNames} tornano in scena per la votazione! Non potevano mancare all'appello!",
+        "category": "votingSession_creation",
+        "type": "comeback_voters",
+        "priority": "medium",
+        "icon": "🎉",
+        "style": "success"
+      },
+      {
+        "text": "🔄 RIPENSAMENTO! {reIncludedPlayersNames} cambiano idea e si uniscono alla giuria! Meglio tardi che mai!",
+        "category": "votingSession_creation",
+        "type": "comeback_voters",
+        "priority": "medium",
+        "icon": "🔄",
+        "style": "info"
+      },
+      {
+        "text": "⚡ LAST MINUTE! {reIncludedPlayersNames} fanno il loro ingresso trionfale nella votazione! Che tempismo!",
+        "category": "votingSession_creation",
+        "type": "comeback_voters",
+        "priority": "high",
+        "icon": "⚡",
+        "style": "warning"
+      },
+      {
+        "text": "🚀 RISVEGLIO! {reIncludedPlayersNames} escono dal letargo e si gettano nella mischia della votazione!",
+        "category": "votingSession_creation",
+        "type": "comeback_voters",
+        "priority": "medium",
+        "icon": "🚀",
+        "style": "info"
+      },
+      {
+        "text": "💫 COLPO DI SCENA! {reIncludedPlayersNames} fanno il loro ingresso a sorpresa! La votazione si arricchisce di nuovi giudici!",
+        "category": "votingSession_creation",
+        "type": "comeback_voters",
+        "priority": "high",
+        "icon": "💫",
+        "style": "success"
+      },
+      {
+        "text": "🎯 CHIAMATA ACCETTATA! {reIncludedPlayersNames} non resistono al richiamo della votazione e si uniscono al gruppo!",
+        "category": "votingSession_creation",
+        "type": "comeback_voters",
+        "priority": "medium",
+        "icon": "🎯",
+        "style": "success"
+      },
+      {
+        "text": "🌟 RITORNO DELLE STELLE! {reIncludedPlayersNames} decidono che il loro parere è troppo prezioso per essere taciuto!",
+        "category": "votingSession_creation",
+        "type": "comeback_voters",
+        "priority": "medium",
+        "icon": "🌟",
+        "style": "warning"
+      }
+    ]
+  },
+ 
   "match_completed": {
     "mvp_performance": [
       {
@@ -769,7 +940,7 @@
     ],
     "late_night": [
       {
-        "text": "🌙 BATTAGLIA NOTTURNA! Match concluso - I guerrieri della notte non si fermano mai!",
+        "text": "🌙 BATTAGLIA NOTTURNA! Match al {field} concluso con {totalGoals} gol - I {totalPlayers} guerrieri della notte non si fermano mai!",
         "category": "match_completed",
         "type": "late_night",
         "priority": "medium",

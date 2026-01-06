@@ -35,6 +35,30 @@ class VotingSessionRepository extends BaseRepository {
     }
 
     /**
+     * 🔍 Trova singola voting session con nomi sia per eligible voters che abstained (se ci sono)
+     * @param {string} sessionId - ID della sessione
+     * @returns {Object} Sessione con utenti popolati
+     */
+    async findByIdWithUsernames(sessionId) {
+        return this.model
+            .findById(sessionId)
+            .populate({
+                path: 'eligibleVoters',
+                select: 'name teamName',
+
+            })
+            .populate({
+                path: 'abstainedUsers.userId',
+                select: 'name teamName',
+
+            })
+            .populate({
+                path: 'abstainedUsers.abstainedBy',
+                select: 'name',
+            });
+    };
+
+    /**
      * 🔍 Trova sessioni attive
      * @returns {Array} Lista sessioni attive
      */

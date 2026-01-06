@@ -19,6 +19,93 @@ class MatchRepository extends BaseRepository {
     // 🎯 METODI SPECIFICI PER MATCH
     // ==============================
 
+
+    /**
+    * 🔍 Trova partite con dati utenti popolati
+    * @param {Object} filter - Filtro query
+    * @param {Object} options - Opzioni query (page, limit, sort)
+    * @returns {Array} Lista partite con utenti popolati
+    */
+    async findWithUsers(filter = {}, options = {}) {
+        const { page = 1, limit = 10, sort = { date: -1 } } = options;
+
+        return this.model
+            .find(filter)
+            .populate({
+                path: 'createdBy',
+                select: 'name email teamName',
+                transform: (doc) => ({
+                    id: doc._id,
+                    name: doc.name,
+                    email: doc.email,
+                    teamName: doc.teamName
+                })
+            })
+            .populate({
+                path: 'teamMemberIds',
+                select: 'name email teamName',
+                transform: (doc) => ({
+                    id: doc._id,
+                    name: doc.name,
+                    email: doc.email,
+                    teamName: doc.teamName
+                })
+            })
+            .populate({
+                path: 'finalResults.mvpPlayer',
+                select: 'name email teamName',
+                transform: (doc) => ({
+                    id: doc._id,
+                    name: doc.name,
+                    email: doc.email,
+                    teamName: doc.teamName
+                })
+            })
+            .sort(sort)
+            .skip((page - 1) * limit)
+            .limit(limit);
+    }
+
+    /**
+     * 🔍 Trova singolo match con utenti popolati
+     * @param {string} matchId - ID del match
+     * @returns {Object} Match con utenti popolati
+     */
+    async findByIdWithUsers(matchId) {
+        return this.model
+            .findById(matchId)
+            .populate({
+                path: 'createdBy',
+                select: 'name email teamName',
+                transform: (doc) => ({
+                    id: doc._id,
+                    name: doc.name,
+                    email: doc.email,
+                    teamName: doc.teamName
+                })
+            })
+            .populate({
+                path: 'teamMemberIds',
+                select: 'name email teamName',
+                transform: (doc) => ({
+                    id: doc._id,
+                    name: doc.name,
+                    email: doc.email,
+                    teamName: doc.teamName
+                })
+            })
+            .populate({
+                path: 'finalResults.mvpPlayer',
+                select: 'name email teamName',
+                transform: (doc) => ({
+                    id: doc._id,
+                    name: doc.name,
+                    email: doc.email,
+                    teamName: doc.teamName
+                })
+            });
+    }
+
     /**
      * 🔍 Trova partite per data
      * @param {Date} date - Data partita

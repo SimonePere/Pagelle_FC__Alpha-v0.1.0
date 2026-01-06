@@ -48,9 +48,7 @@ class NewsService {
         try {
             const { field, date, playersCount, teamId } = newsData;
 
-            // TODO: aggiungere logica per varianti di news:
-            // - news diversa per numero partecipanti
-            // - meteo diverso
+
             // ✅ Genera news multiple per creazione match
             const newsItems = [];
 
@@ -78,6 +76,9 @@ class NewsService {
             // Placeholder comuni
             const commonPlaceholders = {
                 teamId: teamId,
+                teamName: newsData.eligibleVotersNames && newsData.eligibleVotersNames.length > 0
+                    ? newsData.eligibleVotersNames[0].teamName || 'Team'
+                    : 'Team',
                 playersCount: playersCount, // campo a 5, 8, 11
                 playersType: getPlayersTypeDescription(playersCount),
                 date: formatDateItalian(date),
@@ -87,7 +88,7 @@ class NewsService {
             // 1. News principale creazione
             const mainNews = this.newsGenerator.generateMatchCreationNews({
                 ...commonPlaceholders,
-                type: 'general' || 'date_soon' || "field"
+                type: ['general', 'date_soon', 'field'][Math.floor(Math.random() * 3)]
             });
 
             console.log('xxxxxx   ==>>>  DEBUG CREATEnewsOnCreateMatch COMMON PLACEHOLDERS :', commonPlaceholders);
@@ -148,17 +149,99 @@ class NewsService {
                 }
             }
 
+
+            // NEWS PER CREAZIONE VOTINGSESSION
+            // POSSIAMO utilizzare nomi dei partecipanti e possibili astenuti per news categoria: votingSession_creation con 
+            // sottocategorie: session opened, participants announcedm voting excitement, expert panel, funny abstainers e comeback voters
+
+            // 🚧 TODO FUTURO - FEATURE COMEBACK_VOTERS:
+            // ========================================
+            // Quando un utente viene ri-ammesso dopo essere stato astenuto, deve generare news tipo:
+            // "🎉 GRANDE RITORNO! {reIncludedPlayersNames} tornano in scena per la votazione!"
+            // 
+            // DATI NECESSARI da aggiungere a newsData:
+            // - reIncludedPlayersNames: array con nomi utenti ri-ammessi
+            // 
+            // LOGICA PRIORITÀ da implementare:
+            // const votingType = newsData.reIncludedPlayersNames?.length > 0
+            //     ? 'comeback_voters'                    // PRIORITÀ 1: Chi torna
+            //     : newsData.abstainedUsersNames?.length > 0  
+            //         ? 'funny_abstainers'               // PRIORITÀ 2: Chi si astiene
+            //         : ['session_opened', 'participants_announced', 'voting_excitement'][Math.floor(Math.random() * 3)]; // PRIORITÀ 3: Random
+            //
+            // TEMPLATE GIÀ PRONTI: 7 template comeback_voters esistono nel JSON (linea 736-788)
+            // PLACEHOLDER: {reIncludedPlayersNames} - lista nomi separati da virgola
+            // ========================================
+
+            if (newsData.eligibleVotersNames &&
+                newsData.eligibleVotersNames.length > 0) {
+
+                // Logica condizionale attuale: se ci sono astenuti usa funny_abstainers
+                const votingType = newsData.abstainedUsersNames?.length > 0
+                    ? 'funny_abstainers'
+                    : ['session_opened', 'participants_announced', 'voting_excitement'][Math.floor(Math.random() * 3)];
+
+                const votingSessionNews = this.newsGenerator.generateVotingSessionNews({
+                    ...commonPlaceholders,
+                    type: votingType,
+                    eligibleVotersNames: Array.isArray(newsData.eligibleVotersNames)
+                        ? newsData.eligibleVotersNames.map(voter => voter.name).join(', ')
+                        : '',
+                    abstainedUsersNames: Array.isArray(newsData.abstainedUsersNames)
+                        ? newsData.abstainedUsersNames.map(abstained => abstained.userId.name).join(', ')
+                        : '',
+
+                });
+
+                if (votingSessionNews) {
+                    newsItems.push({
+                        teamId: teamId,
+                        text: votingSessionNews.text,
+                        category: votingSessionNews.category,
+                        type: votingSessionNews.type,
+                        priority: votingSessionNews.priority,
+                        icon: votingSessionNews.icon,
+                        style: votingSessionNews.style,
+                        eventData: { matchId: null, field, date, playersCount }
+                    })
+
+                }
+            }
+
+
+
+
+
+
             // 📰 ========================================
             // 🔄 SISTEMA "SOSTITUZIONE NOTIZIE INTELLIGENTE"
             // ========================================
-            // Questo sistema sostituisce SOLO le notizie della categoria "match_creation"
-            // mantenendo intatte quelle di altre categorie (match_completed, leaderboard, ecc.)
-            // È come un giornale: le vecchie notizie di "creazione match" spariscono 
-            // quando arrivano quelle nuove, ma le altre sezioni rimangono
-            console.log(`📰 [REPLACE-SYSTEM] 🎯 CREAZIONE MATCH - Avvio sostituzione categoria 'match_creation'`);
-            console.log(`📰 [REPLACE-SYSTEM] 📊 Team: ${teamId} | Notizie da sostituire: ${newsItems.length}`);
+            // Separo le news per categoria per evitare conflitti:
+            // - match_creation: news generali del match
+            // - votingSession_creation: news specifiche della voting session
 
-            return await this.deleteReplaceNewsByCategory(teamId, 'match_creation', newsItems);
+            const matchCreationNews = newsItems.filter(news => news.category === 'match_creation');
+            const votingSessionNews = newsItems.filter(news => news.category === 'votingSession_creation');
+
+            let results = [];
+
+            // Sostituisco prima le news di match creation se presenti
+            if (matchCreationNews.length > 0) {
+                console.log(`📰 [REPLACE-SYSTEM] 🎯 CREAZIONE MATCH - Avvio sostituzione categoria 'match_creation'`);
+                console.log(`📰 [REPLACE-SYSTEM] 📊 Team: ${teamId} | News match creation: ${matchCreationNews.length}`);
+                const matchResults = await this.deleteReplaceNewsByCategory(teamId, 'match_creation', matchCreationNews);
+                results = results.concat(matchResults);
+            }
+
+            // Sostituisco le news di voting session se presenti
+            if (votingSessionNews.length > 0) {
+                console.log(`📰 [REPLACE-SYSTEM] 🗳️ VOTING SESSION - Avvio sostituzione categoria 'votingSession_creation'`);
+                console.log(`📰 [REPLACE-SYSTEM] 📊 Team: ${teamId} | News voting session: ${votingSessionNews.length}`);
+                const votingResults = await this.deleteReplaceNewsByCategory(teamId, 'votingSession_creation', votingSessionNews);
+                results = results.concat(votingResults);
+            }
+
+            return results;
 
 
 
@@ -557,7 +640,7 @@ class NewsService {
     }
 
     /**
-     * �🔄 SISTEMA "SOSTITUZIONE NOTIZIE INTELLIGENTE"
+     * 🔄 SISTEMA "SOSTITUZIONE NOTIZIE INTELLIGENTE"
      * 
      * 🎯 COSA FA:
      * Sostituisce le notizie di una specifica categoria mantenendo intatte quelle delle altre categorie.

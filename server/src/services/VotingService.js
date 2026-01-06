@@ -141,8 +141,6 @@ class VotingService {
         }
 
 
-
-
         // 4. Business rules per creazione sessione
         const votingSession = await this.votingSessionRepository.create({
             type: 'match_rating',
@@ -169,6 +167,10 @@ class VotingService {
         console.log('✅ Voting Session creata:', votingSession._id);
         console.log('📝 === FINE CREATE VOTING SESSION (SERVICE) ===\n');
 
+        // 4.1. Recupera i nomi degli utenti partecipanti e astenuti per la sessione (se ci sono)
+        const userNames = await this.votingSessionRepository.findByIdWithUsernames(votingSession._id);
+
+
         // 5. Restituisce sessione con match info per response
         return {
             session: votingSession,
@@ -177,7 +179,9 @@ class VotingService {
                 date: match.date,
                 teamId: match.teamId,
                 playersCount: match.playersCount
-            }
+            },
+            eligibleVoters: userNames.eligibleVoters,
+            abstainedUsers: userNames.abstainedUsers
         };
     }
 
@@ -1035,9 +1039,11 @@ class VotingService {
             throw new Error('User ID is required');
         }
 
-        const votingSession = await this.votingSessionRepository.findById(sessionId, {
-            populate: [{ path: 'targetId', select: 'opponent date venue teamMemberIds' }]
-        });
+        // const votingSession = await this.votingSessionRepository.findById(sessionId, {
+        //     populate: [{ path: 'targetId', select: 'opponent date venue teamMemberIds' }]
+        // });
+
+        const votingSession = await this.votingSessionRepository.findByIdWithUsernames(sessionId);
 
         if (!votingSession) {
             throw new Error('Voting session not found');
@@ -1229,7 +1235,8 @@ class VotingService {
     }
 
     /**
-     * Recupera sessioni utente con statistiche
+     * Recupera TUTTE LE sessioni di un utente con statistiche
+     * // @route   GET /api/v1/voting-sessions
      * @param {string} userId - ID utente
      * @returns {Array} Lista sessioni con stats
      */
@@ -1285,6 +1292,9 @@ class VotingService {
             const isActive = session.status === 'active';
             const canVote = isActive && !hasVoted;
 
+            // 3.1. Recupera i nomi degli utenti partecipanti e astenuti per la sessione (se ci sono)
+            const userNames = await this.votingSessionRepository.findByIdWithUsernames(session._id);
+
             return {
                 id: session._id,
                 type: session.type,
@@ -1298,8 +1308,10 @@ class VotingService {
                 createdAt: session.createdAt,
                 updatedAt: session.updatedAt,
                 eligibleVoters: session.eligibleVoters,
-                eligibleVotersCount: session.eligibleVoters.length,
+                eligibleVotersNames: userNames.eligibleVoters,
                 abstainedUsers: session.abstainedUsers, // 🎯 FIX: Include abstained users
+                abstainedUsersNames: userNames.abstainedUsers, // 🎯 FIX: Include abstained users
+                eligibleVotersCount: session.eligibleVoters.length,
                 submissionsCount,
                 participationRate,
                 isActive,
