@@ -62,16 +62,13 @@ export function AppSidebar() {
             title="Vai alla Home"
           >
             <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
-              <Trophy className="w-6 h-6 text-primary-foreground" />
+              <img src="/public/FLAT_BG_TRAS.png" alt="Pagelle FC Logo" className="w-[40px] h-[40px] " />
             </div>
             {!isCollapsed && (
               <div className="animate-fade-in">
                 <h1 className="font-display text-xl font-bold text-sidebar-foreground">
-                  Football Ledger
-                </h1>
-                <p className="text-xs text-sidebar-muted-foreground">
-                  Gestione Squadra
-                </p>
+                  Pagelle FC                </h1>
+
               </div>
             )}
           </div>

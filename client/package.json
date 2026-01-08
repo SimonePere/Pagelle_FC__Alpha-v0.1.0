@@ -1,9 +1,9 @@
 {
-  "name": "football-ledger-client",
+  "name": "pagelle-fc-client",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Football Ledger - Gestione votazioni e valutazioni squadra calcio",
+  "description": "Pagelle FC - Gestione votazioni e valutazioni squadra calcio",
   "author": "Simone Mele <simone@example.com>",
   "license": "UNLICENSED",
   "repository": {

@@ -155,8 +155,8 @@ const Login = () => {
 
       <Card className="w-full max-w-md bg-card/80 backdrop-blur-sm border-border shadow-card relative z-10 animate-scale-in">
         <CardHeader className="text-center space-y-4 pb-8">
-          <div className="mx-auto w-20 h-20 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-glow animate-glow">
-            <Trophy className="w-10 h-10 text-primary-foreground" />
+          <div className="mx-auto w-24 h-24 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-glow animate-glow">
+            <img src="/public/FLAT_BG_TRAS.png" alt="Pagelle FC Logo" className="w-[80px] h-[80px] object-contain" />
           </div>
           <div>
             <CardTitle className="font-display text-4xl font-bold text-foreground mb-2">

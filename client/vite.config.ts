@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "0.0.0.0",
     port: 8080,
-    allowedHosts: 'all',
+    allowedHosts: true,
     hmr: {
       clientPort: 8080
     }
@@ -24,8 +24,8 @@ export default defineConfig(({ mode }) => ({
       },
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'Football Ledger - Gestione Squadra',
-        short_name: 'Football Ledger',
+        name: 'Pagelle FC - Gestione Squadra',
+        short_name: 'Pagelle FC',
         description: 'App per gestire votazioni e statistiche della tua squadra di calcio',
         theme_color: '#000000',
         background_color: '#000000',

@@ -1,4 +1,4 @@
-# ⚽ The Football Ledger - Sistema Pagelle FC
+# ⚽ Pagelle FC - Sistema Pagelle FC
 
 ## 🏆 FIFA-Style Player Cards & Voting System
 
