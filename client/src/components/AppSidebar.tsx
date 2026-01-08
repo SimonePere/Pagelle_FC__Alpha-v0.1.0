@@ -61,8 +61,8 @@ export function AppSidebar() {
             onClick={() => navigate('/')}
             title="Vai alla Home"
           >
-            <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
-              <img src="/FLAT_BG_TRAS.png" alt="Pagelle FC Logo" className="w-[40px] h-[40px] " />
+            <div className="w-10 h-10 rounded-sm bg-gradient-primary flex items-center justify-center overflow-hidden shadow-glow">
+              <img src="/FLAT_BG_W.png" alt="Pagelle FC Logo" className="w-full h-full object-cover" />
             </div>
             {!isCollapsed && (
               <div className="animate-fade-in">
