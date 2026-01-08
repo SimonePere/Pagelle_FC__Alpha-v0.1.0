@@ -62,7 +62,7 @@ export function AppSidebar() {
             title="Vai alla Home"
           >
             <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
-              <img src="/public/FLAT_BG_TRAS.png" alt="Pagelle FC Logo" className="w-[40px] h-[40px] " />
+              <img src="/FLAT_BG_TRAS.png" alt="Pagelle FC Logo" className="w-[40px] h-[40px] " />
             </div>
             {!isCollapsed && (
               <div className="animate-fade-in">
