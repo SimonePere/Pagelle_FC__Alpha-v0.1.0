@@ -1370,11 +1370,7 @@ class VotingService {
             throw new Error('Invalid session type');
         }
 
-        // 2. Business Rule: Verifica che l'utente abbia accesso alla sessione
-        if (!session.eligibleVoters.includes(userId)) {
-            throw new Error('Access denied to this voting session');
-        }
-
+        // eventualmente si puo mettere controllo se userId è membro del team
         // 3. Recupera tutti i submissions attivi con tutti i dettagli
         const submissions = await this.voteSubmissionRepository.findAll(
             {
