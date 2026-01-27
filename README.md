@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Pagelle FC Logo](https://via.placeholder.com/200x200/4F46E5/ffffff?text=⚽+PAGELLE+FC)
+<img src="client\public\FLAT_BG_W.png" alt="Pagelle FC Logo" width="150" style="border: 3px solid #2563eb; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin: 20px 0;">
 
 **🏆 Sistema completo di gestione squadra calcistica con carte giocatori stile FIFA e votazioni collaborative**
 
@@ -208,18 +208,15 @@ Il backend espone API RESTful complete:
 - [x] UI responsive con Shadcn/UI
 - [x] Sistema autenticazione JWT
 - [x] Database MongoDB con backup automatico
-
-### 🚧 **In Sviluppo (v1.1.0)**
-- [ ] **CRUD Avanzato**: Edit/Delete partite e profili utente
-- [ ] **Team Join Fluido**: Dropdown team pubblici
-- [ ] **Sistema Astensioni**: Voto opzionale per inclusività
-- [ ] **Attributi Portieri**: Specializzazione ruoli
-- [ ] **Bonus Esperienza**: Riconoscimento over 50
+- [x] **CRUD Avanzato**: Edit/Delete partite e profili utente
+- [x] **Team Join Fluido**: Dropdown team pubblici
+- [x] **Sistema Astensioni**: Voto opzionale per inclusività
+- [x] **Attributi Portieri**: Specializzazione ruoli
+- [x] **WEB APP PWA**: Versione scaricabile iOS/Android
 
 ### 🔮 **Pianificato (v1.2.0+)**
 - [ ] **Dashboard Comparazioni**: Analisi avanzate giocatori
 - [ ] **Sistema Flagging**: Gestione dispute valutazioni
-- [ ] **Mobile App**: Versione nativa iOS/Android
 - [ ] **Integrazione Social**: Condivisione risultati
 - [ ] **AI Insights**: Suggerimenti performance
 

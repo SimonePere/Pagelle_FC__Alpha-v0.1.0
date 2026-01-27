@@ -205,36 +205,28 @@ export function AppSidebar() {
                     >
                       GitHub
                     </a>
-                    <span className="text-sidebar-muted-foreground">•</span>
-                    <a
-                      href="https://simone-mele-portfolio.web.app/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                    >
-                      Portfolio
-                    </a>
+
                   </div>
                 </div>
               </div>
 
               {/* Copyright */}
               <div className="text-xs text-sidebar-muted-foreground text-center pt-2 border-t border-sidebar-border">
-                © 2025 Simone Mele<br />
+                © 2026 Simone Mele<br />
                 Tutti i diritti riservati
               </div>
 
               {/* Technical Info */}
-              <div className="text-xs text-sidebar-muted-foreground">
+              {/* <div className="text-xs text-sidebar-muted-foreground">
                 <div className="flex justify-between">
                   <span>Build:</span>
-                  <span className="font-mono">15.12.2025</span>
+                  <span className="font-mono">15.12.2026</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Env:</span>
                   <span className="font-mono text-green-600 dark:text-green-400">DEV</span>
                 </div>
-              </div>
+              </div> */}
             </div>
           </div>
         )}

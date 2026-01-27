@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Pagelle FC Logo](https://via.placeholder.com/200x200/4F46E5/ffffff?text=⚽+PAGELLE+FC)
+<img src="client\public\FLAT_BG_W.png" alt="Pagelle FC Logo" width="150" style="border: 3px solid #2563eb; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin: 20px 0;">
 
 **🏆 Complete football team management system with FIFA-style player cards and collaborative voting**
 
@@ -208,18 +208,15 @@ The backend exposes complete RESTful APIs:
 - [x] Responsive UI with Shadcn/UI
 - [x] JWT authentication system
 - [x] MongoDB database with automatic backup
-
-### 🚧 **In Development (v1.1.0)**
-- [ ] **Advanced CRUD**: Edit/Delete matches and user profiles
-- [ ] **Fluid Team Join**: Public teams dropdown
-- [ ] **Abstention System**: Optional voting for inclusivity
-- [ ] **Goalkeeper Attributes**: Role specialization
-- [ ] **Experience Bonus**: Over 50 recognition
+- [x] **Advanced CRUD**: Edit/Delete matches and user profiles
+- [x] **Fluid Team Join**: Public teams dropdown
+- [x] **Abstention System**: Optional voting for inclusivity
+- [x] **Goalkeeper Attributes**: Role specialization
+- [x] **PWA WEB APP**: Downloadable iOS/Android version
 
 ### 🔮 **Planned (v1.2.0+)**
 - [ ] **Comparison Dashboard**: Advanced player analytics
 - [ ] **Flagging System**: Evaluation dispute management
-- [ ] **Mobile App**: Native iOS/Android version
 - [ ] **Social Integration**: Result sharing
 - [ ] **AI Insights**: Performance suggestions
 
