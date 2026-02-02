@@ -134,6 +134,15 @@ analysis/
 RIEPILOGO COMPLETO ARCHITETTURA BACKEND - PAGELLE FC.md
 SYSTEM_ARCHITECTURE_GUIDE.md
 
+# =========================== guide per spostare backend su railway ===========================
+# Railway deployment files (local only)
+RAILWAY_COST_OPTIMIZATION_GUIDE.md
+RAILWAY_MIGRATION_GUIDE.md
+RAILWAY_QUICK_START.md
+RAILWAY_TECHNICAL_GUIDE.md
+README_RAILWAY.md
+
+
 # Development documentation (local only)
 ARCHIVIO_IDEE_COMPLETE.md
 GUIDA_IMPLEMENTAZIONE_FEATURE_COMPLETA.md

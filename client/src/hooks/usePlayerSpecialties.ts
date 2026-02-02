@@ -129,7 +129,7 @@ export const usePlayerSpecialties = (
                 name: 'Maratoneta',
                 icon: '🏃',
                 color: 'yellow',
-                description: 'Resistenza instancabile per tutti i 90 minuti'
+                description: 'Resistenza instancabile per tutta la partita'
             });
         }
 
