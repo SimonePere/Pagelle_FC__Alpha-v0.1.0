@@ -154,7 +154,7 @@ class VotingService {
 
             status: 'active', // Business rule: match rating sessions are immediately active
             voteConfig: {
-                ratingRange: { min: 1, max: 10, step: 0.5 },
+                ratingRange: { min: 1, max: 10, step: 0.25 },
                 allowBadges: true,
                 requiredFields: ['rating'],
                 allowComments: true
@@ -724,8 +724,8 @@ class VotingService {
                 finalResults[playerId] = {
                     playerId: playerId,
                     playerName: playerNames[playerId] || `Player ${playerId.substring(0, 8)}`,
-                    averageRating: parseFloat(average.toFixed(1)),
-                    medianRating: parseFloat(median.toFixed(1)),
+                    averageRating: parseFloat(average.toFixed(2)),
+                    medianRating: parseFloat(median.toFixed(2)),
                     goals: stats.selfReportedGoals,
                     assists: stats.selfReportedAssists,
                     voteCount: voteCount,

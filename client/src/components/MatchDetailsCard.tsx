@@ -453,7 +453,7 @@ export const MatchDetailsCard: React.FC<VoteCardProps> = ({
                               </span>
 
                               <span className={`text-3xl font-display font-bold ${getRatingColor(vote.rating)}`}>
-                                {vote.rating.toFixed(1)}
+                                {vote.rating.toFixed(2)}
                               </span>
                             </div>
                             <div className="flex gap-3 text-xs text-muted-foreground">

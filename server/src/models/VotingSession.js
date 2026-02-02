@@ -141,7 +141,7 @@ const VotingSessionSchema = new mongoose.Schema({
     ratingRange: {
       min: { type: Number, default: 1 },
       max: { type: Number, default: 10 },
-      step: { type: Number, default: 0.5 }
+      step: { type: Number, default: 0.25 }
     },
     allowBadges: { type: Boolean, default: true },
     requiredFields: [{ type: String }], // ["rating", "goals", "assists"]
@@ -341,7 +341,7 @@ VotingSessionSchema.statics.createForMatch = async function (matchId, teamId, el
     description: `Valuta le prestazioni dei tuoi compagni nella partita del ${match.date.toLocaleDateString('it-IT')}`,
     eligibleVoters,
     voteConfig: {
-      ratingRange: { min: 1, max: 10, step: 0.5 },
+      ratingRange: { min: 1, max: 10, step: 0.25 },
       allowBadges: true,
       requiredFields: ['rating'],
       allowComments: true

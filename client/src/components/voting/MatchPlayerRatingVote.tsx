@@ -336,7 +336,7 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
                           variant="outline"
                           className={`${getRatingColor(rating)} text-white font-mono`}
                         >
-                          {rating.toFixed(1)}/10
+                          {rating.toFixed(2)}/10
                         </Badge>
                         <Badge variant="secondary" className="text-xs">
                           {getRatingLabel(rating)}
@@ -352,7 +352,7 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
                         onValueChange={(value) => handlePlayerRatingChange(player.id, value[0])}
                         max={10}
                         min={1}
-                        step={0.5}
+                        step={0.25}
                         className="w-full"
                       />
                       <div className="flex justify-between text-xs text-muted-foreground">
