@@ -142,127 +142,130 @@ const Vote: React.FC = () => {
   // TEMPLATE IDENTICO A PLAYERCARDS CHE FUNZIONA PERFETTO
   return (
     <DashboardLayout>
-      <div className="mobile-page-container lg:space-y-6 space-y-6">
+      <div className="pb-24 lg:pb-8">
 
-        {/* Se siamo in modalità votazione, mostra il componente specifico */}
-        {viewMode === 'voting' && selectedSession ? (
-          <div className="space-y-6">
-            {/* 🟢 IMPLEMENTATI */}
-            {selectedSession.type === 'player_card_rating' && (
-              <PlayerCardVote
-                sessionId={selectedSession.id}
-              />
-            )}
+        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
 
-            {selectedSession.type === 'match_rating' && (
-              <MatchRatingVote
-                sessionId={selectedSession.id}
-              />
-            )}
+          {/* Se siamo in modalità votazione, mostra il componente specifico */}
+          {viewMode === 'voting' && selectedSession ? (
+            <div className="space-y-6">
+              {/* 🟢 IMPLEMENTATI */}
+              {selectedSession.type === 'player_card_rating' && (
+                <PlayerCardVote
+                  sessionId={selectedSession.id}
+                />
+              )}
 
-            {/* Default fallback per tipi non implementati */}
-            {!['player_card_rating', 'match_rating'].includes(selectedSession.type) && (
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Tipo di votazione non disponibile</AlertTitle>
-                <AlertDescription>
-                  Il tipo di votazione "{selectedSession.type}" non è ancora implementato.
-                  Feature in arrivo!
-                  <Button
-                    variant="outline"
-                    onClick={() => setViewMode('dashboard')}
-                    className="mt-2"
-                  >
-                    🔙 Torna al Dashboard
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
-        ) : (
-          // Dashboard mode - IDENTICO AL TEMPLATE FUNZIONANTE
-          <>
-            {/* Loading state - identico a PlayerCards */}
-            {isLoading && (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center space-y-4">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                  <p className="text-muted-foreground">Caricamento sessioni...</p>
-                </div>
-              </div>
-            )}
+              {selectedSession.type === 'match_rating' && (
+                <MatchRatingVote
+                  sessionId={selectedSession.id}
+                />
+              )}
 
-            {/* Content - mostra solo dopo aver caricato - IDENTICO TEMPLATE PLAYERCARDS */}
-            {!isLoading &&
-              (
-                <>
-                  {/* Header */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-sm border-border shadow-card p-8"
-                  >
-                    <div className="relative z-10">
-                      <h1 className="font-display text-4xl font-bold text-foreground flex items-center gap-3">
-                        <FileText className="w-8 h-8 text-primary" />
-                        Votazioni
-                      </h1>
-                      <p className="text-muted-foreground text-lg mt-4">
-                        Vota le prestazioni dei tuoi compagni di squadra.
-                      </p>
-                    </div>
-                    <div className="absolute top-0 right-0 w-48 h-48 bg-primary/10 rounded-full blur-3xl"></div>
-                  </motion.div>
-
-                  {/* Sessioni di Votazione - Visualizzazione diretta senza tabs - Visualizzazione diretta senza tabs */}
-                  <div className="space-y-4">
-                    {/* Use all sessions to avoid duplication from selectors */}
-                    {sessions.length === 0 ? (
-                      <Card className="bg-card/80 backdrop-blur-sm border-border shadow-card">
-                        <CardContent className="p-8 text-center">
-                          <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                          <h3 className="font-display text-xl font-bold text-foreground mb-2">
-                            Nessuna votazione disponibile 🗳️
-                          </h3>
-                          <p className="text-muted-foreground">
-                            Al momento non ci sono sessioni di votazione attive.
-                          </p>
-                        </CardContent>
-                      </Card>
-                    ) : (
-                      sessions.map((session, index) => {
-                        const isAbstained = isUserAbstained(session, user?.id || '');
-                        const mappedMatch = mapSessionToMatch(session);
-                        const realMatch = matches?.find(match => match.id === session.targetId);
-
-                        // Calcolo corretto della percentuale voti
-                        const totalMembers = mappedMatch.teamMemberIds.length;
-                        const votesReceived = Math.round((session.participationRate || 0) / 100 * session.eligibleVotersCount);
-                        const correctProgress = totalMembers > 0 ? Math.round((votesReceived / totalMembers) * 100) : 0;
-
-                        return (
-                          <VoteCard
-                            key={session.id}
-                            match={mappedMatch}
-                            voting={{
-                              isVotable: session.status === 'active',           // Manteniamo sempre true se active
-                              hasVoted: session.hasVoted || false,              // Stato votazione normale
-                              isAbstained: isAbstained,                         // NUOVO FLAG
-                              votingDeadline: session.deadline,
-                              votingProgress: correctProgress
-                            }}
-                            index={index}
-                            onClick={() => handleSessionInfo(session)}
-                            onVoteClick={isAbstained ? undefined : () => handleEnterSession(session)} // MODIFICATO
-                          />
-                        );
-                      })
-                    )}
+              {/* Default fallback per tipi non implementati */}
+              {!['player_card_rating', 'match_rating'].includes(selectedSession.type) && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Tipo di votazione non disponibile</AlertTitle>
+                  <AlertDescription>
+                    Il tipo di votazione "{selectedSession.type}" non è ancora implementato.
+                    Feature in arrivo!
+                    <Button
+                      variant="outline"
+                      onClick={() => setViewMode('dashboard')}
+                      className="mt-2"
+                    >
+                      🔙 Torna al Dashboard
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          ) : (
+            // Dashboard mode - IDENTICO AL TEMPLATE FUNZIONANTE
+            <>
+              {/* Loading state - identico a PlayerCards */}
+              {isLoading && (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center space-y-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <p className="text-muted-foreground">Caricamento sessioni...</p>
                   </div>
-                </>
-              )} {/* Chiusura del blocco condizionale !isLoading - IDENTICO A PLAYERCARDS */}
-          </>
-        )} {/* Chiusura del blocco viewMode dashboard */}
+                </div>
+              )}
+
+              {/* Content - mostra solo dopo aver caricato - IDENTICO TEMPLATE PLAYERCARDS */}
+              {!isLoading &&
+                (
+                  <>
+                    {/* Header */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-sm border-border shadow-card p-8"
+                    >
+                      <div className="relative z-10">
+                        <h1 className="font-display text-4xl font-bold text-foreground flex items-center gap-3">
+                          <FileText className="w-8 h-8 text-primary" />
+                          Votazioni
+                        </h1>
+                        <p className="text-muted-foreground text-lg mt-4">
+                          Vota le prestazioni dei tuoi compagni di squadra.
+                        </p>
+                      </div>
+                      <div className="absolute top-0 right-0 w-48 h-48 bg-primary/10 rounded-full blur-3xl"></div>
+                    </motion.div>
+
+                    {/* Sessioni di Votazione - Visualizzazione diretta senza tabs - Visualizzazione diretta senza tabs */}
+                    <div className="space-y-4">
+                      {/* Use all sessions to avoid duplication from selectors */}
+                      {sessions.length === 0 ? (
+                        <Card className="bg-card/80 backdrop-blur-sm border-border shadow-card">
+                          <CardContent className="p-8 text-center">
+                            <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                            <h3 className="font-display text-xl font-bold text-foreground mb-2">
+                              Nessuna votazione disponibile 🗳️
+                            </h3>
+                            <p className="text-muted-foreground">
+                              Al momento non ci sono sessioni di votazione attive.
+                            </p>
+                          </CardContent>
+                        </Card>
+                      ) : (
+                        sessions.map((session, index) => {
+                          const isAbstained = isUserAbstained(session, user?.id || '');
+                          const mappedMatch = mapSessionToMatch(session);
+                          const realMatch = matches?.find(match => match.id === session.targetId);
+
+                          // Calcolo corretto della percentuale voti
+                          const totalMembers = mappedMatch.teamMemberIds.length;
+                          const votesReceived = Math.round((session.participationRate || 0) / 100 * session.eligibleVotersCount);
+                          const correctProgress = totalMembers > 0 ? Math.round((votesReceived / totalMembers) * 100) : 0;
+
+                          return (
+                            <VoteCard
+                              key={session.id}
+                              match={mappedMatch}
+                              voting={{
+                                isVotable: session.status === 'active',           // Manteniamo sempre true se active
+                                hasVoted: session.hasVoted || false,              // Stato votazione normale
+                                isAbstained: isAbstained,                         // NUOVO FLAG
+                                votingDeadline: session.deadline,
+                                votingProgress: correctProgress
+                              }}
+                              index={index}
+                              onClick={() => handleSessionInfo(session)}
+                              onVoteClick={isAbstained ? undefined : () => handleEnterSession(session)} // MODIFICATO
+                            />
+                          );
+                        })
+                      )}
+                    </div>
+                  </>
+                )} {/* Chiusura del blocco condizionale !isLoading - IDENTICO A PLAYERCARDS */}
+            </>
+          )} {/* Chiusura del blocco viewMode dashboard */}
+        </div>
       </div>
     </DashboardLayout>
   );

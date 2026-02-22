@@ -79,7 +79,7 @@ const getTeamMatches = async (req, res, next) => {
     const userId = req.user.id;
     const options = {
       page: parseInt(req.query.page) || 1,
-      limit: parseInt(req.query.limit) || 10
+      limit: parseInt(req.query.limit) || 100
     };
 
     // 🎯 CACHE STRATEGY: Solo per history match (completed), non per match attivi

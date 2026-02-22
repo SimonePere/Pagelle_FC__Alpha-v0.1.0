@@ -216,142 +216,144 @@ export default function PlayerCards() {
 
   return (
     <DashboardLayout>
-      <div className="mobile-page-container lg:space-y-6 space-y-6">
-        {/* Loading state - aspetta che teamMembers sia caricato */}
-        {isLoadingTeamMembers && (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center space-y-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              <p className="text-muted-foreground">Caricamento team members...</p>
+      <div className="pb-24 lg:pb-8">
+        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+          {/* Loading state - aspetta che teamMembers sia caricato */}
+          {isLoadingTeamMembers && (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center space-y-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                <p className="text-muted-foreground">Caricamento team members...</p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
 
 
 
 
-        {/* Content - mostra solo dopo aver caricato teamMembers */}
-        {!isLoadingTeamMembers &&
-          (
-            <>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-sm border-border shadow-card p-8"
-              >
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between">
-                    <h1 className="font-display text-4xl font-bold text-foreground flex items-center gap-3">
-                      <Users className="w-8 h-8 text-primary" />
-                      Player Cards
-                    </h1>
-                    {!showVoteForm && (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button className="p-2 rounded-full hover:bg-primary/10 transition-colors">
-                            <Info className="w-5 h-5 text-primary cursor-pointer" />
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-80" side="bottom" align="end">
-                          <div className="space-y-2">
-                            <h4 className="font-medium text-foreground">Come Funziona</h4>
-                            <p className="text-sm text-muted-foreground">
-                              Ogni membro del team valuta gli attributi di tutti i compagni.
-                              Quando tutti hanno votato, la carta finale viene calcolata automaticamente come media dei voti ricevuti.
-                            </p>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    )}
-                  </div>
-                </div>
-                <div className="absolute top-0 right-0 w-48 h-48 bg-primary/10 rounded-full blur-3xl"></div>
-
-              </motion.div>
-
-              {/* Loading State */}
-              {isLoadingSessions && (
-                <div className="text-center py-8">
-                  <div className="text-muted-foreground">Caricamento sessioni PlayerCard...</div>
-                </div>
-              )}
-
-              {/* Vote Form */}
-              {(() => {
-
-                return null;
-              })()}
-              {showVoteForm && selectedSession && (
+          {/* Content - mostra solo dopo aver caricato teamMembers */}
+          {!isLoadingTeamMembers &&
+            (
+              <>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="space-y-6 mt-6"
+                  className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-sm border-border shadow-card p-8"
                 >
-                  {/* Header con Nome Dinamico */}
-                  <Card className="border-primary/30 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5">
-                    <div className="p-4 border-b border-primary/20">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-
-                          <div >
-                            <h2 className="text-xl font-bold text-foreground">
-                              Stai valutando: {getPlayerNameFromSession(selectedSession)}
-                            </h2>
-                            <p className="text-sm text-muted-foreground">
-                              Sii onesto, è un tuo compagno di squadra! Valuta con sincerità le sue skills 🤝
-                            </p>
-                          </div>
-                        </div>
-
-                      </div>
-                    </div>
-                  </Card>
-
-                  <PlayerCardVote
-                    sessionId={selectedSession}
-                  />
-                </motion.div>
-              )}
-
-              {/* PlayerCardNavigator - Sostituisce la Grid */}
-              {(() => {
-                return null;
-              })()}
-              {!showVoteForm && allPlayers.length > 0 && (
-                <div className="space-y-6 mt-6">
-                  {/* Dashboard Stats - Opzione A: Compatte Inline */}
-                  <div className="grid grid-cols-4 gap-2">
-                    <div className="text-center p-3 bg-secondary/50 rounded-lg">
-                      <div className="text-2xl font-bold text-primary">{dashboardStats.totalPlayerCardSessions}</div>
-                      <div className="text-xs text-muted-foreground">Totali</div>
-                    </div>
-                    <div className="text-center p-3 bg-green-500/10 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">{dashboardStats.activePlayerCardSessions}</div>
-                      <div className="text-xs text-muted-foreground">Attive</div>
-                    </div>
-                    <div className="text-center p-3 bg-yellow-500/10 rounded-lg">
-                      <div className="text-2xl font-bold text-yellow-600">{dashboardStats.pendingPlayerCardVotes}</div>
-                      <div className="text-xs text-muted-foreground">In Attesa</div>
-                    </div>
-                    <div className="text-center p-3 bg-blue-500/10 rounded-lg">
-                      <div className="text-2xl font-bold text-blue-600">{dashboardStats.completedPlayerCardSessions}</div>
-                      <div className="text-xs text-muted-foreground">Complete</div>
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between">
+                      <h1 className="font-display text-4xl font-bold text-foreground flex items-center gap-3">
+                        <Users className="w-8 h-8 text-primary" />
+                        Player Cards
+                      </h1>
+                      {!showVoteForm && (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button className="p-2 rounded-full hover:bg-primary/10 transition-colors">
+                              <Info className="w-5 h-5 text-primary cursor-pointer" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80" side="bottom" align="end">
+                            <div className="space-y-2">
+                              <h4 className="font-medium text-foreground">Come Funziona</h4>
+                              <p className="text-sm text-muted-foreground">
+                                Ogni membro del team valuta gli attributi di tutti i compagni.
+                                Quando tutti hanno votato, la carta finale viene calcolata automaticamente come media dei voti ricevuti.
+                              </p>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      )}
                     </div>
                   </div>
+                  <div className="absolute top-0 right-0 w-48 h-48 bg-primary/10 rounded-full blur-3xl"></div>
+
+                </motion.div>
+
+                {/* Loading State */}
+                {isLoadingSessions && (
+                  <div className="text-center py-8">
+                    <div className="text-muted-foreground">Caricamento sessioni PlayerCard...</div>
+                  </div>
+                )}
+
+                {/* Vote Form */}
+                {(() => {
+
+                  return null;
+                })()}
+                {showVoteForm && selectedSession && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-6 mt-6"
+                  >
+                    {/* Header con Nome Dinamico */}
+                    <Card className="border-primary/30 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5">
+                      <div className="p-4 border-b border-primary/20">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+
+                            <div >
+                              <h2 className="text-xl font-bold text-foreground">
+                                Stai valutando: {getPlayerNameFromSession(selectedSession)}
+                              </h2>
+                              <p className="text-sm text-muted-foreground">
+                                Sii onesto, è un tuo compagno di squadra! Valuta con sincerità le sue skills 🤝
+                              </p>
+                            </div>
+                          </div>
+
+                        </div>
+                      </div>
+                    </Card>
+
+                    <PlayerCardVote
+                      sessionId={selectedSession}
+                    />
+                  </motion.div>
+                )}
+
+                {/* PlayerCardNavigator - Sostituisce la Grid */}
+                {(() => {
+                  return null;
+                })()}
+                {!showVoteForm && allPlayers.length > 0 && (
+                  <div className="space-y-6 mt-6">
+                    {/* Dashboard Stats - Opzione A: Compatte Inline */}
+                    <div className="grid grid-cols-4 gap-2">
+                      <div className="text-center p-3 bg-secondary/50 rounded-lg">
+                        <div className="text-2xl font-bold text-primary">{dashboardStats.totalPlayerCardSessions}</div>
+                        <div className="text-xs text-muted-foreground">Totali</div>
+                      </div>
+                      <div className="text-center p-3 bg-green-500/10 rounded-lg">
+                        <div className="text-2xl font-bold text-green-600">{dashboardStats.activePlayerCardSessions}</div>
+                        <div className="text-xs text-muted-foreground">Attive</div>
+                      </div>
+                      <div className="text-center p-3 bg-yellow-500/10 rounded-lg">
+                        <div className="text-2xl font-bold text-yellow-600">{dashboardStats.pendingPlayerCardVotes}</div>
+                        <div className="text-xs text-muted-foreground">In Attesa</div>
+                      </div>
+                      <div className="text-center p-3 bg-blue-500/10 rounded-lg">
+                        <div className="text-2xl font-bold text-blue-600">{dashboardStats.completedPlayerCardSessions}</div>
+                        <div className="text-xs text-muted-foreground">Complete</div>
+                      </div>
+                    </div>
 
 
-                  <PlayerCardNavigator
-                    players={allPlayers}
-                    sessions={mappedSessions}
-                    onCreateSession={handleCreatePlayerCardSession}
-                    onVote={handleOpenVoteForm}
-                    onLoadResults={handleLoadResults}
-                    initialPlayerId={user.id}
-                  />
-                </div>
-              )}
-            </>)} {/* Chiusura del blocco condizionale !isLoadingTeamMembers */}
+                    <PlayerCardNavigator
+                      players={allPlayers}
+                      sessions={mappedSessions}
+                      onCreateSession={handleCreatePlayerCardSession}
+                      onVote={handleOpenVoteForm}
+                      onLoadResults={handleLoadResults}
+                      initialPlayerId={user.id}
+                    />
+                  </div>
+                )}
+              </>)} {/* Chiusura del blocco condizionale !isLoadingTeamMembers */}
+        </div>
       </div>
     </DashboardLayout>
   );
