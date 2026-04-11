@@ -1433,6 +1433,30 @@ client/
 │       └── api.ts         # Enhanced API layer (787→45 lines)
 ```
 
+### **Aggiornamento Leaderboard Stats-per-Match (Apr 2026)**
+
+**Nuovo endpoint unificato:**
+```http
+GET /api/v1/leaderboards/:teamId/stats-per-match?stat=goals|assists|both
+```
+
+**Comportamento:**
+- `stat=goals`: classifica per `goalPerMatch`
+- `stat=assists`: classifica per `assistPerMatch`
+- `stat=both`: risposta unica con entrambi i valori per giocatore (`goalPerMatch`, `assistPerMatch`)
+
+**Ordinamento classifica (`stat=both`):**
+- Definito dal backend (service layer), non dalla UI.
+- Criterio attuale: `goalPerMatch` desc, poi `totalGoals` desc, poi `averageRating` desc.
+
+**Schema PlayerLeaderboardStats esteso:**
+- `goalPerMatch` (Number)
+- `assistPerMatch` (Number)
+
+**Regola calcolo:**
+- Aggiornamento automatico durante `updateFromMatch()` e `updateStats()`.
+- Guard su `totalMatches = 0` per evitare NaN.
+
 ### **Key Commands v0.1.0**
 ```bash
 # Backend Testing (Enhanced)

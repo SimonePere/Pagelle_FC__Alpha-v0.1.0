@@ -12,7 +12,7 @@ const CacheService = require("../services/CacheService")
  * - GET /leaderboard/:teamId/goals
  * - GET /leaderboard/:teamId/assists
  * - GET /leaderboard/:teamId/playercard
- * - GET /leaderboard/:teamId/form
+ * - GET /leaderboard/:teamId/goals-per-match
  * - GET /leaderboard/:teamId/all
  */
 
@@ -116,13 +116,30 @@ exports.getPlayercardLeaderboard = async (req, res, next) => {
     }
 };
 
-// === CLASSIFICA FORM ===
-exports.getFormLeaderboard = async (req, res, next) => {
+// === MEDIA GOLxPARTITA ===
+exports.getStatsPerMatchLeaderboard = async (req, res, next) => {
     try {
         const { teamId } = req.params;
+        const stat = req.query.stat || 'goals';
         const limit = parseInt(req.query.limit) || 10;
 
-        const result = await leaderboardService.getLeaderboard(teamId, 'form', limit);
+        let result;
+
+        if (!['goals', 'assists', 'both'].includes(stat)) {
+            return res.status(400).json({
+                success: false,
+                message: 'stat deve essere: "goals", "assists", oppure "both"'
+            });
+        }
+
+        if (stat === 'goals') {
+            result = await leaderboardService.getLeaderboard(teamId, 'goalPerMatch', limit);
+        } else if (stat === 'assists') {
+            result = await leaderboardService.getLeaderboard(teamId, 'assistPerMatch', limit);
+        } else {
+            // Per il frontend mobile-first usiamo una lista unica con dati completi del player.
+            result = await leaderboardService.getLeaderboard(teamId, 'goalPerMatch', limit);
+        }
 
         res.json(result);
 
@@ -131,7 +148,10 @@ exports.getFormLeaderboard = async (req, res, next) => {
     }
 };
 
-// === TUTTE LE CLASSIFICHE (OTTIMIZZATO + CACHE) ===
+
+// === TUTTE LE CLASSIFICHE (OTTIMIZZATO + CACHE) === 
+// * IMPORTANTE: AL MOMENTO QUESTO METODO NON E' UTILIZZATO,
+// viene utilizzato invece getLeaderboard con tipo (es) 'playercard' e 'goalPerMatch'
 exports.getAllLeaderboards = async (req, res, next) => {
     try {
         const { teamId } = req.params;

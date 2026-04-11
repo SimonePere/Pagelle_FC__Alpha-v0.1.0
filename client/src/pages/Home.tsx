@@ -13,7 +13,7 @@ import { OnboardingTutorial } from '@/components/OnboardingTutorial';
 import useHomeDashboard from '@/hooks/useHomeDashboard';
 
 // Types now handled by useHomeDashboard hook
-type LeaderboardType = 'rating' | 'goals' | 'assists' | 'playercard' | 'form';
+type LeaderboardType = 'rating' | 'goals' | 'assists' | 'playercard' | 'stats-per-match';
 
 const Home = () => {
   const { user } = useSelector((state: RootState) => state.auth);
@@ -52,8 +52,8 @@ const Home = () => {
         return 'Assist';
       case 'playercard':
         return 'Player Card';
-      case 'form':
-        return 'Forma Recente';
+      case 'stats-per-match':
+        return 'Media Gol-Assist per Partita';
       default:
         return 'Classifica Generale';
     }
@@ -69,8 +69,8 @@ const Home = () => {
         return 'Chi ha fornito più assist ai compagni';
       case 'playercard':
         return 'Rating TOT dalle valutazioni complete dei giocatori';
-      case 'form':
-        return 'Media dei voti delle ultime 5 partite giocate';
+      case 'stats-per-match':
+        return 'Media Gol a Partita e Assist a Partita. \n Ordinati per G/P, con A/P come secondo criterio.';
       default:
         return 'Classifica complessiva per media voti nelle partite';
     }
@@ -89,8 +89,20 @@ const Home = () => {
         // Il campo corretto è playerCardTOT
         const cardValue = player.playerCardTOT || player.playerCardAverage;
         return cardValue ? Math.round(cardValue).toString() : 'N/A';
-      case 'form':
-        return player.formRating ? player.formRating.toFixed(1) : '0.0';
+      case 'stats-per-match':
+        // 🆕 Stats-per-match mostra GOL per partita come primario
+        return player.goalPerMatch ? player.goalPerMatch.toFixed(2) : '0.00';
+      default:
+        return '';
+    }
+  };
+
+  // 🆕 NUOVA FUNZIONE: Ottieni il valore secondario (per stats-per-match)
+  const getSecondaryValue = (player: any, type: LeaderboardType) => {
+    switch (type) {
+      case 'stats-per-match':
+        // Stats-per-match mostra ASSIST per partita come secondario
+        return player.assistPerMatch ? player.assistPerMatch.toFixed(2) : '0.00';
       default:
         return '';
     }
@@ -107,8 +119,18 @@ const Home = () => {
         return 'Assist';
       case 'playercard':
         return 'TOT';
-      case 'form':
-        return 'Forma';
+      case 'stats-per-match':
+        return 'G/P';
+      default:
+        return '';
+    }
+  };
+
+  // 🆕 NUOVA FUNZIONE: Ottieni la label del valore secondario
+  const getSecondaryLabel = (type: LeaderboardType) => {
+    switch (type) {
+      case 'stats-per-match':
+        return 'A/P';
       default:
         return '';
     }
@@ -268,9 +290,9 @@ const Home = () => {
                       <Star className={`w-4 h-4 ${activeLeaderboard === 'playercard' ? 'text-primary' : 'text-muted-foreground'}`} />
                       <span className={`hidden sm:inline ${activeLeaderboard === 'playercard' ? 'text-primary' : 'text-muted-foreground'}`}>Card</span>
                     </TabsTrigger>
-                    <TabsTrigger value="form" className="flex items-center gap-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none">
-                      <TrendingUp className={`w-4 h-4 ${activeLeaderboard === 'form' ? 'text-primary' : 'text-muted-foreground'}`} />
-                      <span className={`hidden sm:inline ${activeLeaderboard === 'form' ? 'text-primary' : 'text-muted-foreground'}`}>Forma</span>
+                    <TabsTrigger value="stats-per-match" className="flex items-center gap-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                      <TrendingUp className={`w-4 h-4 ${activeLeaderboard === 'stats-per-match' ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <span className={`hidden sm:inline ${activeLeaderboard === 'stats-per-match' ? 'text-primary' : 'text-muted-foreground'}`}>Gol-Assist X Match</span>
                     </TabsTrigger>
                   </TabsList>
 
@@ -335,30 +357,47 @@ const Home = () => {
                                 <Crown className="w-8 h-8 text-primary drop-shadow-glow" fill="hsl(var(--primary))" />
                               </motion.div>
                             )}
-                            <div className="flex items-center gap-5 flex-1">
-                              <motion.div
-                                transition={{ duration: 0.5 }}
-                                className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center font-display font-bold text-xl shadow-glow"
-                              >
-                                {getMedalIcon(index) || (
-                                  <span className="text-primary-foreground">{index + 1}</span>
-                                )}
-                              </motion.div>
+                            <div className={`flex items-center ${activeLeaderboard === 'stats-per-match' ? 'gap-2' : 'gap-5'} flex-1`}>
+                              {activeLeaderboard !== 'stats-per-match' && (
+                                <motion.div
+                                  transition={{ duration: 0.5 }}
+                                  className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center font-display font-bold text-xl shadow-glow"
+                                >
+                                  {getMedalIcon(index) || (
+                                    <span className="text-primary-foreground">{index + 1}</span>
+                                  )}
+                                </motion.div>
+                              )}
                               <div className="flex-1">
-                                <p className="font-display text-xl font-bold text-foreground mb-1">
-                                  {player.playerName}
-                                </p>
+                                <div className="flex items-center gap-2 mb-1">
+                                  {activeLeaderboard === 'stats-per-match' && (
+                                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-muted/40 border border-border/50">
+                                      {index === 0 ? (
+                                        <Trophy className="w-3 h-3 text-primary" />
+                                      ) : index === 1 ? (
+                                        <Medal className="w-3 h-3 text-slate-300" />
+                                      ) : index === 2 ? (
+                                        <Medal className="w-3 h-3 text-amber-600" />
+                                      ) : (
+                                        <span className="text-[10px] font-bold text-muted-foreground">{index + 1}</span>
+                                      )}
+                                    </span>
+                                  )}
+                                  <p className="font-display text-xl font-bold text-foreground">
+                                    {player.playerName}
+                                  </p>
+                                </div>
                                 {/* Stats Summary */}
-                                <div className="flex items-center gap-3 sm:gap-4 text-sm">
-                                  <span className="flex items-center gap-1">
+                                <div className={`flex items-center ${activeLeaderboard === 'stats-per-match' ? 'gap-1.5 sm:gap-2' : 'gap-3 sm:gap-4'} text-sm`}>
+                                  <span className={`flex items-center ${activeLeaderboard === 'stats-per-match' ? 'gap-0.5' : 'gap-1'}`}>
                                     <span className="text-muted-foreground text-xs uppercase tracking-wide">PG</span>
                                     <span className="font-bold text-foreground">{player.totalMatches || 0}</span>
                                   </span>
-                                  <span className="flex items-center gap-1">
+                                  <span className={`flex items-center ${activeLeaderboard === 'stats-per-match' ? 'gap-0.5' : 'gap-1'}`}>
                                     <span className="text-muted-foreground text-xs uppercase tracking-wide">G</span>
                                     <span className="font-bold text-primary">{player.totalGoals || 0}</span>
                                   </span>
-                                  <span className="flex items-center gap-1">
+                                  <span className={`flex items-center ${activeLeaderboard === 'stats-per-match' ? 'gap-0.5' : 'gap-1'}`}>
                                     <span className="text-muted-foreground text-xs uppercase tracking-wide">A</span>
                                     <span className="font-bold text-accent">{player.totalAssists || 0}</span>
                                   </span>
@@ -371,20 +410,56 @@ const Home = () => {
                             </div>
 
                             {/* Main Value based on active leaderboard */}
-                            <div className="text-right flex items-center gap-4">
-                              <motion.div
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{ delay: index * 0.1 + 0.2, type: "spring" }}
-                                className="text-center"
-                              >
-                                <div className="text-4xl font-display font-bold text-primary transition-transform">
-                                  {getPrimaryValue(player, activeLeaderboard)}
+                            <div className="text-right flex items-center gap-3 sm:gap-4">
+                              {/* 🆕 Se è stats-per-match, mostra entrambi i valori */}
+                              {activeLeaderboard === 'stats-per-match' ? (
+                                <div className="flex items-end gap-2.5 sm:gap-3">
+                                  {/* Gol per Partita */}
+                                  <motion.div
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    transition={{ delay: index * 0.1 + 0.2, type: "spring" }}
+                                    className="text-center min-w-[58px]"
+                                  >
+                                    <div className="text-[1.7rem] sm:text-[1.9rem] leading-none font-display font-bold text-primary transition-transform">
+                                      {getPrimaryValue(player, activeLeaderboard)}
+                                    </div>
+                                    <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider leading-tight mt-1">
+                                      {getPrimaryLabel(activeLeaderboard)}
+                                    </p>
+                                  </motion.div>
+
+                                  {/* Assist per Partita */}
+                                  <motion.div
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    transition={{ delay: index * 0.1 + 0.25, type: "spring" }}
+                                    className="text-center min-w-[58px]"
+                                  >
+                                    <div className="text-[1.7rem] sm:text-[1.9rem] leading-none font-display font-bold text-accent transition-transform">
+                                      {getSecondaryValue(player, activeLeaderboard)}
+                                    </div>
+                                    <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider leading-tight mt-1">
+                                      {getSecondaryLabel(activeLeaderboard)}
+                                    </p>
+                                  </motion.div>
                                 </div>
-                                <p className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1 justify-center">
-                                  {getPrimaryLabel(activeLeaderboard)}
-                                </p>
-                              </motion.div>
+                              ) : (
+                                // Per gli altri tab, mostra solo il valore primario (layout di sempre)
+                                <motion.div
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  transition={{ delay: index * 0.1 + 0.2, type: "spring" }}
+                                  className="text-center"
+                                >
+                                  <div className="text-4xl font-display font-bold text-primary transition-transform">
+                                    {getPrimaryValue(player, activeLeaderboard)}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1 justify-center">
+                                    {getPrimaryLabel(activeLeaderboard)}
+                                  </p>
+                                </motion.div>
+                              )}
                             </div>
                           </motion.div>
                         ))}

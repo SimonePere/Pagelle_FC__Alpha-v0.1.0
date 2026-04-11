@@ -24,15 +24,18 @@ import useAppData from './useAppData';
 interface PlayerStats {
     playerId: string;
     playerName: string;
-    averageRating: number;
-    totalGoals: number;
-    totalAssists: number;
-    totalMatches: number;
+    averageRating?: number;
+    totalGoals?: number;
+    totalAssists?: number;
+    totalMatches?: number;
     playerCardAverage?: number;
+    playerCardTOT?: number;
     formRating?: number;
+    goalPerMatch?: number;        // 🆕 Media gol per partita
+    assistPerMatch?: number;      // 🆕 Media assist per partita
 }
 
-type LeaderboardType = 'rating' | 'goals' | 'assists' | 'playercard' | 'form';
+type LeaderboardType = 'rating' | 'goals' | 'assists' | 'playercard' | 'stats-per-match';
 
 interface UseHomeDashboardReturn {
     // 📊 Dati base da useAppData
@@ -120,7 +123,13 @@ export const useHomeDashboard = (): UseHomeDashboardReturn => {
         setLeaderboardError(null);
 
         try {
-            const response = await api.get(`/leaderboards/${teamId}/${type}`);
+            // 🆕 Se richiedi stats-per-match, includi il query param ?stat=both
+            let url = `/leaderboards/${teamId}/${type}`;
+            if (type === 'stats-per-match') {
+                url = `${url}?stat=both`;
+            }
+
+            const response = await api.get(url);
 
             if (response.success) {
                 setLeaderboard(response.data || []);

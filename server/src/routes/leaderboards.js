@@ -56,16 +56,15 @@ router.get('/:teamId/assists', auth, leaderboardController.getAssistsLeaderboard
  */
 router.get('/:teamId/playercard', auth, leaderboardController.getPlayercardLeaderboard);
 
-// === CLASSIFICA FORM ===
+// === CLASSIFICA GOL / ASSIST PER PARTITA ===
 /**
- * GET /api/v1/leaderboards/:teamId/form
- * 
- * @desc    Classifica giocatori per forma recente (ultime 3+ partite)
+ * GET /api/v1/leaderboards/:teamId/stats-per-match
+ * @desc    Classifica giocatori per media gol e assist per partita
  * @access  Private - Team members only
- * @params  teamId: ObjectId del team  
+ * @params  teamId: ObjectId del team
  * @query   limit: Number (default 10, max 50)
  */
-router.get('/:teamId/form', auth, leaderboardController.getFormLeaderboard);
+router.get('/:teamId/stats-per-match', auth, leaderboardController.getStatsPerMatchLeaderboard);
 
 // === TUTTE LE CLASSIFICHE (ENDPOINT AGGREGATO) ===
 /**

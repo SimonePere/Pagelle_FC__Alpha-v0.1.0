@@ -22,7 +22,7 @@ const AppError = require('../utils/AppError');
  * - Goals (gol totali)
  * - Assists (assist totali)  
  * - PlayerCard (overall rating)
- * - Form (forma recente)
+ * - Goals per Match (media gol per partita)
  */
 class LeaderboardService {
 
@@ -36,13 +36,13 @@ class LeaderboardService {
 
 
         // Standard fields per consistency
-        this.STANDARD_FIELDS = 'playerId playerName totalMatches totalGoals totalAssists averageRating playerCardTOT playerCardAverage formRating recentForm';
+        this.STANDARD_FIELDS = 'playerId playerName totalMatches totalGoals totalAssists averageRating playerCardTOT playerCardAverage goalPerMatch assistPerMatch';
     }
 
     /**
      * Ottiene una classifica specifica per il team
      * @param {string} teamId - ID del team
-     * @param {string} type - Tipo classifica: 'rating'|'goals'|'assists'|'playercard'|'form'
+     * @param {string} type - Tipo classifica: 'rating'|'goals'|'assists'|'playercard'|'goalPerMatch'|'assistPerMatch'
      * @param {number} limit - Numero massimo risultati
      * @returns {Promise<Object>} Classifica con metadati
      */
@@ -77,6 +77,7 @@ class LeaderboardService {
     }
 
     /**
+     * IMPORTANTE: AL MOMENTO QUESTO METODO NON E' UTILIZZATO, viene utilizzato invece getLeaderboard con tipo (es) 'playercard' e 'goalPerMatch'
      * Ottiene tutte le classifiche del team (OTTIMIZZATO)
      * @param {string} teamId - ID del team  
      * @param {number} limit - Numero massimo risultati per classifica
@@ -187,7 +188,15 @@ class LeaderboardService {
                     ]
                 },
                 sort: { formRating: -1, averageRating: -1 }
-            }
+            },
+            goalPerMatch: {
+                filter: baseFilter,
+                sort: { goalPerMatch: -1, totalGoals: -1, averageRating: -1 }
+            },
+            assistPerMatch: {
+                filter: baseFilter,
+                sort: { assistPerMatch: -1, totalAssists: -1, averageRating: -1 }
+            },
         };
 
         const config = configs[type];
@@ -270,7 +279,7 @@ class LeaderboardService {
     }
 
     validateType(type) {
-        const validTypes = ['rating', 'goals', 'assists', 'playercard', 'form'];
+        const validTypes = ['rating', 'goals', 'assists', 'playercard', 'goalPerMatch', 'assistPerMatch'];
         if (!type || !validTypes.includes(type)) {
             throw new AppError(`Invalid leaderboard type. Must be one of: ${validTypes.join(', ')}`, 400);
         }

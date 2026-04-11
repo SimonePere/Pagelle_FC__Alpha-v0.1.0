@@ -70,6 +70,16 @@ const playerLeaderboardStatsSchema = new mongoose.Schema({
         max: [10, 'Worst rating non può superare 10']
     },
 
+    // === GOAL / ASSIST PER MATCH ===
+    goalPerMatch: {
+        type: Number,
+        default: null,
+    },
+    assistPerMatch: {
+        type: Number,
+        default: null,
+    },
+
     // === FORMA RECENTE ===
     recentForm: [{
         type: Number,
@@ -127,7 +137,7 @@ playerLeaderboardStatsSchema.virtual('recentFormAverage').get(function () {
     return sum / this.recentForm.length;
 });
 
-// === METODI ISTANZA ===
+// === CALCOLO MEDIA GIOCATORE (CLASSIFICA PRINCIPALE) ===
 playerLeaderboardStatsSchema.methods.calculateAverageRating = function () {
     if (this.totalMatches === 0) {
         this.averageRating = 0;
@@ -137,6 +147,19 @@ playerLeaderboardStatsSchema.methods.calculateAverageRating = function () {
     return this.averageRating;
 };
 
+// === CALCOLO MEDIA GOLxPARTITA / ASSISTxPARTITA ===
+playerLeaderboardStatsSchema.methods.calculateGoalAssistPerMatch = function () {
+    if (this.totalMatches === 0) {
+        this.goalPerMatch = 0;
+        this.assistPerMatch = 0;
+        return;
+    }
+
+    this.goalPerMatch = Number((this.totalGoals / this.totalMatches).toFixed(2));
+    this.assistPerMatch = Number((this.totalAssists / this.totalMatches).toFixed(2));
+};
+
+// === FORMA RECENTE (ULTIME 5 PARTITE) ===
 playerLeaderboardStatsSchema.methods.addToRecentForm = function (rating) {
     this.recentForm.push(rating);
     // Mantieni solo gli ultimi 5
@@ -146,6 +169,7 @@ playerLeaderboardStatsSchema.methods.addToRecentForm = function (rating) {
     this.markModified('recentForm');
 };
 
+// UPDATEFROMMATCH è un metodo di istanza che aggiorna le statistiche del giocatore dopo ogni partita. Accetta il rating della partita, i gol e gli assist come parametri. Aggiorna il numero totale di partite, gol, assist e punti di rating, ricalcola la media e aggiorna la forma recente. Infine, aggiorna il timestamp e la versione dei dati.
 playerLeaderboardStatsSchema.methods.updateFromMatch = function (rating, goals = 0, assists = 0) {
     this.totalMatches += 1;
     this.totalGoals += goals;
@@ -153,13 +177,14 @@ playerLeaderboardStatsSchema.methods.updateFromMatch = function (rating, goals =
     this.totalRatingPoints += rating;
 
     this.calculateAverageRating();
+    this.calculateGoalAssistPerMatch();
     this.addToRecentForm(rating);
 
     this.lastUpdatedAt = new Date();
     this.dataVersion += 1;
 };
 
-// === METODO UPDATESTATS (AGGIUNTO) ===
+// === METODO UPDATE STATS (AGGIUNTO) ===
 playerLeaderboardStatsSchema.statics.updateStats = async function (playerId, updateData) {
     const stats = await this.findOrCreate(playerId, updateData.teamId, updateData.playerName);
 
@@ -179,6 +204,9 @@ playerLeaderboardStatsSchema.statics.updateStats = async function (playerId, upd
     if (updateData.assists) {
         stats.totalAssists += updateData.assists.totalAssists || 0;
     }
+
+    // Ricalcola media gol/assist per partita
+    stats.calculateGoalAssistPerMatch();
 
     // Aggiorna form se presente
     if (updateData.form && updateData.form.recentMatches) {
