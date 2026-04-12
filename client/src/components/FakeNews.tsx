@@ -14,8 +14,8 @@ export function FakeNews({ news = [], autoRotate = true, rotationInterval = 8000
   const [currentIndex, setCurrentIndex] = useState(0);
 
   // 🔍 DEBUG: Log delle news ricevute
-  console.log('🔍 FakeNews DEBUG - news ricevute:', news);
-  console.log('🔍 FakeNews DEBUG - news.length:', news?.length);
+  // console.log('🔍 FakeNews DEBUG - news ricevute:', news);
+  // console.log('🔍 FakeNews DEBUG - news.length:', news?.length);
 
   // Ordina news per priorità:  urgent > high > medium > low
   const sortedNews = [...news].sort((a, b) => {

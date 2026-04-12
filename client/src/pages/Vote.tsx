@@ -139,7 +139,6 @@ const Vote: React.FC = () => {
 
   if (!user) return null;
 
-  // TEMPLATE IDENTICO A PLAYERCARDS CHE FUNZIONA PERFETTO
   return (
     <DashboardLayout>
       <div className="pb-24 lg:pb-8">
