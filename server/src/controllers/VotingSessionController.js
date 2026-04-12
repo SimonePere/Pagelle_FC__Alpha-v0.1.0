@@ -438,6 +438,87 @@ const getVoterSubmission = async (req, res) => {
   }
 };
 
+// @desc    Get current user's active vote for a session
+// @route   GET /api/v1/voting-sessions/:id/my-vote
+// @access  Private
+const getMyVote = async (req, res) => {
+  try {
+    console.log('\n🔵 === GET MY VOTE (CONTROLLER) ===');
+    console.log('📋 Session ID:', req.params.id);
+    console.log('👤 User ID:', req.user.id);
+
+    const votingService = new VotingService();
+    const result = await votingService.getMyVote(req.params.id, req.user.id);
+
+    console.log('✅ My vote recuperato via service');
+    console.log('🔵 === FINE GET MY VOTE (CONTROLLER) ===\n');
+
+    res.json({
+      success: true,
+      vote: result
+    });
+
+  } catch (error) {
+    console.log('❌ ERRORE GET MY VOTE (CONTROLLER):', error.message);
+    console.log('🔵 === FINE GET MY VOTE (CONTROLLER - ERRORE) ===\n');
+
+    if (error.message.includes('not found')) {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message.includes('not eligible')) {
+      return res.status(403).json({ error: error.message });
+    }
+    if (error.message.includes('Invalid') || error.message.includes('required')) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.status(500).json({ error: 'Server error fetching user vote' });
+  }
+};
+
+// @desc    Update user's vote for a match rating session
+// @route   PATCH /api/v1/voting-sessions/:id/vote
+// @access  Private
+const updateVote = async (req, res) => {
+  console.log('\n🟠 === UPDATE MATCH VOTE (CONTROLLER) ===');
+  console.log('📋 Session ID:', req.params.id);
+  console.log('👤 User ID:', req.user.id);
+
+  try {
+    const votingService = new VotingService();
+    const result = await votingService.updateVote(
+      req.params.id,
+      req.user.id,
+      req.body.vote
+    );
+
+    console.log('✅ Vote update completato via service');
+    console.log('🟠 === FINE UPDATE MATCH VOTE (CONTROLLER) ===\n');
+
+    res.json({
+      success: result.success,
+      submission: result.submission,
+      message: result.message
+    });
+
+  } catch (error) {
+    console.log('❌ ERRORE UPDATE MATCH VOTE (CONTROLLER):', error.message);
+    console.log('🟠 === FINE UPDATE MATCH VOTE (CONTROLLER - ERRORE) ===\n');
+
+    if (error.message.includes('not found')) {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message.includes('not eligible') || error.message.includes('abstained')) {
+      return res.status(403).json({ error: error.message });
+    }
+    if (error.message.includes('not active') || error.message.includes('Invalid') || error.message.includes('required')) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.status(500).json({ error: 'Server error updating vote' });
+  }
+};
+
 module.exports = {
   createVotingSession,
   getUserVotingSessions,
@@ -446,5 +527,7 @@ module.exports = {
   activateVotingSession,
   getVotingCalculation,
   completeVotingSession,
-  getSessionSubmissions
+  getSessionSubmissions,
+  getMyVote,
+  updateVote
 };

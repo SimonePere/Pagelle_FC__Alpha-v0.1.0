@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { current } from '@reduxjs/toolkit';
 import { RootState, AppDispatch } from '@/redux/store/store';
 import { fetchMatchById, updateMatch, deleteMatch } from '@/redux/slices/matchSlice';
-import { fetchMatchVotingData, clearMatchVotingData, reactivateVoter } from '@/redux/slices/votingSlice';
+import { fetchMatchVotingData, clearMatchVotingData, reactivateVoter, fetchUserVotingSessions } from '@/redux/slices/votingSlice';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,7 +27,7 @@ export default function MatchDetails() {
   const { isLoading, error, matches } = useSelector((state: RootState) => state.matches);
 
   // 🗳️ Voting data selector 
-  const { matchVoting } = useSelector((state: RootState) => state.voting);
+  const { matchVoting, sessions } = useSelector((state: RootState) => state.voting);
 
   // 🎯 ENRICHED MATCHES - Con dati astenuti integrati + refresh function
   const { matches: enrichedMatches, refreshData } = useEnrichedMatches();
@@ -65,20 +65,20 @@ export default function MatchDetails() {
     if (matchId) {
       dispatch(fetchMatchById(matchId));
     }
+    // Assicura che le voting sessions siano caricate per trovare la session del match
+    dispatch(fetchUserVotingSessions({ page: 1, limit: 50 }));
   }, [matchId, user, navigate, dispatch]);
 
-  // 🆕 Fetch voting data quando ho votingSession ID
-  useEffect(() => {
-    if (currentMatch?.votingSession?.id) {
-      const sessionId = currentMatch.votingSession.id;
-      dispatch(fetchMatchVotingData(sessionId));
-    }
+  // 🆕 Trova la voting session per questo match direttamente dalle sessions Redux
+  const matchVotingSession = sessions.find((s: any) => s.targetId === matchId);
 
-    // 🧹 Clear voting data quando cambio match o non ho session
-    if (currentMatch && !currentMatch.votingSession?.id) {
+  useEffect(() => {
+    if (matchVotingSession?.id) {
+      dispatch(fetchMatchVotingData(matchVotingSession.id));
+    } else if (matchId) {
       dispatch(clearMatchVotingData());
     }
-  }, [currentMatch?.votingSession?.id, dispatch]);
+  }, [matchVotingSession?.id, matchId, dispatch]);
 
   if (!user) return null;
 

@@ -252,20 +252,32 @@ export const VoteCard: React.FC<VoteCardProps> = ({
                       </Badge>
                     </div>
                   ) : voting.hasVoted ? (
-                    <Badge variant="default" className="bg-green-500 text-green-50 w-full flex justify-center py-2">
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                      Votato
-                    </Badge>
-                  ) : onVoteClick ? (
-                    <Button
-                      className="w-full"
-                      variant="default"
-                      onClick={handleVoteButtonClick}
-                    >
-                      <VotingIcon className="w-4 h-4 mr-2" />
-                      Vota Ora
-                    </Button>
-                  ) : null}
+                    voting.isVotable ? (
+                      // Sessione ancora attiva → permetti modifica
+                      <Button
+                        className="w-full"
+                        variant="outline"
+                        onClick={handleVoteButtonClick}
+                      >
+                        <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />
+                        ✏️ Modifica Voto
+                      </Button>
+                    ) : (
+                      // Sessione completata → badge statico
+                      <Badge variant="default" className="bg-green-500 text-green-50 w-full flex justify-center py-2">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Votato
+                      </Badge>
+                    )) : onVoteClick ? (
+                      <Button
+                        className="w-full"
+                        variant="default"
+                        onClick={handleVoteButtonClick}
+                      >
+                        <VotingIcon className="w-4 h-4 mr-2" />
+                        Vota Ora
+                      </Button>
+                    ) : null}
                 </>
               )}
             </div>

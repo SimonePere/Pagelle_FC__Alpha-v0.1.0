@@ -134,10 +134,38 @@ export const submitVote = createAsyncThunk(
     'voting/submitVote',
     async ({ sessionId, voteData }: { sessionId: string; voteData: SubmitVoteRequest }, { rejectWithValue }) => {
         try {
-            const response = await api.post(`/voting-sessions/${sessionId}/vote`, voteData); return { sessionId, submission: response.submission };
+            const response = await api.post(`/voting-sessions/${sessionId}/vote`, voteData); return { sessionId, submission: response.submission, autoCompleted: response.autoCompleted || false };
         } catch (error: any) {
             console.error('❌ Errore invio voto:', error);
             return rejectWithValue(error.message || 'Errore nell\'invio del voto');
+        }
+    }
+);
+
+// Recupera il voto attivo dell'utente per una sessione
+export const fetchMyVote = createAsyncThunk(
+    'voting/fetchMyVote',
+    async (sessionId: string, { rejectWithValue }) => {
+        try {
+            const response = await api.get(`/voting-sessions/${sessionId}/my-vote`);
+            return { sessionId, vote: response.vote };
+        } catch (error: any) {
+            console.error('❌ Errore recupero voto:', error);
+            return rejectWithValue(error.message || 'Errore nel recupero del voto');
+        }
+    }
+);
+
+// Aggiorna il voto dell'utente per una sessione match rating
+export const updateVote = createAsyncThunk(
+    'voting/updateVote',
+    async ({ sessionId, voteData }: { sessionId: string; voteData: SubmitVoteRequest }, { rejectWithValue }) => {
+        try {
+            const response = await api.patch(`/voting-sessions/${sessionId}/vote`, voteData);
+            return { sessionId, submission: response.submission };
+        } catch (error: any) {
+            console.error('❌ Errore aggiornamento voto:', error);
+            return rejectWithValue(error.message || 'Errore nell\'aggiornamento del voto');
         }
     }
 );
@@ -646,13 +674,17 @@ const votingSlice = createSlice({
                 state.submitError = null;
             })
             .addCase(submitVote.fulfilled, (state, action) => {
-                const { sessionId } = action.payload;
+                const { sessionId, autoCompleted } = action.payload;
 
                 // Aggiorna la sessione corrente
                 if (state.currentSession?.id === sessionId) {
                     state.currentSession.hasVoted = true;
                     state.currentSession.canVote = false;
                     state.currentSession.submissionsCount += 1;
+                    if (autoCompleted) {
+                        state.currentSession.status = 'completed';
+                        state.currentSession.isActive = false;
+                    }
                 }
 
                 // Aggiorna nella lista
@@ -661,14 +693,46 @@ const votingSlice = createSlice({
                     state.sessions[sessionIndex].hasVoted = true;
                     state.sessions[sessionIndex].canVote = false;
                     state.sessions[sessionIndex].submissionsCount += 1;
+                    if (autoCompleted) {
+                        state.sessions[sessionIndex].status = 'completed';
+                        state.sessions[sessionIndex].isActive = false;
+                    }
                 }
 
                 // Rimuovi draft vote
                 delete state.draftVotes[sessionId];
 
+                // Invalida cache match voting se auto-completata
+                if (autoCompleted) {
+                    state.matchVoting.lastFetched = null;
+                    state.matchVoting.calculation = null;
+                    state.matchVoting.submissions = [];
+                }
+
                 state.isSubmittingVote = false;
             })
             .addCase(submitVote.rejected, (state, action) => {
+                state.isSubmittingVote = false;
+                state.submitError = action.payload as string;
+            });
+
+        // =============================================
+        // ✏️ UPDATE VOTE
+        // =============================================
+        builder
+            .addCase(updateVote.pending, (state) => {
+                state.isSubmittingVote = true;
+                state.submitError = null;
+            })
+            .addCase(updateVote.fulfilled, (state, action) => {
+                state.isSubmittingVote = false;
+                // hasVoted resta true, submissionsCount non cambia
+                // Invalida cache match voting per forzare re-fetch con dati aggiornati
+                state.matchVoting.lastFetched = null;
+                state.matchVoting.calculation = null;
+                state.matchVoting.submissions = [];
+            })
+            .addCase(updateVote.rejected, (state, action) => {
                 state.isSubmittingVote = false;
                 state.submitError = action.payload as string;
             });

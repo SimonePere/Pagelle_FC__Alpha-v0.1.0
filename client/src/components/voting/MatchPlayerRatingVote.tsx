@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAppSelector, useAppDispatch } from '../../hooks/redux hooks/redux hooks';
-import { submitVote } from '../../redux/slices/votingSlice';
+import { submitVote, fetchMyVote, updateVote, fetchUserVotingSessions } from '../../redux/slices/votingSlice';
 import { fetchMatchById } from '../../redux/slices/matchSlice';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { Slider } from '../ui/slider';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
@@ -15,6 +16,8 @@ import { RootState } from '@/redux/store/store';
 
 interface MatchPlayerRatingVoteProps {
   sessionId: string;
+  startInEditMode?: boolean;
+  onVoteComplete?: () => void;
 }
 
 interface PlayerRating {
@@ -92,13 +95,16 @@ const getRatingLabel = (rating: number) => {
   return 'Scarso';
 };
 
-export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps) {
+export function MatchPlayerRatingVote({ sessionId, startInEditMode = false, onVoteComplete }: MatchPlayerRatingVoteProps) {
   const dispatch = useAppDispatch();
   const session = useAppSelector(state =>
     state.voting.sessions.find(s => s.id === sessionId)
   );
   const isSubmitting = useAppSelector(state => state.voting.isSubmittingVote);
   const { user } = useAppSelector((state: RootState) => state.auth);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isLoadingMyVote, setIsLoadingMyVote] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const voterId = user?.id || user?._id || null;
   // Lista utenti astenuti della sessione: questi player possono ricevere
@@ -126,6 +132,13 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
 
   // Stati per i voti dei giocatori
   const [playerRatings, setPlayerRatings] = useState<{ [playerId: string]: PlayerRating }>({});
+
+  // Auto-enter edit mode se richiesto (click da VoteCard "Modifica Voto")
+  useEffect(() => {
+    if (startInEditMode && session?.hasVoted && !isEditMode && matchPlayers.length > 0) {
+      handleEnterEditMode();
+    }
+  }, [startInEditMode, session?.hasVoted, matchPlayers.length]);
 
   // Inizializza i rating quando i giocatori del match sono disponibili
   useEffect(() => {
@@ -220,6 +233,105 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
     });
   };
 
+  const handleEnterEditMode = async () => {
+    setIsLoadingMyVote(true);
+    try {
+      const result = await dispatch(fetchMyVote(sessionId)).unwrap();
+      const { voteData } = result.vote;
+
+      // Pre-popola il form con i dati del voto esistente
+      const restored: { [playerId: string]: PlayerRating } = {};
+
+      voteData.playerRatings.forEach((pr: any) => {
+        const playerBadges = voteData.badges
+          ?.filter((b: any) => b.playerId === pr.playerId)
+          .map((b: any) => {
+            // Reverse mapping: database → frontend badge names
+            const reverseMapping: Record<string, string> = {
+              'gol_bello': 'gol_piu_bello',
+              'difensore': 'muro_difensivo',
+              'assist_man': 'assist_man',
+              'mvp': 'mvp',
+              'maratoneta': 'maratoneta',
+              'goleador': 'goleador'
+            };
+            return (reverseMapping[b.badgeType] || b.badgeType) as PlayerMatchBadge;
+          }) || [];
+
+        restored[pr.playerId] = {
+          rating: pr.rating,
+          comments: pr.comment || '',
+          goals: pr.goals || 0,
+          assists: pr.assists || 0,
+          badges: playerBadges
+        };
+      });
+
+      // Per i giocatori senza voto esistente, inizializza a default
+      matchPlayers.forEach(player => {
+        if (!restored[player.id]) {
+          restored[player.id] = { rating: 6, comments: '', goals: 0, assists: 0, badges: [] };
+        }
+      });
+
+      setPlayerRatings(restored);
+      setMatchComments(voteData.overallComment || '');
+      setIsEditMode(true);
+      toast.info('Modifica il tuo voto e reinvia');
+    } catch (error) {
+      toast.error('Errore nel recupero del voto');
+      console.error('Errore fetch my vote:', error);
+    } finally {
+      setIsLoadingMyVote(false);
+    }
+  };
+
+  // Calcola se l'utente è l'ultimo votante
+  const activeVoters = (session?.eligibleVotersCount || 0) - (session?.abstainedUsers?.length || 0);
+  const isLastVoter = !isEditMode && ((session?.submissionsCount || 0) + 1) >= activeVoters;
+
+  const buildPayload = () => ({
+    sessionId,
+    voteData: {
+      vote: {
+        playerRatings,
+        matchComments: matchComments.trim()
+      } as MatchPlayerRatingVoteType,
+      deviceInfo: {
+        userAgent: navigator.userAgent,
+        timestamp: new Date().toISOString()
+      }
+    }
+  });
+
+  const executeSubmit = async () => {
+    if (!session) return;
+
+    const payload = buildPayload();
+
+    try {
+      if (isEditMode) {
+        await dispatch(updateVote(payload)).unwrap();
+        toast.success(`Valutazioni per ${session.title} aggiornate!`);
+        setIsEditMode(false);
+      } else {
+        await dispatch(submitVote(payload)).unwrap();
+        toast.success(`Valutazioni per ${session.title} inviate!`);
+      }
+      // Refresh sessioni e torna alla lista dopo 2 secondi
+      dispatch(fetchUserVotingSessions({ page: 1, limit: 50 }));
+      if (onVoteComplete) {
+        setTimeout(() => onVoteComplete(), 2000);
+      }
+    } catch (error) {
+      toast.error(isEditMode
+        ? 'Errore durante l\'aggiornamento delle valutazioni'
+        : 'Errore durante l\'invio delle valutazioni'
+      );
+      console.error('Errore invio valutazioni:', error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -228,33 +340,18 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
       return;
     }
 
-    // Validazione - almeno 1 giocatore deve essere valutato diversamente da 6 (per test)
     if (ratedPlayersCount < 1) {
       toast.error('Valuta almeno 1 giocatore con un voto diverso da 6.0');
       return;
     }
 
-    const vote: MatchPlayerRatingVoteType = {
-      playerRatings,
-      matchComments: matchComments.trim()
-    };
-
-    try {
-      await dispatch(submitVote({
-        sessionId,
-        voteData: {
-          vote: vote,
-          deviceInfo: {
-            userAgent: navigator.userAgent,
-            timestamp: new Date().toISOString()
-          }
-        }
-      })).unwrap();
-      toast.success(`Valutazioni per ${session.title} inviate!`);
-    } catch (error) {
-      toast.error('Errore durante l\'invio delle valutazioni');
-      console.error('Errore invio valutazioni:', error);
+    // Se è l'ultimo votante, mostra dialog di conferma
+    if (isLastVoter) {
+      setShowConfirmDialog(true);
+      return;
     }
+
+    await executeSubmit();
   };
 
   if (!session) {
@@ -282,7 +379,7 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
     );
   }
 
-  if (session.hasVoted) {
+  if (session.hasVoted && !isEditMode) {
     return (
       <Card>
         <CardHeader>
@@ -475,7 +572,7 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
                     </div>
 
                     {/* Commenti giocatore */}
-                    <div className="space-y-2">
+                    {/* <div className="space-y-2">
                       <Label htmlFor={`comments-${player.id}`} className="text-sm font-medium">
                         Note specifiche (opzionale)
                       </Label>
@@ -487,7 +584,7 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
                         rows={2}
                         className="resize-none text-sm"
                       />
-                    </div>
+                    </div> */}
                   </div>
                 </CardContent>
               </Card>
@@ -496,7 +593,7 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
         </div>
 
         {/* Commenti generali partita */}
-        <Card>
+        {/* <Card>
           <CardHeader>
             <Label htmlFor="match-comments" className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
@@ -513,7 +610,7 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
               className="resize-none"
             />
           </CardContent>
-        </Card>
+        </Card> */}
 
         {/* Top performers e submit */}
         <Card>
@@ -560,7 +657,7 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
                   ) : (
                     <>
                       <Send className="mr-2 h-4 w-4" />
-                      Invia Valutazioni
+                      {isEditMode ? 'Aggiorna Valutazioni' : 'Invia Valutazioni'}
                     </>
                   )}
                 </Button>
@@ -569,6 +666,24 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
           </CardContent>
         </Card>
       </form>
+
+      {/* Dialog conferma ultimo votante */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>⚠️ Sei l'ultimo a votare!</AlertDialogTitle>
+            <AlertDialogDescription>
+              Dopo il tuo invio la sessione si chiuderà automaticamente e non sarà più possibile modificare il voto. Sei sicuro di voler confermare?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Rivedi Voti</AlertDialogCancel>
+            <AlertDialogAction onClick={() => executeSubmit()}>
+              Conferma Invio
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

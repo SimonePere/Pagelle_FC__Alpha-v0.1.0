@@ -18,20 +18,12 @@ router.post('/', auth, votingSessionController.createVotingSession);
 // @access  Private
 router.get('/', auth, votingSessionController.getUserVotingSessions);
 
-// @route   GET /api/v1/voting-sessions/:id
-// @desc    Get specific voting session details
-// @access  Private
-router.get('/:id', auth, votingSessionController.getVotingSession);
+// --- Sub-resource routes FIRST (before /:id catch-all) ---
 
-// @route   POST /api/v1/voting-sessions/:id/vote
-// @desc    Submit vote for a voting session
+// @route   GET /api/v1/voting-sessions/:id/my-vote
+// @desc    Get current user's active vote for a session
 // @access  Private
-router.post('/:id/vote', auth, votingSessionController.submitVote);
-
-// @route   PATCH /api/v1/voting-sessions/:id/activate
-// @desc    Activate a voting session (change from draft to active)
-// @access  Private
-router.patch('/:id/activate', auth, votingSessionController.activateVotingSession);
+router.get('/:id/my-vote', auth, votingSessionController.getMyVote);
 
 // @route   GET /api/v1/voting-sessions/:id/calculation
 // @desc    Calculate and get voting results (average ratings, self-reported goals/assists)
@@ -39,20 +31,36 @@ router.patch('/:id/activate', auth, votingSessionController.activateVotingSessio
 // @note    Uses simplified calculation: average ratings with dynamic divisor, self-reported stats
 router.get('/:id/calculation', auth, votingSessionController.getVotingCalculation);
 
+// @route   GET /api/v1/voting-sessions/:id/submissions
+// @desc    Get all individual vote submissions for a session (complete with vote details)
+// @access  Private
+router.get('/:id/submissions', auth, votingSessionController.getSessionSubmissions);
+
+// @route   POST /api/v1/voting-sessions/:id/vote
+// @desc    Submit vote for a voting session
+// @access  Private
+router.post('/:id/vote', auth, votingSessionController.submitVote);
+
+// @route   PATCH /api/v1/voting-sessions/:id/vote
+// @desc    Update user's vote for a match rating session
+// @access  Private
+router.patch('/:id/vote', auth, votingSessionController.updateVote);
+
+// @route   PATCH /api/v1/voting-sessions/:id/activate
+// @desc    Activate a voting session (change from draft to active)
+// @access  Private
+router.patch('/:id/activate', auth, votingSessionController.activateVotingSession);
 
 // @route   POST /api/v1/voting-sessions/:id/complete
 // @desc    Complete session and save official results (allow reopen)
 // @access  Private
 router.post('/:id/complete', auth, votingSessionController.completeVotingSession);
 
-// @route   GET /api/v1/voting-sessions/:id/submissions
-// @desc    Get all individual vote submissions for a session (complete with vote details)
-// @access  Private
-router.get('/:id/submissions', auth, votingSessionController.getSessionSubmissions);
+// --- Catch-all :id route LAST ---
 
-//  FUTURE ENDPOINTS - Implementare quando necessario
-// router.patch('/:id/complete', auth, votingSessionController.completeVotingSession);
-// router.delete('/:id', auth, votingSessionController.cancelVotingSession);
-// router.get('/:id/audit', auth, votingSessionController.getVotingAudit);
+// @route   GET /api/v1/voting-sessions/:id
+// @desc    Get specific voting session details
+// @access  Private
+router.get('/:id', auth, votingSessionController.getVotingSession);
 
 module.exports = router;

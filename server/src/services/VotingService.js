@@ -331,6 +331,141 @@ class VotingService {
     }
 
     /**
+     * Recupera il voto attivo dell'utente per una sessione
+     * @param {string} sessionId - ID sessione
+     * @param {string} userId - ID utente
+     * @returns {Object} Voto attivo dell'utente con dati formattati
+    */
+    async getMyVote(sessionId, userId) {
+        console.log('\n🔵 === GET MY VOTE (SERVICE) ===');
+        console.log('📋 Session ID:', sessionId);
+        console.log('👤 User ID:', userId);
+
+        if (!sessionId) throw new Error('Session ID is required');
+        if (!userId) throw new Error('User ID is required');
+
+        // 1. Verifica che la sessione esista e sia match_rating
+        const session = await this.votingSessionRepository.findById(sessionId);
+        if (!session) throw new Error('Voting session not found');
+        if (session.type !== 'match_rating') throw new Error('Invalid session type');
+
+        // 2. Verifica che l'utente sia eligible
+        if (!session.eligibleVoters.includes(userId)) {
+            throw new Error('User not eligible for this session');
+        }
+
+        // 3. Trova il voto attivo dell'utente
+        const submission = await this.voteSubmissionRepository.findOne({
+            votingSessionId: sessionId,
+            voterId: userId,
+            isActive: true
+        });
+
+        if (!submission) {
+            throw new Error('No active vote found for this user');
+        }
+
+        console.log('✅ Voto trovato, version:', submission.version);
+        console.log('🔵 === FINE GET MY VOTE (SERVICE) ===\n');
+
+        return {
+            id: submission._id,
+            votingSessionId: submission.votingSessionId,
+            voterId: submission.voterId,
+            voteData: submission.voteData,
+            version: submission.version,
+            hasBeenModified: submission.version > 1,
+            createdAt: submission.createdAt,
+            updatedAt: submission.updatedAt,
+            sessionStatus: session.status
+        };
+    }
+
+    /**
+     * Aggiorna il voto di un utente (crea nuova versione)
+     * @param {string} sessionId - ID sessione
+     * @param {string} userId - ID utente
+     * @param {Object} voteData - Nuovi dati voto
+     * @returns {Object} Risultato aggiornamento
+     */
+    async updateVote(sessionId, userId, voteData) {
+        console.log('\n🟠 === UPDATE VOTE (SERVICE) ===');
+        console.log('📋 Session ID:', sessionId);
+        console.log('👤 User ID:', userId);
+
+        if (!sessionId) throw new Error('Session ID is required');
+        if (!userId) throw new Error('User ID is required');
+
+        try {
+            // 1. Verifica sessione attiva
+            const session = await this.votingSessionRepository.findById(sessionId);
+            if (!session) throw new Error('Voting session not found');
+            if (session.type !== 'match_rating') throw new Error('Invalid session type');
+            if (session.status !== 'active') throw new Error('Voting session is not active - cannot edit vote');
+
+            // 2. Verifica utente eligible e non astenuto
+            if (!session.eligibleVoters.includes(userId)) {
+                throw new Error('User not eligible for this session');
+            }
+            if (session.isUserAbstained(userId)) {
+                throw new Error('User is abstained from this voting session');
+            }
+
+            // 3. Trova il voto attivo esistente
+            const existingVote = await this.voteSubmissionRepository.findOne({
+                votingSessionId: sessionId,
+                voterId: userId,
+                isActive: true
+            });
+
+            if (!existingVote) {
+                throw new Error('No active vote found to update');
+            }
+
+            // 4. Trasforma dati dal frontend
+            const transformedVoteData = this.transformVoteData(voteData);
+
+            console.log('📤 Dati aggiornati:', {
+                playerRatingsCount: transformedVoteData.playerRatings.length,
+                badgesCount: transformedVoteData.badges.length,
+                previousVersion: existingVote.version
+            });
+
+            // 5. Aggiorna IN-PLACE il documento esistente (no versioning)
+            existingVote.voteData = transformedVoteData;
+            existingVote.version = existingVote.version + 1;
+            existingVote.modificationReason = 'User edited vote';
+            await existingVote.save();
+
+            console.log('✅ Voto aggiornato, nuova version:', existingVote.version);
+
+            // 6. Recupera nome votante per response
+            const voter = await this.userRepository.findById(userId);
+
+            console.log('🟠 === FINE UPDATE VOTE (SERVICE) ===\n');
+
+            return {
+                success: true,
+                submission: {
+                    id: existingVote._id,
+                    updatedAt: existingVote.createdAt,
+                    type: 'match_rating',
+                    version: existingVote.version,
+                    playersRated: transformedVoteData.playerRatings.length,
+                    badgesAwarded: transformedVoteData.badges.length,
+                    voterInfo: voter ? { id: voter._id, name: voter.name } : { id: userId }
+                },
+                message: 'Voto aggiornato con successo'
+            };
+
+        } catch (error) {
+            console.log('❌ ERRORE UPDATE VOTE (SERVICE):', error.message);
+            console.log('🟠 === FINE UPDATE VOTE (SERVICE - ERRORE) ===\n');
+            throw error;
+        }
+    }
+
+    /**
      * Verifica se sessione deve auto-completarsi
      * @param {string} sessionId - ID sessione
      * @returns {boolean} True se auto-completed

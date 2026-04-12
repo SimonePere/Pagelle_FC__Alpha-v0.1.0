@@ -108,13 +108,15 @@ const Vote: React.FC = () => {
     const realMatch = matches?.find(match => match.id === session.targetId);
 
     if (realMatch) {
-      // Usa i dati della partita vera con mapping dello status
+      // Usa i dati della partita vera, ma lo status viene dalla session (fonte di verità per la votazione)
+      const mappedStatus = session.status === 'completed' ? 'completed' as const :
+        realMatch.status === 'cancelled' ? 'draft' as const :
+          realMatch.status === 'active' ? 'active' as const :
+            realMatch.status === 'completed' ? 'completed' as const : 'draft' as const;
       return {
         id: realMatch.id,
         date: realMatch.date,
-        status: realMatch.status === 'cancelled' ? 'draft' as const :
-          realMatch.status === 'active' ? 'active' as const :
-            realMatch.status === 'completed' ? 'completed' as const : 'draft' as const,
+        status: mappedStatus,
         teamMemberIds: (realMatch.teamMemberIds && realMatch.teamMemberIds.length > 0)
           ? realMatch.teamMemberIds
           : Array.from({ length: session.eligibleVotersCount }, (_, i) => `voter-${i}`)
@@ -158,6 +160,11 @@ const Vote: React.FC = () => {
               {selectedSession.type === 'match_rating' && (
                 <MatchRatingVote
                   sessionId={selectedSession.id}
+                  startInEditMode={selectedSession.hasVoted}
+                  onVoteComplete={() => {
+                    setViewMode('dashboard');
+                    setSelectedSession(null);
+                  }}
                 />
               )}
 

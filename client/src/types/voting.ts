@@ -147,6 +147,29 @@ export interface VotingResult {
   breakdown?: ResultBreakdown;
 }
 
+export interface MyVoteResponse {
+  id: string;
+  votingSessionId: string;
+  voterId: string;
+  voteData: {
+    playerRatings: Array<{
+      playerId: string;
+      rating: number;
+      goals: number;
+      assists: number;
+      comment?: string;
+    }>;
+    badges: Array<{
+      playerId: string;
+      badgeType: string;
+    }>;
+    overallComment?: string;
+  };
+  version: number;
+  hasBeenModified: boolean;
+  sessionStatus: string;
+}
+
 export interface VotingAudit {
   id: string;
   sessionId: string;
