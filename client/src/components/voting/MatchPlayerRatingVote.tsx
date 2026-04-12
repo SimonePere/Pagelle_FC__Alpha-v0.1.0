@@ -11,6 +11,7 @@ import { Badge } from '../ui/badge';
 import { Loader2, Send, Trophy, User, Timer, MapPin, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import type { MatchPlayerRatingVote as MatchPlayerRatingVoteType, PlayerMatchBadge } from '../../types/voting';
+import { RootState } from '@/redux/store/store';
 
 interface MatchPlayerRatingVoteProps {
   sessionId: string;
@@ -97,6 +98,14 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
     state.voting.sessions.find(s => s.id === sessionId)
   );
   const isSubmitting = useAppSelector(state => state.voting.isSubmittingVote);
+  const { user } = useAppSelector((state: RootState) => state.auth);
+
+  const voterId = user?.id || user?._id || null;
+  // Lista utenti astenuti della sessione: questi player possono ricevere
+  // goals/assists anche da altri votanti.
+  const abstainedUserIds = session?.abstainedUsers?.map(a => a.userId) || [];
+  // Flag utile per eventuali regole UI dedicate agli utenti astenuti.
+  const isCurrentUserAbstained = voterId ? abstainedUserIds.includes(voterId) : false;
 
   // Recupero i dati del match collegato alla sessione di voto
   const currentMatch = useAppSelector(state => state.matches.currentMatch);
@@ -144,6 +153,14 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
   const topRated = Object.entries(playerRatings).sort(([, a], [, b]) => b.rating - a.rating).slice(0, 3);
   const ratedPlayersCount = Object.values(playerRatings).filter(p => p.rating !== 6).length;
 
+  const canEditPlayerStats = (playerId: string) => {
+    if (!voterId) return false;
+    // Business rule:
+    // - ogni utente può impostare goals/assists per se stesso
+    // - se un giocatore è astenuto, anche gli altri possono impostargli goals/assists
+    return playerId === voterId || abstainedUserIds.includes(playerId);
+  };
+
   const handlePlayerRatingChange = (playerId: string, rating: number) => {
     setPlayerRatings(prev => ({
       ...prev,
@@ -165,6 +182,7 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
   };
 
   const handleGoalsChange = (playerId: string, goals: number) => {
+    if (!canEditPlayerStats(playerId)) return;
     setPlayerRatings(prev => ({
       ...prev,
       [playerId]: {
@@ -175,6 +193,7 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
   };
 
   const handleAssistsChange = (playerId: string, assists: number) => {
+    if (!canEditPlayerStats(playerId)) return;
     setPlayerRatings(prev => ({
       ...prev,
       [playerId]: {
@@ -315,6 +334,8 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
           {matchPlayers.map(player => {
             const rating = playerRatings[player.id]?.rating || 6;
             const comments = playerRatings[player.id]?.comments || '';
+            const statsEditable = canEditPlayerStats(player.id);
+
 
             return (
               <Card key={player.id} className="overflow-hidden">
@@ -362,8 +383,12 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
                       </div>
                     </div>
 
-                    {/* Statistiche partita: Gol e Assist */}
-                    <div className="grid grid-cols-2 gap-4">
+                    {/*
+                      Statistiche partita (Gol/Assist):
+                      i controlli sono visibili solo quando statsEditable=true,
+                      quindi per il votante stesso o per i giocatori astenuti.
+                    */}
+                    <div className={`grid grid-cols-2 gap-4 ${statsEditable ? 'visible' : 'hidden'}`}>
                       <div className="space-y-2">
                         <Label className="text-sm font-medium flex items-center gap-1">
                           ⚽ Gol
@@ -375,7 +400,6 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
                             size="sm"
                             className="h-8 w-8 p-0"
                             onClick={() => handleGoalsChange(player.id, (playerRatings[player.id]?.goals || 0) - 1)}
-                            disabled={(playerRatings[player.id]?.goals || 0) <= 0}
                           >
                             -
                           </Button>
@@ -405,7 +429,6 @@ export function MatchPlayerRatingVote({ sessionId }: MatchPlayerRatingVoteProps)
                             size="sm"
                             className="h-8 w-8 p-0"
                             onClick={() => handleAssistsChange(player.id, (playerRatings[player.id]?.assists || 0) - 1)}
-                            disabled={(playerRatings[player.id]?.assists || 0) <= 0}
                           >
                             -
                           </Button>

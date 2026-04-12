@@ -601,8 +601,14 @@ class VotingService {
             throw new Error('No votes found for this session');
         }
 
+        // Estrarre gli astenuti in forma normalizzata (array di string ID) evita
+        // mismatch ObjectId/string durante i confronti nell'aggregatore.
+        const abstainedUserIds = (session.abstainedUsers || [])
+            .map(user => user.userId?.toString())
+            .filter(Boolean);
+
         // 4. Usa il metodo esistente per aggregazione
-        const playerResults = await this.aggregatePlayerStats(submissions);
+        const playerResults = await this.aggregatePlayerStats(submissions, abstainedUserIds);
 
         console.log('✅ Calcoli match rating live completati per', Object.keys(playerResults).length, 'giocatori');
         console.log('🧮 === FINE CALCULATE VOTING RESULTS (SERVICE) ===\n');
@@ -621,15 +627,19 @@ class VotingService {
     /**
      * Aggrega statistiche giocatori da submissions
      * @param {Array} submissions - Lista submissions
+        * @param {Array<string>} abstainedUserIds - ID giocatori astenuti nella sessione
      * @returns {Object} Stats aggregate per player
      */
-    async aggregatePlayerStats(submissions) {
+    async aggregatePlayerStats(submissions, abstainedUserIds = []) {
         if (!Array.isArray(submissions) || submissions.length === 0) {
             throw new Error('Valid submissions array is required');
         }
 
         const playerStats = {};
         const playerNames = {}; // Cache per i nomi dei giocatori
+        // Set usato per lookup O(1): serve per capire se il player valutato è astenuto.
+        const abstainedSet = new Set(abstainedUserIds.map(String));
+
 
         // Aggrega tutti i dati dai submissions
         submissions.forEach(submission => {
@@ -641,20 +651,29 @@ class VotingService {
                 if (!playerStats[playerId]) {
                     playerStats[playerId] = {
                         ratings: [],
-                        selfReportedGoals: 0,
-                        selfReportedAssists: 0,
+                        reportedGoals: [],
+                        reportedAssists: [],
                         badges: []
                     };
                 }
 
                 playerStats[playerId].ratings.push(playerRating.rating);
 
-                // Se il votante sta votando se stesso, salva goals/assists
-                if (voterId === playerId) {
-                    playerStats[playerId].selfReportedGoals = playerRating.goals || 0;
-                    playerStats[playerId].selfReportedAssists = playerRating.assists || 0;
+                // Regola stats goals/assists:
+                // - se voto me stesso, il mio dato è valido
+                // - se il player è astenuto, i votanti attivi possono segnalare goals/assists per lui
+                const isAbstainedPlayer = abstainedSet.has(playerId);
+                const canReportStats = voterId === playerId || isAbstainedPlayer;
+
+                if (canReportStats) {
+                    // Accumulo valori raw da tutti i votanti validi; il consolidamento
+                    // finale avviene sotto con media arrotondata.
+                    playerStats[playerId].reportedGoals.push(Math.max(0, playerRating.goals || 0));
+                    playerStats[playerId].reportedAssists.push(Math.max(0, playerRating.assists || 0));
                 }
             });
+
+
 
             // Aggrega badges
             submission.voteData.badges?.forEach(badge => {
@@ -662,8 +681,8 @@ class VotingService {
                 if (!playerStats[playerId]) {
                     playerStats[playerId] = {
                         ratings: [],
-                        selfReportedGoals: 0,
-                        selfReportedAssists: 0,
+                        reportedGoals: [],
+                        reportedAssists: [],
                         badges: []
                     };
                 }
@@ -721,13 +740,22 @@ class VotingService {
                     ? (sortedRatings[Math.floor(sortedRatings.length / 2) - 1] + sortedRatings[Math.floor(sortedRatings.length / 2)]) / 2
                     : sortedRatings[Math.floor(sortedRatings.length / 2)];
 
+                // Consolidamento goals/assists:
+                // usa media aritmetica arrotondata all'intero più vicino.
+                // Se non ci sono segnalazioni valide, restituisce 0.
+                const roundedMean = (values) => {
+                    if (!values || values.length === 0) return 0;
+                    const sum = values.reduce((acc, v) => acc + v, 0);
+                    return Math.round(sum / values.length);
+                };
+
                 finalResults[playerId] = {
                     playerId: playerId,
                     playerName: playerNames[playerId] || `Player ${playerId.substring(0, 8)}`,
                     averageRating: parseFloat(average.toFixed(2)),
                     medianRating: parseFloat(median.toFixed(2)),
-                    goals: stats.selfReportedGoals,
-                    assists: stats.selfReportedAssists,
+                    goals: roundedMean(stats.reportedGoals),
+                    assists: roundedMean(stats.reportedAssists),
                     voteCount: voteCount,
                     badges: [...new Set(stats.badges)]
                 };
@@ -805,8 +833,14 @@ class VotingService {
             throw new Error('Cannot complete session with no votes');
         }
 
+        // Stessa normalizzazione usata nel calcolo live: garantisce coerenza tra
+        // risultati preview e risultati ufficiali salvati in VoteResult.
+        const abstainedUserIds = (session.abstainedUsers || [])
+            .map(user => user.userId?.toString())
+            .filter(Boolean);
+
         // 4. Aggrega risultati usando il metodo esistente
-        const finalResults = await this.aggregatePlayerStats(submissions);
+        const finalResults = await this.aggregatePlayerStats(submissions, abstainedUserIds);
 
         // 5. Salva risultati ufficiali con struttura corretta VoteResult
         const voteResultData = {
