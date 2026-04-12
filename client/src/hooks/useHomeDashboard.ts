@@ -19,6 +19,7 @@ import { User } from '@/types/api';
 import { PlayerCard } from '@/types/playerCard';
 import { api } from '@/lib/api';
 import useAppData from './useAppData';
+import { getLatestRelease, getUnseenReleases, type WhatsNewRelease } from '@/data/whats-new-data';
 
 // Types per Home Dashboard
 interface PlayerStats {
@@ -73,6 +74,8 @@ interface UseHomeDashboardReturn {
     allUsers: User[];
     playerCardsFiltered: PlayerCard[];
     showOnboarding: boolean;
+    showWhatsNew: boolean;
+    unseenReleases: WhatsNewRelease[];
     activeLeaderboard: LeaderboardType;
 
     // 🛠️ Actions base da useAppData
@@ -85,6 +88,7 @@ interface UseHomeDashboardReturn {
     // 🏠 Home-specific actions
     setActiveLeaderboard: (type: LeaderboardType) => void;
     handleOnboardingComplete: () => void;
+    handleWhatsNewDismiss: () => void;
     loadLeaderboard: (type: LeaderboardType, teamId: string) => void;
 }
 
@@ -111,6 +115,8 @@ export const useHomeDashboard = (): UseHomeDashboardReturn => {
     // 🏠 Home-specific states
     const [leaderboard, setLeaderboard] = useState<PlayerStats[]>([]);
     const [showOnboarding, setShowOnboarding] = useState(false);
+    const [showWhatsNew, setShowWhatsNew] = useState(false);
+    const [unseenReleases, setUnseenReleases] = useState<WhatsNewRelease[]>([]);
     const [activeLeaderboard, setActiveLeaderboard] = useState<LeaderboardType>('rating');
     const [leaderboardLoading, setLeaderboardLoading] = useState(false);
     const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
@@ -151,6 +157,15 @@ export const useHomeDashboard = (): UseHomeDashboardReturn => {
             localStorage.setItem(`onboarding_${user._id}`, 'true');
         }
         setShowOnboarding(false);
+    };
+
+    // 🆕 What's New dismiss handler
+    const handleWhatsNewDismiss = () => {
+        const latest = getLatestRelease();
+        if (user && latest) {
+            localStorage.setItem(`whats_new_${user._id}`, String(latest.id));
+        }
+        setShowWhatsNew(false);
     };
 
     // 🧮 Computed: Pending matches from matches data
@@ -212,6 +227,18 @@ export const useHomeDashboard = (): UseHomeDashboardReturn => {
         }
     }, [user?.id]);
 
+    // 🆕 What's New check effect (non mostrare se onboarding è attivo)
+    useEffect(() => {
+        if (user && !showOnboarding) {
+            const lastSeenId = parseInt(localStorage.getItem(`whats_new_${user._id}`) || '0', 10);
+            const unseen = getUnseenReleases(lastSeenId);
+            if (unseen.length > 0) {
+                setUnseenReleases(unseen);
+                setShowWhatsNew(true);
+            }
+        }
+    }, [user?.id, showOnboarding]);
+
     // 🎯 Auto-load leaderboard when activeLeaderboard or team changes
     useEffect(() => {
         const currentTeamId = user?.teams?.[0]?.id;
@@ -253,6 +280,8 @@ export const useHomeDashboard = (): UseHomeDashboardReturn => {
         allUsers,
         playerCardsFiltered,
         showOnboarding,
+        showWhatsNew,
+        unseenReleases,
         activeLeaderboard,
 
         // 🛠️ Base actions
@@ -265,6 +294,7 @@ export const useHomeDashboard = (): UseHomeDashboardReturn => {
         // 🏠 Home-specific actions
         setActiveLeaderboard,
         handleOnboardingComplete,
+        handleWhatsNewDismiss,
         loadLeaderboard
     };
 };

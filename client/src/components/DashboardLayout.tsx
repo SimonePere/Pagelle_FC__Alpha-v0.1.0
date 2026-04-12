@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -8,6 +8,8 @@ import { Menu } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSelector } from 'react-redux';
 import { RootState } from '@/redux/store/store';
+import { WhatsNewModal } from "@/components/WhatsNewModal";
+import { getLatestRelease, getUnseenReleases, type WhatsNewRelease } from "@/data/whats-new-data";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -17,8 +19,35 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user } = useSelector((state: RootState) => state.auth);
   const navigate = useNavigate();
 
+  // 🆕 What's New state
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
+  const [unseenReleases, setUnseenReleases] = useState<WhatsNewRelease[]>([]);
+
+  useEffect(() => {
+    if (user) {
+      const lastSeenId = parseInt(localStorage.getItem(`whats_new_${user._id}`) || '0', 10);
+      const unseen = getUnseenReleases(lastSeenId);
+      if (unseen.length > 0) {
+        setUnseenReleases(unseen);
+        setShowWhatsNew(true);
+      }
+    }
+  }, [user?._id]);
+
+  const handleWhatsNewDismiss = () => {
+    const latest = getLatestRelease();
+    if (user && latest) {
+      localStorage.setItem(`whats_new_${user._id}`, String(latest.id));
+    }
+    setShowWhatsNew(false);
+  };
+
   return (
     <SidebarProvider>
+      {/* What's New Modal (globale, appare su qualsiasi pagina) */}
+      {showWhatsNew && unseenReleases.length > 0 && (
+        <WhatsNewModal releases={unseenReleases} onDismiss={handleWhatsNewDismiss} />
+      )}
       <div className="min-h-screen flex w-full bg-background relative">
         {/* Subtle pitch pattern overlay */}
         <div className="fixed inset-0 opacity-30 pointer-events-none" style={{
