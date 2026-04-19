@@ -1,54 +1,38 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Trophy, Mail, Lock, User, Calendar as CalendarIcon, Users, Check, X } from 'lucide-react';
+import { Mail, Lock, User, Calendar as CalendarIcon, Users, KeyRound, Check, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import OptionsDropdown from '@/components/OptionsDropdown';
-import { loginUser, registerUser } from '@/redux/slices/authSlice';
+import { loginUser, registerUser, refreshUserData } from '@/redux/slices/authSlice';
+import { createTeam, joinTeam } from '@/redux/slices/teamSlice';
 import { RootState, AppDispatch } from '@/redux/store/store';
-import { api } from '@/lib/api';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Login = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [tab, setTab] = useState<'login' | 'signup'>('login');
+  const [signupMode, setSignupMode] = useState<'create' | 'join'>('create');
+
+  // Campi condivisi
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  // Campi registrazione
   const [name, setName] = useState('');
   const [birthdate, setBirthdate] = useState('');
-
-  const [selectedTeamId, setSelectedTeamId] = useState('');
-  const [teams, setTeams] = useState([]);
-  const [teamsLoading, setTeamsLoading] = useState(false);
+  const [teamName, setTeamName] = useState('');
+  const [teamCode, setTeamCode] = useState('');
+  const [acceptTerms, setAcceptTerms] = useState(false);
 
   const navigate = useNavigate();
   const { toast } = useToast();
   const dispatch = useDispatch<AppDispatch>();
 
-  // Validazione regole password per registrazione
-  const getPasswordValidationRules = () => {
-    return {
-      minLength: password.length >= 6,
-      hasUppercase: /[A-Z]/.test(password),
-      hasLowercase: /[a-z]/.test(password),
-      hasNumber: /\d/.test(password),
-      hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password)
-    };
-  };
-
-  // Controlla se il form è valido per la registrazione
-  const isRegistrationFormValid = () => {
-    if (isLogin) return true; // Login non ha validazioni aggiuntive
-
-    const rules = getPasswordValidationRules();
-    return rules.minLength && rules.hasUppercase && rules.hasLowercase &&
-      rules.hasNumber && rules.hasSpecialChar;
-  };
-
-  // Redux state
   const { user, isLoading, isAuthenticated, error } = useSelector((state: RootState) => state.auth);
 
   // Redirect se già autenticato
@@ -58,103 +42,109 @@ const Login = () => {
     }
   }, [isAuthenticated, user, navigate]);
 
-  // Fetch teams per la registrazione
-  useEffect(() => {
-    const fetchTeams = async () => {
-      if (!isLogin) { // Solo se siamo in modalità registrazione
-        setTeamsLoading(true);
-        try {
-          const data = await api.get('/teams');
+  // Validazione password
+  const getPasswordValidationRules = () => ({
+    minLength: password.length >= 6,
+    hasUppercase: /[A-Z]/.test(password),
+    hasLowercase: /[a-z]/.test(password),
+    hasNumber: /\d/.test(password),
+    hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+  });
 
-          if (data.success && data.teams) {
-            setTeams(data.teams.map(team => ({
-              id: team.id,
-              name: team.name,
-              description: `${team.totalMembers || 0} membri`
-            })));
-          }
-        } catch (error) {
-          console.error('❌ Errore fetch teams:', error);
-        } finally {
-          setTeamsLoading(false);
-        }
-      } else {
-        // Skip fetch teams - modalità login
-      }
-    };
+  const isPasswordValid = () => {
+    const rules = getPasswordValidationRules();
+    return rules.minLength && rules.hasUppercase && rules.hasLowercase && rules.hasNumber && rules.hasSpecialChar;
+  };
 
-    fetchTeams();
-  }, [isLogin]);
+  // --- LOGIN ---
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      toast({ title: 'Errore', description: 'Inserisci email e password.', variant: 'destructive' });
+      return;
+    }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    const result = await dispatch(loginUser({ email, password }));
+    if (loginUser.fulfilled.match(result)) {
+      toast({ title: 'Benvenuto!', description: 'Login effettuato con successo.' });
+      navigate('/');
+    }
+  };
+
+  // --- REGISTRAZIONE ---
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email || !password) {
-      toast({
-        title: 'Errore',
-        description: 'Inserisci email e password',
-        variant: 'destructive'
-      });
+    if (!name.trim()) {
+      toast({ title: 'Errore', description: 'Inserisci il tuo nome.', variant: 'destructive' });
+      return;
+    }
+    if (!birthdate) {
+      toast({ title: 'Errore', description: 'Seleziona la data di nascita.', variant: 'destructive' });
+      return;
+    }
+    if (!isPasswordValid()) {
+      toast({ title: 'Errore', description: 'La password non soddisfa tutti i requisiti.', variant: 'destructive' });
+      return;
+    }
+    if (!acceptTerms) {
+      toast({ title: 'Errore', description: 'Devi accettare Privacy e Termini di Servizio.', variant: 'destructive' });
       return;
     }
 
-    if (!isLogin && !name.trim()) {
-      toast({
-        title: 'Errore',
-        description: 'Inserisci il nome',
-        variant: 'destructive'
-      });
+    if (signupMode === 'create' && !teamName.trim()) {
+      toast({ title: 'Errore', description: 'Inserisci il nome del team.', variant: 'destructive' });
       return;
     }
-
-    if (!isLogin && !birthdate) {
-      toast({
-        title: 'Errore',
-        description: 'Seleziona la data di nascita',
-        variant: 'destructive'
-      });
+    if (signupMode === 'join' && !teamCode.trim()) {
+      toast({ title: 'Errore', description: 'Inserisci il codice team.', variant: 'destructive' });
       return;
     }
 
     try {
-      if (isLogin) {
-        const result = await dispatch(loginUser({ email, password }));
-        if (loginUser.fulfilled.match(result)) {
-          toast({ title: 'Benvenuto!', description: 'Login effettuato con successo' });
-          navigate('/');
+      // Step 1: Registra utente
+      const regResult = await dispatch(registerUser({ name, email, password, birthdate }));
+
+      if (!registerUser.fulfilled.match(regResult)) {
+        // L'errore viene gestito da Redux error state
+        return;
+      }
+
+      // Step 2: Crea o unisciti al team
+      if (signupMode === 'create') {
+        const teamResult = await dispatch(createTeam({ name: teamName.trim() }));
+        if (createTeam.fulfilled.match(teamResult)) {
+          toast({ title: 'Registrazione completata!', description: `Team "${teamName}" creato. Condividi il codice invito con i compagni.` });
+        } else {
+          toast({ title: 'Attenzione', description: 'Account creato, ma errore nella creazione del team. Potrai crearlo dopo.', variant: 'destructive' });
         }
       } else {
-        const result = await dispatch(registerUser({
-          name,
-          email,
-          password,
-          birthdate: birthdate,
-          existingTeamId: selectedTeamId || undefined
-        }));
-        if (registerUser.fulfilled.match(result)) {
-          toast({ title: 'Benvenuto!', description: 'Registrazione completata' });
-          navigate('/');
+        const joinResult = await dispatch(joinTeam({ inviteCode: teamCode.trim() }));
+        if (joinTeam.fulfilled.match(joinResult)) {
+          toast({ title: 'Registrazione completata!', description: 'Ti sei unito al team con successo.' });
+        } else {
+          toast({ title: 'Attenzione', description: 'Account creato, ma il codice team non è valido. Potrai unirti dopo.', variant: 'destructive' });
         }
       }
+
+      // Step 3: Aggiorna i dati utente (enriched con teams) prima di navigare
+      await dispatch(refreshUserData());
+
+      navigate('/');
     } catch (err: any) {
-      toast({
-        title: 'Errore',
-        description: err?.message || 'Errore imprevisto',
-        variant: 'destructive'
-      });
+      toast({ title: 'Errore', description: err?.message || 'Errore imprevisto.', variant: 'destructive' });
     }
   };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-1/2 -right-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-1/2 -left-1/4 w-96 h-96 bg-accent/20 rounded-full blur-3xl"></div>
+        <div className="absolute -top-1/2 -right-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl" />
+        <div className="absolute -bottom-1/2 -left-1/4 w-96 h-96 bg-accent/20 rounded-full blur-3xl" />
       </div>
 
-      <Card className="w-full max-w-md bg-card/80 backdrop-blur-sm border-border shadow-card relative z-10 animate-scale-in">
-        <CardHeader className="text-center space-y-4 pb-8">
+      <Card className="w-full max-w-md bg-card/80 backdrop-blur-sm border-border shadow-card relative z-10 animate-scale-in my-8">
+        <CardHeader className="text-center space-y-4 pb-6">
           <div className="mx-auto w-24 h-24 rounded-2xl overflow-hidden shadow-glow animate-glow">
             <img src="/FLAT_BG_W.png" alt="Pagelle FC Logo" className="w-full h-full object-cover" />
           </div>
@@ -162,145 +152,193 @@ const Login = () => {
             <CardTitle className="font-display text-4xl font-bold text-foreground mb-2">
               Pagelle FC
             </CardTitle>
-            <CardDescription className="text-muted-foreground text-base">
-              {isLogin ? 'Accedi al tuo account' : 'Crea il tuo account'}
+            <CardDescription className="text-muted-foreground">
+              Vota, confronta, vinci con il tuo team
             </CardDescription>
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="flex items-center gap-2 text-foreground font-medium">
-                <Mail className="w-4 h-4 text-primary" />
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="bg-secondary/40 border-border focus:border-primary transition-all h-12"
-                placeholder={isLogin ? "Simone o simone@team.com" : "simone@email.com"}
-              />
-            </div>
 
-            {!isLogin && (
-              <>
-                <div className="space-y-2 animate-slide-in">
-                  <Label htmlFor="name" className="flex items-center gap-2 text-foreground font-medium">
-                    <User className="w-4 h-4 text-primary" />
-                    Nome
+        <CardContent className="space-y-4">
+          <Tabs value={tab} onValueChange={(v) => setTab(v as 'login' | 'signup')}>
+            <TabsList className="grid grid-cols-2 w-full">
+              <TabsTrigger value="login">Accedi</TabsTrigger>
+              <TabsTrigger value="signup">Registrati</TabsTrigger>
+            </TabsList>
+
+            {/* ========== LOGIN TAB ========== */}
+            <TabsContent value="login" className="space-y-4 mt-4">
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-primary" /> Nome o Email
                   </Label>
                   <Input
-                    id="name"
                     type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="bg-secondary/40 border-border focus:border-primary transition-all h-12"
-                    placeholder="Simone Rossi"
+                    className="h-12"
+                    placeholder="Simone o simone@team.com"
                   />
                 </div>
-                {/* Data di nascita */}
-                <div className="space-y-2 animate-slide-in">
-                  <Label htmlFor="birthdate" className="flex items-center gap-2 text-foreground font-medium">
-                    <CalendarIcon className="w-4 h-4 text-primary" />
-                    Data di Nascita
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-primary" /> Password
                   </Label>
                   <Input
-                    id="birthdate"
-                    type="date"
-                    value={birthdate}
-                    onChange={(e) => setBirthdate(e.target.value)}
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="bg-secondary/40 border-border focus:border-primary transition-all h-12"
+                    className="h-12"
+                    placeholder="••••••••"
                   />
                 </div>
-                {/* Team selection - solo registrazione */}
-                <div className="space-y-2 animate-slide-in">
-                  <OptionsDropdown
-                    label="Team (opzionale)"
-                    placeholder="Scegli un team esistente"
-                    options={teams}
-                    value={selectedTeamId}
-                    onChange={setSelectedTeamId}
-                    loading={teamsLoading}
-                    allowEmpty={true}
-                    emptyLabel="Registrazione solo utente"
-                    icon={Users}
-                  />
+
+                {error && tab === 'login' && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
+                <Button type="submit" disabled={isLoading} className="w-full h-12 font-display font-bold text-lg shadow-glow">
+                  {isLoading ? 'Attendere...' : 'Accedi'}
+                </Button>
+              </form>
+            </TabsContent>
+
+            {/* ========== SIGNUP TAB ========== */}
+            <TabsContent value="signup" className="space-y-4 mt-4">
+              {/* Sub-tabs: Crea team / Unisciti */}
+              <Tabs value={signupMode} onValueChange={(v) => setSignupMode(v as 'create' | 'join')}>
+                <TabsList className="grid grid-cols-2 w-full">
+                  <TabsTrigger value="create" className="gap-1.5">
+                    <Users className="w-4 h-4" /> Crea team
+                  </TabsTrigger>
+                  <TabsTrigger value="join" className="gap-1.5">
+                    <KeyRound className="w-4 h-4" /> Unisciti
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+
+              <form onSubmit={handleSignup} className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-primary" /> Il tuo nome
+                  </Label>
+                  <Input value={name} onChange={(e) => setName(e.target.value)} required className="h-12" placeholder="Mario Rossi" />
                 </div>
-              </>
-            )}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-primary" /> Email
+                  </Label>
+                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="h-12" placeholder="mario@esempio.com" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <CalendarIcon className="w-4 h-4 text-primary" /> Data di nascita
+                  </Label>
+                  <Input type="date" value={birthdate} onChange={(e) => setBirthdate(e.target.value)} required className="h-12" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-primary" /> Password
+                  </Label>
+                  <Input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="h-12"
+                    placeholder="••••••••"
+                  />
+                  {password.length > 0 && (
+                    <div className="mt-2 p-3 rounded-lg bg-muted/30 border border-border/50">
+                      <p className="text-sm font-medium text-foreground mb-2">Requisiti Password:</p>
+                      <div className="space-y-1">
+                        {Object.entries({
+                          minLength: 'Almeno 6 caratteri',
+                          hasUppercase: 'Una lettera maiuscola',
+                          hasLowercase: 'Una lettera minuscola',
+                          hasNumber: 'Un numero',
+                          hasSpecialChar: 'Un carattere speciale (!@#$%^&*)',
+                        }).map(([rule, text]) => {
+                          const valid = getPasswordValidationRules()[rule as keyof ReturnType<typeof getPasswordValidationRules>];
+                          return (
+                            <div key={rule} className="flex items-center gap-2">
+                              {valid ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-red-500" />}
+                              <span className={`text-xs ${valid ? 'text-green-600' : 'text-muted-foreground'}`}>{text}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="flex items-center gap-2 text-foreground font-medium">
-                <Lock className="w-4 h-4 text-primary" />
-                Password
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="bg-secondary/40 border-border focus:border-primary transition-all h-12"
-                placeholder="••••••••"
-              />
-
-              {/* Regole Password - Solo nella registrazione */}
-              {!isLogin && password.length > 0 && (
-                <div className="mt-3 p-3 rounded-lg bg-muted/30 border border-border/50">
-                  <p className="text-sm font-medium text-foreground mb-2">Requisiti Password:</p>
-                  <div className="space-y-1">
-                    {Object.entries({
-                      minLength: 'Almeno 6 caratteri',
-                      hasUppercase: 'Una lettera maiuscola',
-                      hasLowercase: 'Una lettera minuscola',
-                      hasNumber: 'Un numero',
-                      hasSpecialChar: 'Un carattere speciale (!@#$%^&*)'
-                    }).map(([rule, text]) => {
-                      const isValid = getPasswordValidationRules()[rule as keyof ReturnType<typeof getPasswordValidationRules>];
-                      return (
-                        <div key={rule} className="flex items-center gap-2">
-                          {isValid ? (
-                            <Check className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <X className="h-4 w-4 text-red-500" />
-                          )}
-                          <span className={`text-xs ${isValid ? 'text-green-600' : 'text-muted-foreground'}`}>
-                            {text}
-                          </span>
-                        </div>
-                      );
-                    })}
+                {/* Campi team in base al mode */}
+                {signupMode === 'create' ? (
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-primary" /> Nome del nuovo team
+                    </Label>
+                    <Input value={teamName} onChange={(e) => setTeamName(e.target.value)} required className="h-12" placeholder="Es: I Guerrieri" />
+                    <p className="text-xs text-muted-foreground">
+                      Dopo la registrazione riceverai un codice da condividere con i compagni.
+                    </p>
                   </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <KeyRound className="w-4 h-4 text-primary" /> Codice team
+                    </Label>
+                    <Input
+                      value={teamCode}
+                      onChange={(e) => setTeamCode(e.target.value.toUpperCase())}
+                      required
+                      className="h-12 uppercase tracking-widest font-mono"
+                      placeholder="ABC123"
+                      maxLength={10}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Inserisci il codice ricevuto da un membro del team.
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex items-start gap-2 pt-2">
+                  <Checkbox id="terms" checked={acceptTerms} onCheckedChange={(v) => setAcceptTerms(!!v)} />
+                  <Label htmlFor="terms" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
+                    Accetto la{' '}
+                    <Link to="/privacy" target="_blank" className="text-primary underline">Privacy Policy</Link>
+                    {' '}e i{' '}
+                    <Link to="/terms" target="_blank" className="text-primary underline">Termini di Servizio</Link>.
+                  </Label>
                 </div>
-              )}
-            </div>
 
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+                {error && tab === 'signup' && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
 
-            <Button
-              type="submit"
-              disabled={isLoading || (!isLogin && !isRegistrationFormValid())}
-              className="w-full h-12 text-primary-foreground font-display font-bold text-lg shadow-glow disabled:opacity-50"
-            >
-              {isLoading ? 'Attendere...' : (isLogin ? 'Accedi' : 'Registrati')}
-            </Button>
-          </form>
-          <div className="text-center pt-2">
-            <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-primary hover:text-accent transition-colors font-medium"
-            >
-              {isLogin ? 'Non hai un account? Registrati' : 'Hai già un account? Accedi'}
-            </button>
+                <Button
+                  type="submit"
+                  disabled={isLoading || !isPasswordValid() || !acceptTerms}
+                  className="w-full h-12 font-display font-bold text-lg shadow-glow disabled:opacity-50"
+                >
+                  {isLoading ? 'Attendere...' : 'Registrati'}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
+
+          <div className="text-center text-xs text-muted-foreground pt-4 border-t border-border space-x-3">
+            <Link to="/privacy" className="hover:text-primary">Privacy</Link>
+            <span>·</span>
+            <Link to="/terms" className="hover:text-primary">Termini</Link>
+            <span>·</span>
+            <Link to="/cookie-policy" className="hover:text-primary">Cookie</Link>
           </div>
         </CardContent>
       </Card>

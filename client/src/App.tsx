@@ -8,9 +8,9 @@ import { ProtectedRouteRedux } from "./components/ProtectedRouteRedux";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import VotePage from "./pages/Vote.tsx";
-
 import MatchDetails from "./pages/MatchDetails";
 import NotFound from "./pages/NotFound";
+import TeamPage from "./pages/Team.tsx";
 
 // 🚀 STEP 1: Code splitting per pagine meno critiche
 const TestVote = lazy(() => import("./pages/TestVote.tsx"));
@@ -98,6 +98,16 @@ const App = () => (
               <Suspense fallback={<PageSkeleton />}>
                 <ProtectedRouteRedux>
                   <PlayerCards />
+                </ProtectedRouteRedux>
+              </Suspense>
+            }
+          />
+          <Route
+            path="/team"
+            element={
+              <Suspense fallback={<PageSkeleton />}>
+                <ProtectedRouteRedux>
+                  <TeamPage />
                 </ProtectedRouteRedux>
               </Suspense>
             }

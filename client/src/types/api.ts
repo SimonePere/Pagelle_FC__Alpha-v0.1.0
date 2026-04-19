@@ -55,6 +55,7 @@ export interface User {
       primary: string;
       secondary: string;
     };
+    city?: string;
     settings: {
       isPrivate: boolean;
       maxMembers: number;
@@ -100,6 +101,7 @@ export interface Team {
   _id: string;
   name: string;
   description?: string;
+  city?: string;
   logo?: string;
   creator: string | User;
   memberIds: User[];
@@ -137,6 +139,21 @@ export interface CreateTeamRequest {
 
 export interface JoinTeamRequest {
   inviteCode: string;
+}
+
+export interface UpdateTeamRequest {
+  name?: string;
+  description?: string;
+  city?: string;
+  avatar?: string;
+  colors?: {
+    primary?: string;
+    secondary?: string;
+  };
+  settings?: {
+    autoApprove?: boolean;
+    allowGuestVoting?: boolean;
+  };
 }
 
 // Match Types

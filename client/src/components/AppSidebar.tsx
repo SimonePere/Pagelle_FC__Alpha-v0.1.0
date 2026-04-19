@@ -1,8 +1,9 @@
-import { Home, PlusCircle, User, Trophy, LogOut, History, BarChart3, Vote, Clock, Star, FileText, Archive } from "lucide-react";
+import { Home, PlusCircle, User, Trophy, LogOut, History, BarChart3, Vote, Clock, Star, FileText, Archive, Shield } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@/redux/store/store';
 import { logout } from '@/redux/slices/authSlice';
+import { useActiveTeamId } from '@/hooks/useActiveTeamId';
 import { useEffect, useState } from "react";
 import {
   Sidebar,
@@ -26,11 +27,13 @@ const navItems = [
   { title: "Statistiche", url: "/stats", icon: BarChart3, inDevelopment: true },
   { title: "Player Cards", url: "/player-cards", icon: Star, showCardsBadge: true },
   { title: "Crea Partita", url: "/create-match", icon: PlusCircle },
+  { title: "Team", url: "/team", icon: Shield },
 ];
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const { user } = useSelector((state: RootState) => state.auth);
+  const { activeTeam } = useActiveTeamId();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const isCollapsed = state === "collapsed";
@@ -91,7 +94,7 @@ export function AppSidebar() {
                     {user.name}
                   </p>
                   <p className="text-xs text-sidebar-muted-foreground">
-                    Team: {user.teams?.[0]?.name || user.teamName || 'N/A'}
+                    Team: {activeTeam?.name || user.teamName || 'N/A'}
                   </p>
                 </div>
               )}

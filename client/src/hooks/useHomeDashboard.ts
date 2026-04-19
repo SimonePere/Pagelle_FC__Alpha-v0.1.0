@@ -19,6 +19,7 @@ import { User } from '@/types/api';
 import { PlayerCard } from '@/types/playerCard';
 import { api } from '@/lib/api';
 import useAppData from './useAppData';
+import { useActiveTeamId } from './useActiveTeamId';
 import { getLatestRelease, getUnseenReleases, type WhatsNewRelease } from '@/data/whats-new-data';
 
 // Types per Home Dashboard
@@ -95,6 +96,7 @@ interface UseHomeDashboardReturn {
 export const useHomeDashboard = (): UseHomeDashboardReturn => {
     const { user } = useSelector((state: RootState) => state.auth);
     const dispatch = useDispatch<AppDispatch>();
+    const { activeTeamId } = useActiveTeamId();
 
     // 🎯 Base data da useAppData - include NEWS!
     const {
@@ -170,45 +172,40 @@ export const useHomeDashboard = (): UseHomeDashboardReturn => {
 
     // 🧮 Computed: Pending matches from matches data
     const pendingMatches = useMemo(() => {
-        if (!matches?.length || !user?.teams?.[0]?.id) return [];
+        if (!matches?.length || !activeTeamId) return [];
 
-        const currentTeamId = user.teams[0].id;
         return matches
-            .filter(m => m.teamId === currentTeamId)
+            .filter(m => m.teamId === activeTeamId)
             .filter(m => m.status === 'active');
-    }, [matches, user?.teams]);
+    }, [matches, activeTeamId]);
 
     // 🧮 Computed: All users filtered by team
     const allUsers = useMemo(() => {
-        if (!user?.teams?.[0]?.id) return [];
+        if (!activeTeamId) return [];
 
         // Preferisci users da Redux se disponibili, altrimenti fallback localStorage
         if (users?.length) {
-            const currentTeamId = user.teams[0].id;
-            return users.filter((u: any) => u.teamId === currentTeamId);
+            return users.filter((u: any) => u.teamId === activeTeamId);
         }
 
         // Fallback localStorage (compatibilità)
         const storedUsers = JSON.parse(localStorage.getItem('users') || '[]');
-        const currentTeamId = user.teams[0].id;
-        return storedUsers.filter((u: any) => u.teamId === currentTeamId);
-    }, [users, user?.teams]);
+        return storedUsers.filter((u: any) => u.teamId === activeTeamId);
+    }, [users, activeTeamId]);
 
     // 🧮 Computed: Player cards filtered by team
     const playerCardsFiltered = useMemo(() => {
-        if (!user?.teams?.[0]?.id) return [];
+        if (!activeTeamId) return [];
 
         // Preferisci playerCards da Redux se disponibili, altrimenti fallback localStorage
         if (playerCards?.length) {
-            const currentTeamId = user.teams[0].id;
-            return playerCards.filter((c: any) => c.teamId === currentTeamId);
+            return playerCards.filter((c: any) => c.teamId === activeTeamId);
         }
 
         // Fallback localStorage (compatibilità)
         const storedCards = JSON.parse(localStorage.getItem('playerCards') || '[]') as PlayerCard[];
-        const currentTeamId = user.teams[0].id;
-        return storedCards.filter(c => c.teamId === currentTeamId);
-    }, [playerCards, user?.teams]);
+        return storedCards.filter(c => c.teamId === activeTeamId);
+    }, [playerCards, activeTeamId]);
 
     // 🎯 Load enriched user data effect
     useEffect(() => {
@@ -241,11 +238,10 @@ export const useHomeDashboard = (): UseHomeDashboardReturn => {
 
     // 🎯 Auto-load leaderboard when activeLeaderboard or team changes
     useEffect(() => {
-        const currentTeamId = user?.teams?.[0]?.id;
-        if (currentTeamId) {
-            loadLeaderboard(activeLeaderboard, currentTeamId);
+        if (activeTeamId) {
+            loadLeaderboard(activeLeaderboard, activeTeamId);
         }
-    }, [activeLeaderboard, user?.teams?.[0]?.id]);
+    }, [activeLeaderboard, activeTeamId]);
 
     // 🔗 Combined loading states
     const combinedLoading = {

@@ -108,11 +108,39 @@ const leaveTeam = async (req, res, next) => {
   }
 };
 
+// @desc    Update team details
+// @route   PUT /api/v1/teams/:id
+// @access  Private (admin only)
+const updateTeam = async (req, res, next) => {
+  try {
+    const result = await teamService.updateTeam(req.params.id, req.user.id, req.body);
+
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Remove a member from team
+// @route   DELETE /api/v1/teams/:id/members/:userId
+// @access  Private (admin only)
+const removeMember = async (req, res, next) => {
+  try {
+    const result = await teamService.removeMember(req.params.id, req.user.id, req.params.userId);
+
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAllTeams,
   createTeam,
   getTeam,
   joinTeam,
   getMyTeams,
-  leaveTeam
+  leaveTeam,
+  updateTeam,
+  removeMember
 };

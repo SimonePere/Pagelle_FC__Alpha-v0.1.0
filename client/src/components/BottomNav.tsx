@@ -1,4 +1,4 @@
-import { Home, PlusCircle, User, Trophy, BarChart3, Vote, Clock, Star, FileText } from "lucide-react";
+import { Home, PlusCircle, User, Trophy, BarChart3, Vote, Clock, Star, FileText, Shield } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { motion } from "framer-motion";
 import { useSelector } from 'react-redux';
@@ -7,11 +7,13 @@ import { useEffect, useState } from "react";
 import { PlayerCard } from "@/types/playerCard";
 import { hasUserSubmitted as hasUserSubmittedCard } from "@/utils/playerCardCalculations";
 import { Badge } from "@/components/ui/badge";
+import { useActiveTeamId } from "@/hooks/useActiveTeamId";
 
 // Eliminare hover su navbar, perche fa sbagliare le larghezze dei bottoni su mobile
 
 export function BottomNav() {
   const { user } = useSelector((state: RootState) => state.auth);
+  const { activeTeamId } = useActiveTeamId();
   const [pendingVotesCount, setPendingVotesCount] = useState(0);
   const [pendingCardsCount, setPendingCardsCount] = useState(0);
 
@@ -27,7 +29,7 @@ export function BottomNav() {
       const users = JSON.parse(localStorage.getItem('users') || '[]');
 
       // Get user team ID
-      const userTeamId = user.teams?.[0]?.id;
+      const userTeamId = activeTeamId;
       if (!userTeamId) return;
 
       const teamMembers = users.filter((u: any) => u.teamId === userTeamId);
@@ -54,6 +56,7 @@ export function BottomNav() {
     { icon: Vote, label: "Vota", path: "/vote", showVoteBadge: true },
     { icon: FileText, label: "Storico", path: "/history", showVoteBadge: true },
     { icon: Star, label: "Cards", path: "/player-cards", showCardsBadge: true },
+    { icon: Shield, label: "Team", path: "/team", showCardsBadge: true },
     // { icon: BarChart3, label: "Statistiche", path: "/stats" },
   ];
 

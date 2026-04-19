@@ -188,6 +188,7 @@ class TeamService {
                     id: team._id,
                     name: team.name,
                     description: team.description,
+                    city: team.city,
                     inviteCode: isMember ? team.inviteCode : undefined, // Solo membri vedono il codice
                     createdBy: team.createdBy,
                     memberIds: team.memberIds,
@@ -197,8 +198,12 @@ class TeamService {
                     settings: team.settings,
                     stats: team.stats,
                     colors: team.colors,
+                    avatar: team.avatar,
+                    isActive: team.isActive,
                     isUserMember: isMember,
-                    isUserAdmin: team.isAdmin(userId)
+                    isUserAdmin: team.isAdmin(userId),
+                    createdAt: team.createdAt,
+                    updatedAt: team.updatedAt
                 }
             };
 
@@ -440,6 +445,163 @@ class TeamService {
 
     async getMyTeams(userId) {
         return this.getUserTeams(userId);
+    }
+
+    /**
+     * Aggiorna i dettagli di un team (solo admin)
+     * @param {string} teamId - ID del team
+     * @param {string} userId - ID dell'utente che fa la modifica
+     * @param {Object} updateData - Campi da aggiornare (name, description, city)
+     * @returns {Promise<Object>} Team aggiornato
+     */
+    async updateTeam(teamId, userId, updateData) {
+        this.validateTeamId(teamId);
+        this.validateUserId(userId);
+
+        try {
+            const team = await this.teamRepository.findById(teamId);
+            if (!team) {
+                throw new AppError('Team not found', 404);
+            }
+
+            // Solo admin possono modificare il team
+            if (!team.isAdmin(userId)) {
+                throw new AppError('Only team admins can update team details', 403);
+            }
+
+            // Whitelist dei campi modificabili
+            const allowedFields = ['name', 'description', 'city', 'avatar'];
+            const sanitizedUpdate = {};
+            for (const key of allowedFields) {
+                if (updateData[key] !== undefined) {
+                    sanitizedUpdate[key] = typeof updateData[key] === 'string'
+                        ? updateData[key].trim()
+                        : updateData[key];
+                }
+            }
+
+            // Gestione settings (oggetto nested, solo booleani)
+            if (updateData.settings && typeof updateData.settings === 'object') {
+                const settingsUpdate = {};
+                if (typeof updateData.settings.autoApprove === 'boolean') {
+                    settingsUpdate['settings.autoApprove'] = updateData.settings.autoApprove;
+                }
+                if (typeof updateData.settings.allowGuestVoting === 'boolean') {
+                    settingsUpdate['settings.allowGuestVoting'] = updateData.settings.allowGuestVoting;
+                }
+                if (Object.keys(settingsUpdate).length > 0) {
+                    Object.assign(sanitizedUpdate, settingsUpdate);
+                }
+            }
+
+            // Gestione colors (oggetto nested)
+            if (updateData.colors && typeof updateData.colors === 'object') {
+                const colorUpdate = {};
+                if (updateData.colors.primary && /^#[0-9A-F]{6}$/i.test(updateData.colors.primary)) {
+                    colorUpdate.primary = updateData.colors.primary;
+                }
+                if (updateData.colors.secondary && /^#[0-9A-F]{6}$/i.test(updateData.colors.secondary)) {
+                    colorUpdate.secondary = updateData.colors.secondary;
+                }
+                if (Object.keys(colorUpdate).length > 0) {
+                    sanitizedUpdate.colors = colorUpdate;
+                }
+            }
+
+            if (Object.keys(sanitizedUpdate).length === 0) {
+                throw new AppError('No valid fields to update', 400);
+            }
+
+            // Se si sta cambiando il nome, verifica unicità
+            if (sanitizedUpdate.name) {
+                if (sanitizedUpdate.name.length < 2) {
+                    throw new AppError('Team name must be at least 2 characters long', 400);
+                }
+                const existingTeam = await this.teamRepository.findOne({
+                    name: sanitizedUpdate.name,
+                    _id: { $ne: teamId }
+                });
+                if (existingTeam) {
+                    throw new AppError('Team name already exists', 400);
+                }
+            }
+
+            const updatedTeam = await this.teamRepository.updateById(teamId, sanitizedUpdate);
+
+            return {
+                success: true,
+                message: 'Team updated successfully',
+                team: {
+                    id: updatedTeam._id,
+                    name: updatedTeam.name,
+                    description: updatedTeam.description,
+                    city: updatedTeam.city,
+                    inviteCode: updatedTeam.inviteCode,
+                    totalMembers: updatedTeam.totalMembers,
+                    settings: updatedTeam.settings,
+                    stats: updatedTeam.stats,
+                    colors: updatedTeam.colors,
+                    avatar: updatedTeam.avatar
+                }
+            };
+
+        } catch (error) {
+            if (error instanceof AppError) throw error;
+            throw new AppError(`Failed to update team: ${error.message}`, 500);
+        }
+    }
+
+    /**
+     * Rimuove un membro dal team (solo admin)
+     * @param {string} teamId - ID del team
+     * @param {string} adminUserId - ID dell'admin che esegue la rimozione
+     * @param {string} targetUserId - ID del membro da rimuovere
+     * @returns {Promise<Object>} Risultato rimozione
+     */
+    async removeMember(teamId, adminUserId, targetUserId) {
+        this.validateTeamId(teamId);
+        this.validateUserId(adminUserId);
+        this.validateUserId(targetUserId);
+
+        try {
+            const team = await this.teamRepository.findById(teamId);
+            if (!team) {
+                throw new AppError('Team not found', 404);
+            }
+
+            // Solo admin possono rimuovere membri
+            if (!team.isAdmin(adminUserId)) {
+                throw new AppError('Only team admins can remove members', 403);
+            }
+
+            // Non puoi rimuovere te stesso (usa leaveTeam)
+            if (adminUserId === targetUserId) {
+                throw new AppError('Use leave team to remove yourself', 400);
+            }
+
+            // Verifica che il target sia membro
+            if (!team.isMember(targetUserId)) {
+                throw new AppError('User is not a member of this team', 400);
+            }
+
+            // Rimuovi il membro
+            team.removeMember(targetUserId);
+            await this.teamRepository.save(team);
+
+            // Aggiorna teamIds dell'utente rimosso
+            await this.userRepository.updateById(targetUserId, {
+                $pull: { teamIds: team._id }
+            });
+
+            return {
+                success: true,
+                message: 'Member removed successfully'
+            };
+
+        } catch (error) {
+            if (error instanceof AppError) throw error;
+            throw new AppError(`Failed to remove member: ${error.message}`, 500);
+        }
     }
 }
 

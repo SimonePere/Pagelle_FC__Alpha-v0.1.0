@@ -21,6 +21,7 @@ import {
     fetchNewsByPriority,
     fetchUrgentNews
 } from '@/redux/slices/newsSlice';
+import { useActiveTeamId } from './useActiveTeamId';
 
 
 interface UseAppDataReturn {
@@ -66,6 +67,7 @@ interface UseAppDataReturn {
 export const useAppData = (): UseAppDataReturn => {
     const dispatch = useDispatch<AppDispatch>();
     const { user } = useSelector((state: RootState) => state.auth);
+    const { activeTeamId } = useActiveTeamId();
 
     // 📊 Selettori Redux granulari (ENTERPRISE)
     const { matches, isLoading: matchesLoading, error: matchesError } = useSelector((state: RootState) => state.matches);
@@ -105,13 +107,14 @@ export const useAppData = (): UseAppDataReturn => {
             return;
         }
 
-        const teamId = user.teams[0].id;
+        const teamId = activeTeamId;
+        if (!teamId) return;
         dispatch(fetchTeamMatches(teamId));
         dispatch(fetchTeamUsers(teamId));
         dispatch(fetchTeamPlayerCards(teamId));
         dispatch(fetchUserVotingSessions({ page: 1, limit: 50 }));
         dispatch(fetchRecentNews(teamId)); // 🎯 News recenti per dashboard
-    }, [user, dispatch]);
+    }, [user, activeTeamId, dispatch]);
 
     // 🔄 Auto-refresh su visibility change (per tutte le pagine)
     useEffect(() => {
@@ -119,7 +122,8 @@ export const useAppData = (): UseAppDataReturn => {
             return;
         }
 
-        const teamId = user.teams[0].id;
+        const teamId = activeTeamId;
+        if (!teamId) return;
 
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
@@ -144,7 +148,8 @@ export const useAppData = (): UseAppDataReturn => {
     const refreshData = () => {
         if (!user || !user.teams?.length) return;
 
-        const teamId = user.teams[0].id;
+        const teamId = activeTeamId;
+        if (!teamId) return;
         // 🔄 Refresh manuale di tutti i dati
         dispatch(fetchTeamMatches(teamId));
         dispatch(fetchTeamUsers(teamId));
@@ -156,7 +161,8 @@ export const useAppData = (): UseAppDataReturn => {
     // 📰 Metodi granulari per componenti specifici
     const loadNewsByCategory = (category: string) => {
         if (!user || !user.teams?.length) return;
-        const teamId = user.teams[0].id;
+        const teamId = activeTeamId;
+        if (!teamId) return;
         dispatch(fetchNewsByCategory({ category, teamId }));
     };
 

@@ -36,9 +36,19 @@ router.post('/join', auth, teamController.joinTeam);
 // @access  Private
 router.get('/:id', auth, teamController.getTeam);
 
+// @route   PUT /api/v1/teams/:id
+// @desc    Update team details
+// @access  Private (admin only)
+router.put('/:id', auth, teamController.updateTeam);
+
 // @route   DELETE /api/v1/teams/:id/leave
 // @desc    Leave team
 // @access  Private
 router.delete('/:id/leave', auth, teamController.leaveTeam);
+
+// @route   DELETE /api/v1/teams/:id/members/:userId
+// @desc    Remove member from team
+// @access  Private (admin only)
+router.delete('/:id/members/:userId', auth, teamController.removeMember);
 
 module.exports = router;

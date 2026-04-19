@@ -5,7 +5,7 @@
 
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { api } from "../../lib/api";
-import { Team, CreateTeamRequest, JoinTeamRequest } from "../../types/api";
+import { Team, CreateTeamRequest, JoinTeamRequest, UpdateTeamRequest } from "../../types/api";
 
 interface TeamState {
   teams: Team[];
@@ -62,7 +62,7 @@ export const createTeam = createAsyncThunk(
     try {
       const response = await api.post('/teams', teamData);
       dispatch(fetchMyTeams());
-      return response;
+      return response.team;
     } catch (error: any) {
       return rejectWithValue(error.message || 'Errore nella creazione del team');
     }
@@ -75,7 +75,7 @@ export const joinTeam = createAsyncThunk(
     try {
       const response = await api.post('/teams/join', joinData);
       dispatch(fetchMyTeams());
-      return response;
+      return response.team || response;
     } catch (error: any) {
       return rejectWithValue(error.message || 'Errore nell\'unirsi al team');
     }
@@ -107,6 +107,32 @@ export const searchTeams = createAsyncThunk(
   }
 );
 
+export const updateTeam = createAsyncThunk(
+  'teams/update',
+  async ({ teamId, data }: { teamId: string; data: UpdateTeamRequest }, { rejectWithValue }) => {
+    try {
+      const response = await api.put(`/teams/${teamId}`, data);
+      return response.team;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Errore nell\'aggiornamento del team');
+    }
+  }
+);
+
+export const removeMember = createAsyncThunk(
+  'teams/removeMember',
+  async ({ teamId, userId }: { teamId: string; userId: string }, { rejectWithValue, dispatch }) => {
+    try {
+      const response = await api.delete(`/teams/${teamId}/members/${userId}`);
+      // Ricarica i dettagli del team per avere i membri aggiornati
+      dispatch(fetchTeamById(teamId));
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Errore nella rimozione del membro');
+    }
+  }
+);
+
 const initialState: TeamState = {
   teams: [],
   myTeams: [],
@@ -133,19 +159,19 @@ const teamSlice = createSlice({
     },
     updateTeamInLists: (state, action: PayloadAction<Team>) => {
       const updatedTeam = action.payload;
-      
+
       // Aggiorna nei team pubblici
       const teamIndex = state.teams.findIndex(t => t._id === updatedTeam._id);
       if (teamIndex !== -1) {
         state.teams[teamIndex] = updatedTeam;
       }
-      
+
       // Aggiorna nei miei team
       const myTeamIndex = state.myTeams.findIndex(t => t._id === updatedTeam._id);
       if (myTeamIndex !== -1) {
         state.myTeams[myTeamIndex] = updatedTeam;
       }
-      
+
       // Aggiorna il team corrente se è quello modificato
       if (state.currentTeam?._id === updatedTeam._id) {
         state.currentTeam = updatedTeam;
@@ -167,7 +193,7 @@ const teamSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      
+
     // Fetch my teams
     builder
       .addCase(fetchMyTeams.pending, (state) => {
@@ -177,7 +203,7 @@ const teamSlice = createSlice({
       .addCase(fetchMyTeams.fulfilled, (state, action) => {
         state.myTeams = action.payload;
         state.isLoading = false;
-        
+
         // Se non c'è un team corrente e abbiamo team, imposta il primo come corrente
         if (!state.currentTeam && action.payload.length > 0) {
           state.currentTeam = action.payload[0];
@@ -187,7 +213,7 @@ const teamSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      
+
     // Fetch team by ID
     builder
       .addCase(fetchTeamById.pending, (state) => {
@@ -202,7 +228,7 @@ const teamSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      
+
     // Create team
     builder
       .addCase(createTeam.pending, (state) => {
@@ -218,7 +244,7 @@ const teamSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      
+
     // Join team
     builder
       .addCase(joinTeam.pending, (state) => {
@@ -239,7 +265,7 @@ const teamSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      
+
     // Leave team
     builder
       .addCase(leaveTeam.pending, (state) => {
@@ -249,19 +275,19 @@ const teamSlice = createSlice({
       .addCase(leaveTeam.fulfilled, (state, action) => {
         const leftTeamId = action.payload;
         state.myTeams = state.myTeams.filter(t => t._id !== leftTeamId);
-        
+
         // Se il team corrente è quello che abbiamo lasciato, cambialo
         if (state.currentTeam?._id === leftTeamId) {
           state.currentTeam = state.myTeams.length > 0 ? state.myTeams[0] : null;
         }
-        
+
         state.isLoading = false;
       })
       .addCase(leaveTeam.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      
+
     // Search teams
     builder
       .addCase(searchTeams.pending, (state) => {
@@ -275,15 +301,49 @@ const teamSlice = createSlice({
       .addCase(searchTeams.rejected, (state, action) => {
         state.isSearching = false;
         state.error = action.payload as string;
+      })
+
+    // Update team
+    builder
+      .addCase(updateTeam.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(updateTeam.fulfilled, (state, action) => {
+        state.currentTeam = action.payload;
+        // Aggiorna anche nelle liste
+        const idx = state.myTeams.findIndex(t => t._id === action.payload._id);
+        if (idx !== -1) {
+          state.myTeams[idx] = action.payload;
+        }
+        state.isLoading = false;
+      })
+      .addCase(updateTeam.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
+
+    // Remove member
+    builder
+      .addCase(removeMember.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(removeMember.fulfilled, (state) => {
+        state.isLoading = false;
+      })
+      .addCase(removeMember.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
       });
   },
 });
 
-export const { 
-  setCurrentTeam, 
-  clearError, 
-  clearSearchResults, 
-  updateTeamInLists 
+export const {
+  setCurrentTeam,
+  clearError,
+  clearSearchResults,
+  updateTeamInLists
 } = teamSlice.actions;
 
 export default teamSlice.reducer;

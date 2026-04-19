@@ -68,6 +68,11 @@ const teamSchema = new mongoose.Schema({
     trim: true,
     maxlength: [500, 'Description cannot exceed 500 characters']
   },
+  city: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'City name cannot exceed 100 characters']
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
