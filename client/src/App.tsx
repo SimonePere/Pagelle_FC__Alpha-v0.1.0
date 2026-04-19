@@ -24,6 +24,11 @@ const CreateMatch = lazy(() => import("./pages/CreateMatch"));
 const History = lazy(() => import("./pages/History"));
 const PlayerCards = lazy(() => import("./pages/PlayerCards"));
 
+// Pagine legali (pubbliche)
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
+const CookiePolicy = lazy(() => import("./pages/CookiePolicy"));
+
 // ⚡ Loading skeleton component
 const PageSkeleton = () => {
   return (
@@ -47,6 +52,9 @@ const App = () => (
         <Routes>
           {/* Route pubbliche */}
           <Route path="/login" element={<Login />} />
+          <Route path="/privacy" element={<Suspense fallback={<PageSkeleton />}><Privacy /></Suspense>} />
+          <Route path="/terms" element={<Suspense fallback={<PageSkeleton />}><Terms /></Suspense>} />
+          <Route path="/cookie-policy" element={<Suspense fallback={<PageSkeleton />}><CookiePolicy /></Suspense>} />
 
           {/* Route protette con Redux */}
           <Route path="/" element={<ProtectedRouteRedux><Home /></ProtectedRouteRedux>} />

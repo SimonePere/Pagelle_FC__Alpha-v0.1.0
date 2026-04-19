@@ -11,6 +11,7 @@ import { BadgesSection } from '@/components/BadgesSection';
 import MatchCard from '@/components/MatchCard';
 import { OnboardingTutorial } from '@/components/OnboardingTutorial';
 import useHomeDashboard from '@/hooks/useHomeDashboard';
+import { WeatherWidget } from '@/components/WeatherWidget';
 
 // Types now handled by useHomeDashboard hook
 type LeaderboardType = 'rating' | 'goals' | 'assists' | 'playercard' | 'stats-per-match';
@@ -177,6 +178,7 @@ const Home = () => {
                 </button>
               </motion.div>
             </div>
+            <WeatherWidget />
 
             {/* Compact Stats Row */}
             <div className="grid grid-cols-3 gap-3">
