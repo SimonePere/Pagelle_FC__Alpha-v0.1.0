@@ -13,7 +13,7 @@ import NotFound from "./pages/NotFound";
 import TeamPage from "./pages/Team.tsx";
 
 // 🚀 STEP 1: Code splitting per pagine meno critiche
-const TestVote = lazy(() => import("./pages/TestVote.tsx"));
+const TestVote = lazy(() => import("./pages/TestPage.tsx")); // Pagina di test con mock, non critica per il primo accesso
 
 // 🚀 STEP 2: Code splitting per pagine medie
 const Profile = lazy(() => import("./pages/Profile"));

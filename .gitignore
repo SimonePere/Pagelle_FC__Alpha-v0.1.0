@@ -119,6 +119,13 @@ temp/
 .vercel
 
 # ===========================
+# BUSINESS ANALYSIS (docs interni)
+# ===========================
+Analisi_Business_prompt.txt
+Risposta business analysis.txt
+business-analysis/
+
+# ===========================
 # DEVELOPMENT
 # ===========================
 .eslintcache
