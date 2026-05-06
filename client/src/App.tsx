@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Suspense, lazy } from "react";
 import { ProtectedRouteRedux } from "./components/ProtectedRouteRedux";
+import { Skeleton } from "@/components/ui/skeleton";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import VotePage from "./pages/Vote.tsx";
@@ -36,6 +37,136 @@ const PageSkeleton = () => {
       <div className="text-center space-y-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
         <p className="text-slate-300 text-lg">🚀 Code Splitting attivo - Caricamento...</p>
+      </div>
+    </div>
+  );
+};
+
+const HistoryPageSkeleton = () => {
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="pb-24 lg:pb-8">
+        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+          <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-sm border-border shadow-card p-8">
+            <div className="space-y-4">
+              <Skeleton className="h-10 w-48" />
+              <Skeleton className="h-5 w-full max-w-md" />
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 p-4 bg-secondary/20 rounded-lg">
+              <Skeleton className="h-10 w-24" />
+              <Skeleton className="h-9 w-24" />
+            </div>
+
+            <div className="space-y-4">
+              {Array.from({ length: 4 }).map((_, idx) => (
+                <div key={`history-route-skeleton-${idx}`} className="bg-card/80 backdrop-blur-sm border border-border shadow-card rounded-lg p-6 space-y-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-3 flex-1">
+                      <Skeleton className="h-7 w-44" />
+                      <Skeleton className="h-4 w-40" />
+                    </div>
+                    <div className="space-y-2">
+                      <Skeleton className="h-6 w-20" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-4 w-full" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PlayerCardsPageSkeleton = () => {
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="pb-24 lg:pb-8">
+        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+          <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-sm border-border shadow-card p-8">
+            <div className="space-y-4">
+              <Skeleton className="h-10 w-52" />
+              <Skeleton className="h-5 w-full max-w-lg" />
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="bg-card/80 backdrop-blur-sm border border-border shadow-card rounded-lg p-6 space-y-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-3 flex-1">
+                  <Skeleton className="h-8 w-44" />
+                  <Skeleton className="h-5 w-64" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-12" />
+                  <Skeleton className="h-12 w-20" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 pt-4">
+                {Array.from({ length: 10 }).map((_, idx) => (
+                  <Skeleton key={`player-cards-attr-skeleton-${idx}`} className="h-4 w-full" />
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <Skeleton className="h-9 w-9 rounded-md" />
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-9 w-9 rounded-md" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ProfilePageSkeleton = () => {
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="pb-4 lg:pb-8">
+        <div className="p-4 pt-2 lg:p-8 space-y-5 lg:space-y-8 max-w-7xl mx-auto">
+          <div className="bg-card/80 backdrop-blur-sm border border-border shadow-card rounded-lg p-6 space-y-5">
+            <div className="flex items-start gap-4">
+              <Skeleton className="w-20 h-20 rounded-full" />
+              <div className="space-y-3 flex-1">
+                <Skeleton className="h-8 w-56" />
+                <Skeleton className="h-4 w-64" />
+                <Skeleton className="h-4 w-44" />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              {Array.from({ length: 3 }).map((_, idx) => (
+                <Skeleton key={`profile-stat-skeleton-${idx}`} className="h-20 w-full rounded-lg" />
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-card/80 backdrop-blur-sm border border-border shadow-card rounded-lg p-6 space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-3 flex-1">
+                <Skeleton className="h-8 w-40" />
+                <Skeleton className="h-4 w-48" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-12" />
+                <Skeleton className="h-10 w-16" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {Array.from({ length: 10 }).map((_, idx) => (
+                <Skeleton key={`profile-navigator-skeleton-${idx}`} className="h-4 w-full" />
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -73,7 +204,7 @@ const App = () => (
           <Route
             path="/profile"
             element={
-              <Suspense fallback={<PageSkeleton />}>
+              <Suspense fallback={<ProfilePageSkeleton />}>
                 <ProtectedRouteRedux>
                   <Profile />
                 </ProtectedRouteRedux>
@@ -83,7 +214,7 @@ const App = () => (
           <Route
             path="/history"
             element={
-              <Suspense fallback={<PageSkeleton />}>
+              <Suspense fallback={<HistoryPageSkeleton />}>
                 <ProtectedRouteRedux>
                   <History />
                 </ProtectedRouteRedux>
@@ -103,7 +234,7 @@ const App = () => (
           <Route
             path="/player-cards"
             element={
-              <Suspense fallback={<PageSkeleton />}>
+              <Suspense fallback={<PlayerCardsPageSkeleton />}>
                 <ProtectedRouteRedux>
                   <PlayerCards />
                 </ProtectedRouteRedux>

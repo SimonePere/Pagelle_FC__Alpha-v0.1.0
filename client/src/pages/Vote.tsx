@@ -13,10 +13,12 @@ import { VotingSession } from '../types/voting';
 import { motion } from 'framer-motion';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { Card, CardContent } from '../components/ui/card';
+import { Skeleton } from '../components/ui/skeleton';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
+import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
 import {
   Vote as VotingIcon,
   CheckCircle2,
@@ -25,11 +27,53 @@ import {
   Activity,
   Archive,
   AlertCircle,
-  FileText
+  Info
 } from 'lucide-react';
 import { PlayerCardVote } from '../components/voting/index';
 import { MatchRatingVote } from '../components/voting/index';
 import { VoteCard } from '../components/VoteCard';
+
+const VoteDashboardSkeleton: React.FC = () => {
+  return (
+    <div className="space-y-6">
+      <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-sm border-border shadow-card p-5 sm:p-6 lg:p-8">
+        <div className="flex items-center justify-between gap-4">
+          <Skeleton className="h-9 w-44" />
+          <Skeleton className="h-9 w-9 rounded-full" />
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <Card key={`vote-skeleton-${index}`} className="bg-card/80 backdrop-blur-sm border-border shadow-card">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-3 flex-1">
+                  <Skeleton className="h-7 w-44" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-20" />
+                  <Skeleton className="h-6 w-24" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-3 w-10" />
+                </div>
+                <Skeleton className="h-2 w-full" />
+              </div>
+
+              <Skeleton className="h-10 w-full" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 // Giocatori astenuti da votazione helper
 const isUserAbstained = (session: VotingSession, userId: string): boolean => {
@@ -137,9 +181,9 @@ const Vote: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="pb-24 lg:pb-8">
+      <div className="pb-4 lg:pb-8">
 
-        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <div className="p-4 pt-2 lg:p-8 space-y-5 lg:space-y-8 max-w-7xl mx-auto">
 
           {/* Se siamo in modalità votazione, mostra il componente specifico */}
           {viewMode === 'voting' && selectedSession ? (
@@ -186,12 +230,7 @@ const Vote: React.FC = () => {
             <>
               {/* Loading state - identico a PlayerCards */}
               {isLoading && (
-                <div className="flex items-center justify-center py-12">
-                  <div className="text-center space-y-4">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                    <p className="text-muted-foreground">Caricamento sessioni...</p>
-                  </div>
-                </div>
+                <VoteDashboardSkeleton />
               )}
 
               {/* Content - mostra solo dopo aver caricato - IDENTICO TEMPLATE PLAYERCARDS */}
@@ -202,16 +241,34 @@ const Vote: React.FC = () => {
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-sm border-border shadow-card p-8"
+                      className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-sm border-border shadow-card p-5 sm:p-6 lg:p-8"
                     >
                       <div className="relative z-10">
-                        <h1 className="font-display text-4xl font-bold text-foreground flex items-center gap-3">
-                          <FileText className="w-8 h-8 text-primary" />
-                          Votazioni
-                        </h1>
-                        <p className="text-muted-foreground text-lg mt-4">
-                          Vota le prestazioni dei tuoi compagni di squadra.
-                        </p>
+                        <div className="flex items-center justify-between gap-4">
+                          <h1 className="font-display text-3xl sm:text-4xl leading-none font-bold text-foreground flex items-center gap-2 sm:gap-3">
+                            <VotingIcon className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
+                            Votazioni
+                          </h1>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button
+                                type="button"
+                                aria-label="Informazioni votazioni"
+                                className="p-2 rounded-full hover:bg-primary/10 transition-colors"
+                              >
+                                <Info className="w-5 h-5 text-primary cursor-pointer" />
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80" side="bottom" align="end">
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-foreground">Come Funziona</h4>
+                                <p className="text-sm text-muted-foreground">
+                                  Vota le prestazioni dei tuoi compagni di squadra.
+                                </p>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
                       </div>
                       <div className="absolute top-0 right-0 w-48 h-48 bg-primary/10 rounded-full blur-3xl"></div>
                     </motion.div>

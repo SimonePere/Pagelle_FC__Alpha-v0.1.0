@@ -30,7 +30,7 @@ export default function MatchDetails() {
   const { matchVoting, sessions } = useSelector((state: RootState) => state.voting);
 
   // 🎯 ENRICHED MATCHES - Con dati astenuti integrati + refresh function
-  const { matches: enrichedMatches, refreshData } = useEnrichedMatches();
+  const { matches: enrichedMatches, refreshData, abstainedInfoLoading } = useEnrichedMatches();
   const currentMatch = enrichedMatches?.find?.(match => match?.id === matchId) || null;
 
   const dispatch = useDispatch<AppDispatch>();
@@ -343,6 +343,7 @@ export default function MatchDetails() {
               submissions={matchVoting.submissions}
               isVotingLoading={matchVoting.isLoading}
               votingError={matchVoting.error}
+              isAbstainedInfoLoading={abstainedInfoLoading}
               index={0}
               onClick={() => { }}
               onVoteClick={() => { }}

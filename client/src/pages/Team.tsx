@@ -9,10 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Copy, Trash2, Save, MapPin, KeyRound, LogOut, Palette, Trophy, Goal, UserCheck, Calendar, Shield, Image, ToggleLeft, Upload, ChevronDown } from 'lucide-react';
+import { Users, Copy, Trash2, Save, MapPin, KeyRound, LogOut, Palette, Trophy, Goal, UserCheck, Calendar, Shield, Image, ToggleLeft, Upload, ChevronDown, Info } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { motion } from 'framer-motion';
 import { fetchTeamById, leaveTeam, updateTeam, removeMember } from '@/redux/slices/teamSlice';
 import { refreshUserData } from '@/redux/slices/authSlice';
@@ -35,7 +35,7 @@ export default function TeamPage() {
   const [editAutoApprove, setEditAutoApprove] = useState(false);
   const [editAllowGuestVoting, setEditAllowGuestVoting] = useState(false);
 
-  const { activeTeamId, userTeams, hasMultipleTeams, setActiveTeamId } = useActiveTeamId();
+  const { activeTeamId } = useActiveTeamId();
 
   // Carica team e membri
   useEffect(() => {
@@ -66,8 +66,8 @@ export default function TeamPage() {
   if (teamLoading && !currentTeam) {
     return (
       <DashboardLayout>
-        <div className="pb-24 lg:pb-8">
-          <div className="p-6 lg:p-8 max-w-4xl mx-auto">
+        <div className="pb-4 lg:pb-8">
+          <div className="p-4 pt-2 lg:p-8 max-w-4xl mx-auto">
             <Card className="bg-card/80 backdrop-blur-sm border-border shadow-card">
               <CardContent className="py-10 text-center text-muted-foreground">
                 Caricamento team in corso...
@@ -82,11 +82,11 @@ export default function TeamPage() {
   if (!currentTeam) {
     return (
       <DashboardLayout>
-        <div className="pb-24 lg:pb-8">
-          <div className="p-6 lg:p-8 max-w-4xl mx-auto space-y-4">
+        <div className="pb-4 lg:pb-8">
+          <div className="p-4 pt-2 lg:p-8 max-w-4xl mx-auto space-y-4">
             <Card className="bg-card/80 backdrop-blur-sm border-border shadow-card">
               <CardHeader>
-                <CardTitle>Il Mio Team</CardTitle>
+                <CardTitle>Il tuo team</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 {!activeTeamId && (
@@ -243,41 +243,48 @@ export default function TeamPage() {
 
   return (
     <DashboardLayout>
-      <div className="pb-24 lg:pb-8">
-        <div className="p-6 lg:p-8 space-y-8 max-w-4xl mx-auto">
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-4">
-            <Avatar className="w-14 h-14 rounded-lg shadow-glow border border-border">
-              <AvatarImage src={(currentTeam as any).avatar} alt={(currentTeam as any).name} className="rounded-lg object-cover" />
-              <AvatarFallback className="rounded-lg bg-gradient-primary text-primary-foreground font-display font-bold text-lg">
-                {(currentTeam as any).name?.substring(0, 2).toUpperCase() || 'T'}
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0 flex-1">
-              {hasMultipleTeams ? (
-                <Select value={activeTeamId} onValueChange={(id) => { setActiveTeamId(id); dispatch(fetchTeamById(id)); }}>
-                  <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 gap-2">
-                    <h1 className="font-display text-4xl font-bold text-foreground truncate">
-                      <SelectValue />
-                    </h1>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {userTeams.map(t => (
-                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <h1 className="font-display text-4xl font-bold text-foreground">{(currentTeam as any).name || 'Team'}</h1>
-              )}
-              <p className="text-muted-foreground">Gestisci team, codice invito e membri</p>
+      <div className="pb-4 lg:pb-8">
+        <div className="p-4 pt-2 lg:p-8 space-y-5 lg:space-y-8 max-w-4xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-sm border-border shadow-card p-5 sm:p-6 lg:p-8"
+          >
+            <div className="relative z-10">
+              <div className="flex items-center justify-between gap-4">
+                <h1 className="font-display text-3xl sm:text-4xl leading-none font-bold text-foreground flex items-center gap-2 sm:gap-3">
+                  <Shield className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
+                  Il tuo team
+                </h1>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Informazioni team"
+                      className="p-2 rounded-full hover:bg-primary/10 transition-colors"
+                    >
+                      <Info className="w-5 h-5 text-primary cursor-pointer" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80" side="bottom" align="end">
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-foreground">Come Funziona</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Gestisci membri, impostazioni e codice invito del team attivo.
+                      </p>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
+            <div className="absolute top-0 right-0 w-48 h-48 bg-primary/10 rounded-full blur-3xl"></div>
           </motion.div>
 
           {/* Dettagli team */}
           <Card className="bg-card/80 backdrop-blur-sm border-border shadow-card">
-            <CardHeader>
+            {/* <CardHeader>
               <CardTitle>Dettagli team</CardTitle>
-            </CardHeader>
+            </CardHeader> */}
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Nome del team</Label>

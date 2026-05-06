@@ -4,6 +4,7 @@ import { PlayerAttributes } from "@/types/playerCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, ChevronRight, Users, CheckCircle2, Clock, Star } from "lucide-react";
 import { usePlayerSpecialties } from "@/hooks/usePlayerSpecialties";
 import { SpecialtiesBadgeList } from "@/components/SpecialtyBadge";
@@ -70,6 +71,7 @@ interface PlayerCardNavigatorProps {
   onLoadResults?: (playerId: string) => Promise<PlayerCardResult | null>;
   initialPlayerId?: string;
   showNavigation?: boolean;
+  showCounter?: boolean;
 }
 
 type CardMode = 'empty' | 'voting' | 'completed';
@@ -99,7 +101,8 @@ export function PlayerCardNavigator({
   onVote,
   onLoadResults,
   initialPlayerId,
-  showNavigation = true
+  showNavigation = true,
+  showCounter = true
 }: PlayerCardNavigatorProps) {
   const [currentIndex, setCurrentIndex] = useState(() => {
     if (initialPlayerId) {
@@ -112,6 +115,7 @@ export function PlayerCardNavigator({
 
   const [direction, setDirection] = useState(0);
   const [cardResults, setCardResults] = useState<Record<string, PlayerCardResult>>({});
+  const [loadingResults, setLoadingResults] = useState<Record<string, boolean>>({});
 
   const currentPlayer = players[currentIndex];
 
@@ -161,7 +165,12 @@ export function PlayerCardNavigator({
   // Load results quando necessario
   useEffect(() => {
     if (getCardMode() === 'completed' && onLoadResults && currentPlayer) {
-      if (!cardResults[currentPlayer.id]) {
+      if (!cardResults[currentPlayer.id] && !loadingResults[currentPlayer.id]) {
+        setLoadingResults(prev => ({
+          ...prev,
+          [currentPlayer.id]: true
+        }));
+
         onLoadResults(currentPlayer.id).then(result => {
           if (result) {
             setCardResults(prev => ({
@@ -171,10 +180,15 @@ export function PlayerCardNavigator({
           }
         }).catch(error => {
           console.error('Error loading results:', error);
+        }).finally(() => {
+          setLoadingResults(prev => ({
+            ...prev,
+            [currentPlayer.id]: false
+          }));
         });
       }
     }
-  }, [currentIndex, currentPlayer, onLoadResults, cardResults]);
+  }, [currentIndex, currentPlayer, onLoadResults, cardResults, loadingResults]);
 
   if (!currentPlayer) {
     return (
@@ -186,11 +200,12 @@ export function PlayerCardNavigator({
 
   const cardMode = getCardMode();
   const currentResult = cardResults[currentPlayer.id];
+  const isResultLoading = !!loadingResults[currentPlayer.id];
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-3 sm:space-y-6">
       {/* Main Card Area */}
-      <div className="relative h-[610px] overflow-hidden">
+      <div className="relative h-[520px] sm:h-[610px] overflow-hidden">
         <AnimatePresence initial={false} custom={direction} mode="wait">
           <motion.div
             key={currentIndex}
@@ -210,6 +225,7 @@ export function PlayerCardNavigator({
               mode={cardMode}
               session={currentSession}
               result={currentResult}
+              isResultLoading={isResultLoading}
               onCreateSession={() => onCreateSession(currentPlayer.id)}
               onVote={() => currentSession && onVote(currentSession.id)}
             />
@@ -218,7 +234,7 @@ export function PlayerCardNavigator({
       </div>
 
       {/* Navigation */}
-      {showNavigation && (
+      {showNavigation && players.length > 1 && (
         <>
           <div className="flex items-center justify-center space-x-4">
             {/* Previous Button */}
@@ -256,10 +272,11 @@ export function PlayerCardNavigator({
             </Button>
           </div>
 
-          {/* Player Counter */}
-          <div className="text-center text-sm text-muted-foreground">
-            {currentIndex + 1} / {players.length}
-          </div>
+          {showCounter && (
+            <div className="text-center text-sm text-muted-foreground">
+              {currentIndex + 1} / {players.length}
+            </div>
+          )}
         </>
       )}
     </div>
@@ -272,11 +289,12 @@ interface PlayerCardProps {
   mode: CardMode;
   session?: PlayerCardSession;
   result?: PlayerCardResult;
+  isResultLoading?: boolean;
   onCreateSession: () => void;
   onVote: () => void;
 }
 
-function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: PlayerCardProps) {
+function PlayerCard({ player, mode, session, result, isResultLoading = false, onCreateSession, onVote }: PlayerCardProps) {
   // Helper per convertire API results in PlayerAttributes format
   const convertToPlayerAttributes = (apiResult: PlayerCardResult): PlayerAttributes => {
     // 🐛 DEBUG: Verifica che i dati delle stelle arrivino
@@ -317,8 +335,7 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
     return Array.from({ length: 5 }).map((_, i) => (
       <Star
         key={i}
-        size={16}
-        className={i < count ? "fill-primary text-primary" : "text-muted"}
+        className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${i < count ? "fill-primary text-primary" : "text-muted"}`}
       />
     ));
   };
@@ -343,14 +360,14 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
   return (
     <Card className="gradient-card border-border/50 shadow-card h-full flex flex-col">
       {/* Header */}
-      <div className="p-6 space-y-4">
+      <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <div className="flex items-center gap-3 mb-3">
-              <h2 className="font-display text-2xl font-bold text-foreground">
+            <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+              <h2 className="font-display text-xl sm:text-2xl font-bold text-foreground">
                 {player.name}
               </h2>
-              <Users className="w-5 h-5 text-muted-foreground" />
+              <Star className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
             </div>
 
             {/* Badges */}
@@ -382,7 +399,7 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
 
             {/* Session Info */}
             {session && (
-              <div className="text-sm text-muted-foreground mt-2">
+              <div className="text-xs sm:text-sm text-muted-foreground mt-2">
                 {session.submissionsCount} voti raccolti
                 {session.participationRate && (
                   <div> {session.participationRate}% partecipazione</div>
@@ -395,12 +412,20 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
           {mode === 'completed' && result && (
             <div className="text-center">
               <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wide">TOT</div>
-              <div className={`font-display text-5xl font-black ${getOverallColor(result.finalOverallRating)} leading-none`}>
+              <div className={`font-display text-4xl sm:text-5xl font-black ${getOverallColor(result.finalOverallRating)} leading-none`}>
                 {result.finalOverallRating}
               </div>
-              <div className="text-sm text-muted-foreground font-medium mt-1">
+              <div className="text-xs sm:text-sm text-muted-foreground font-medium mt-1">
                 {result.profile.mostVotedPosition || 'N/A'}
               </div>
+            </div>
+          )}
+
+          {mode === 'completed' && !result && isResultLoading && (
+            <div className="text-center space-y-2">
+              <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wide">TOT</div>
+              <Skeleton className="h-12 w-20 mx-auto" />
+              <Skeleton className="h-4 w-14 mx-auto" />
             </div>
           )}
         </div>
@@ -408,7 +433,7 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
         {/* Basic Info */}
         <div className="space-y-1">
           {player.age && (
-            <div className="text-sm text-muted-foreground">
+            <div className="text-xs sm:text-sm text-muted-foreground">
               Età: {player.age}
             </div>
           )}
@@ -416,7 +441,7 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
       </div>
 
       {/* Content basato sulla modalità */}
-      <div className="flex-1 px-6">
+      <div className="flex-1 px-4 sm:px-6">
         {mode === 'completed' && result ? (
           (() => {
             // ✅ FIX: Controlla se ha VERI attributi portiere (non solo oggetto con valori null)
@@ -425,9 +450,9 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
 
             return hasValidGoalkeeperAttributes ? (
               // UI PORTIERI - Solo 5 attributi goalkeeper
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
 
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   <AttributeBar label="Tuffo" value={result.goalkeeperAttributes.tf} />
                   <AttributeBar label="Presa" value={result.goalkeeperAttributes.pr} />
                   <AttributeBar label="Rinvio" value={result.goalkeeperAttributes.rn} />
@@ -462,11 +487,11 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
               </div>
             ) : (
               // UI GIOCATORI NORMALI - 10 attributi a DUE COLONNE + stelle
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {/* Layout a due colonne per ottimizzare spazio */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
                   {/* Colonna Sinistra - 5 attributi */}
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     <AttributeBar label="Tiro" value={result.finalAttributes.tir} />
                     <AttributeBar label="Passaggio" value={result.finalAttributes.pas} />
                     <AttributeBar label="Dribbling" value={result.finalAttributes.dri} />
@@ -475,7 +500,7 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
                   </div>
 
                   {/* Colonna Destra - 5 attributi */}
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     <AttributeBar label="Resistenza" value={result.finalAttributes.res} />
                     <AttributeBar label="Forza" value={result.finalAttributes.for} />
                     <AttributeBar label="Contrasto" value={result.finalAttributes.con} />
@@ -510,16 +535,16 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
                 })()}
 
                 {/* Star Ratings - Solo per giocatori normali */}
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
+                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border/50">
                   <div>
-                    <div className="text-xs text-muted-foreground mb-1">Piede Debole</div>
+                    <div className="text-[11px] sm:text-xs text-muted-foreground mb-1">Piede Debole</div>
                     <div className="flex gap-0.5">{renderStars((() => {
                       const piedeDebole = result.finalAdditionalAttributes?.piedeDebole || 3;
                       return piedeDebole;
                     })())}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-muted-foreground mb-1">Skill</div>
+                    <div className="text-[11px] sm:text-xs text-muted-foreground mb-1">Skill</div>
                     <div className="flex gap-0.5">{renderStars((() => {
                       const skill = result.finalAdditionalAttributes?.skill || 3;
                       return skill;
@@ -529,6 +554,18 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
               </div>
             )
           })() // ← Chiusura della funzione anonima
+        ) : mode === 'completed' && isResultLoading ? (
+          <div className="space-y-3 sm:space-y-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              {Array.from({ length: 10 }).map((_, idx) => (
+                <Skeleton key={`completed-attr-skeleton-${idx}`} className="h-4 w-full" />
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 pt-3 border-t border-border/50">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          </div>
         ) : (
           // Modalità Empty/Voting - Placeholder o progress
           <div className="flex items-center justify-center h-64">
@@ -557,7 +594,7 @@ function PlayerCard({ player, mode, session, result, onCreateSession, onVote }: 
 
       {/* Actions */}
       {mode !== 'completed' && (
-        <div className="p-6 pt-0 space-y-2">
+        <div className="p-4 sm:p-6 pt-0 space-y-2">
           {mode === 'empty' && (
             <Button
               className="w-full"

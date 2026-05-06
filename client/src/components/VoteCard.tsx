@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import { Skeleton } from './ui/skeleton';
 import {
   Calendar,
   Users,
   Vote as VotingIcon,
   CheckCircle2,
-  Clock
+  Clock,
+  PenLine
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -60,6 +62,44 @@ export const VoteCard: React.FC<VoteCardProps> = ({
   onClick,
   onVoteClick
 }) => {
+  const [isActionPending, setIsActionPending] = useState(false);
+  const pendingDelayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pendingDelayTimeoutRef.current) {
+        clearTimeout(pendingDelayTimeoutRef.current);
+      }
+      if (pendingResetTimeoutRef.current) {
+        clearTimeout(pendingResetTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const triggerVoteAction = () => {
+    if (!onVoteClick) return;
+
+    if (pendingDelayTimeoutRef.current) {
+      clearTimeout(pendingDelayTimeoutRef.current);
+    }
+    if (pendingResetTimeoutRef.current) {
+      clearTimeout(pendingResetTimeoutRef.current);
+    }
+
+    // Mostra inline skeleton solo se la transizione non e istantanea.
+    pendingDelayTimeoutRef.current = setTimeout(() => {
+      setIsActionPending(true);
+    }, 220);
+
+    onVoteClick(match);
+
+    // Fallback anti-stato bloccato in caso di transizione non avvenuta.
+    pendingResetTimeoutRef.current = setTimeout(() => {
+      setIsActionPending(false);
+    }, 1800);
+  };
+
   // 🛡️ Controllo di sicurezza per l'oggetto match (identico a MatchCard)
   if (!match) {
     return (
@@ -147,9 +187,11 @@ export const VoteCard: React.FC<VoteCardProps> = ({
 
   // 🎯 Handler per click (ottimizzato per modalità pulsante dedicato)
   const handleCardClick = () => {
+    if (isActionPending) return;
+
     if (!showVoteButton && onVoteClick && voting.isVotable && !voting.hasVoted) {
       // Modalità legacy: click card = voto (se showVoteButton=false)
-      onVoteClick(match);
+      triggerVoteAction();
     } else if (onClick) {
       // Modalità preferita: click card = info/navigazione
       onClick(match);
@@ -158,9 +200,7 @@ export const VoteCard: React.FC<VoteCardProps> = ({
 
   const handleVoteButtonClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Evita bubble su card click
-    if (onVoteClick) {
-      onVoteClick(match);
-    }
+    triggerVoteAction();
   };
 
   return (
@@ -251,9 +291,19 @@ export const VoteCard: React.FC<VoteCardProps> = ({
                         className="w-full"
                         variant="outline"
                         onClick={handleVoteButtonClick}
+                        disabled={isActionPending}
                       >
-                        <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />
-                        ✏️ Modifica Voto
+                        {isActionPending ? (
+                          <span className="flex items-center gap-2 w-full justify-center">
+                            <Skeleton className="h-4 w-4 rounded-full bg-muted-foreground/30" />
+                            <Skeleton className="h-4 w-24 bg-muted-foreground/30" />
+                          </span>
+                        ) : (
+                          <>
+                            <PenLine className="h-4 w-4 mr-2" />
+                            Modifica Voto
+                          </>
+                        )}
                       </Button>
                     ) : (
                       // Sessione completata → badge statico
@@ -266,9 +316,19 @@ export const VoteCard: React.FC<VoteCardProps> = ({
                         className="w-full"
                         variant="default"
                         onClick={handleVoteButtonClick}
+                        disabled={isActionPending}
                       >
-                        <VotingIcon className="w-4 h-4 mr-2" />
-                        Vota Ora
+                        {isActionPending ? (
+                          <span className="flex items-center gap-2 w-full justify-center">
+                            <Skeleton className="h-4 w-4 rounded-full bg-white/40" />
+                            <Skeleton className="h-4 w-16 bg-white/40" />
+                          </span>
+                        ) : (
+                          <>
+                            <VotingIcon className="w-4 h-4 mr-2" />
+                            Vota Ora
+                          </>
+                        )}
                       </Button>
                     ) : null}
                 </>

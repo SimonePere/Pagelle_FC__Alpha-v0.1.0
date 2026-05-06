@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import { Skeleton } from './ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import {
   Trophy,
@@ -12,7 +13,8 @@ import {
   ArrowUp,
   ArrowDown,
   Eye,
-  FileText
+  FileText,
+  Plus
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -24,14 +26,61 @@ import useEnrichedMatches from '@/hooks/useEnrichedMatches';
 interface MatchCardProps {
   match: any;
   index: number;
+  isAbstainedInfoLoading?: boolean;
 }
 
 interface MatchGridProps {
   showStats?: boolean;
   title?: string;
+  onCreateMatch?: () => void;
 }
 
-function MatchCard({ match, index }: MatchCardProps) {
+const MatchGridLoadingSkeleton: React.FC<{ showStats: boolean; showCreateAction: boolean }> = ({ showStats, showCreateAction }) => {
+  return (
+    <div className="space-y-6">
+      {showStats && (
+        <div className="grid grid-cols-4 gap-2">
+          {Array.from({ length: 4 }).map((_, idx) => (
+            <div key={`stats-skeleton-${idx}`} className="text-center p-3 bg-secondary/40 rounded-lg">
+              <Skeleton className="h-8 w-10 mx-auto mb-2" />
+              <Skeleton className="h-3 w-12 mx-auto" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center gap-3 p-4 bg-secondary/20 rounded-lg">
+        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-9 w-24" />
+        {showCreateAction && <Skeleton className="h-9 w-9 rounded-md ml-auto" />}
+      </div>
+
+      <div className="space-y-4">
+        {Array.from({ length: 4 }).map((_, idx) => (
+          <Card key={`match-card-skeleton-${idx}`} className="bg-card/80 backdrop-blur-sm border-border shadow-card">
+            <CardHeader className="pb-3 pt-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-3 flex-1">
+                  <Skeleton className="h-7 w-44" />
+                  <Skeleton className="h-4 w-40" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-20" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0 pb-6">
+              <Skeleton className="h-4 w-full" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+function MatchCard({ match, index, isAbstainedInfoLoading = false }: MatchCardProps) {
   const navigate = useNavigate();
 
   // Controllo di sicurezza per l'oggetto match
@@ -144,8 +193,17 @@ function MatchCard({ match, index }: MatchCardProps) {
           </div>
         )}
 
+        {isAbstainedInfoLoading && match.status !== 'draft' && (
+          <div className="px-6 pb-6">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 flex-shrink-0 text-orange-400" />
+              <Skeleton className="h-4 w-56 max-w-[80%]" />
+            </div>
+          </div>
+        )}
+
         {/* 🧪 TEST: Sezione Astenuti - NUOVA */}
-        {match.hasAbstained && (
+        {!isAbstainedInfoLoading && match.hasAbstained && (
           <div className="px-6 pb-6">
             <div className="flex items-start gap-2 text-sm">
               <Users className="w-4 h-4 flex-shrink-0 mt-0.5 text-orange-500" />
@@ -160,10 +218,10 @@ function MatchCard({ match, index }: MatchCardProps) {
   );
 }
 
-const MatchGrid: React.FC<MatchGridProps> = ({ showStats = true }) => {
+const MatchGrid: React.FC<MatchGridProps> = ({ showStats = true, onCreateMatch }) => {
 
   // 🧪 TEST: Sostituiamo useAppData con useEnrichedMatches
-  const { matches, isLoading } = useEnrichedMatches();
+  const { matches, isLoading, abstainedInfoLoading } = useEnrichedMatches();
 
   const matchesAreLoading = isLoading.matches;
 
@@ -213,12 +271,7 @@ const MatchGrid: React.FC<MatchGridProps> = ({ showStats = true }) => {
     <div className="space-y-6">
       {/* Loading state */}
       {matchesAreLoading && (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center space-y-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="text-muted-foreground">Caricamento partite...</p>
-          </div>
-        </div>
+        <MatchGridLoadingSkeleton showStats={showStats} showCreateAction={!!onCreateMatch} />
       )}
 
       {/* Content */}
@@ -285,6 +338,17 @@ const MatchGrid: React.FC<MatchGridProps> = ({ showStats = true }) => {
               </Button>
             </div>
 
+            {onCreateMatch && (
+              <Button
+                size="icon"
+                onClick={onCreateMatch}
+                className="ml-auto bg-accent hover:bg-accent/90 text-accent-foreground"
+                aria-label="Aggiungi nuova partita"
+                title="Nuova partita"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            )}
 
           </div>
 
@@ -311,6 +375,7 @@ const MatchGrid: React.FC<MatchGridProps> = ({ showStats = true }) => {
                   key={match?.id || `match-${index}`}
                   match={match}
                   index={index}
+                  isAbstainedInfoLoading={abstainedInfoLoading}
                 />
               ))
             )}

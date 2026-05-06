@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { useSelector } from 'react-redux';
 import { RootState } from '@/redux/store/store';
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { FileText, Plus } from "lucide-react";
+import { FileText, Info } from "lucide-react";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import MatchGrid from "@/components/MatchGrid";
 import { Component, ReactNode } from "react";
 
@@ -71,32 +71,39 @@ export default function History() {
 
   return (
     <DashboardLayout>
-      <div className="pb-24 lg:pb-8">
-        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+      <div className="pb-4 lg:pb-8">
+        <div className="p-4 pt-2 lg:p-8 space-y-5 lg:space-y-8 max-w-7xl mx-auto">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-sm border-border shadow-card p-8"
+            className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-sm border-border shadow-card p-5 sm:p-6 lg:p-8"
           >
             <div className="relative z-10">
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div>
-                  <h1 className="font-display text-4xl font-bold text-foreground flex items-center gap-3">
-                    <FileText className="w-8 h-8 text-primary" />
-                    Storico
-                  </h1>
-                  <p className="text-muted-foreground text-lg mt-4">
-                    Rivedi le partite passate e quelle in corso del tuo team.
-                  </p>
-                </div>
-                <Button
-                  onClick={handleCreateMatch}
-                  className="bg-accent hover:bg-accent/90 text-accent-foreground font-semibold px-4 py-2 h-auto md:px-6 md:py-3"
-                >
-                  <Plus className="w-4 h-4 mr-1 md:w-5 md:h-5 md:mr-2" />
-                  <span className="text-sm md:text-base">Nuovo</span>
-                </Button>
+              <div className="flex items-center justify-between gap-4">
+                <h1 className="font-display text-3xl sm:text-4xl leading-none font-bold text-foreground flex items-center gap-2 sm:gap-3">
+                  <FileText className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
+                  Storico
+                </h1>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Informazioni storico"
+                      className="p-2 rounded-full hover:bg-primary/10 transition-colors"
+                    >
+                      <Info className="w-5 h-5 text-primary cursor-pointer" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80" side="bottom" align="end">
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-foreground">Come Funziona</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Rivedi le partite passate e quelle in corso del tuo team.
+                      </p>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <div className="absolute top-0 right-0 w-48 h-48 bg-primary/10 rounded-full blur-3xl"></div>
@@ -111,7 +118,7 @@ export default function History() {
             transition={{ delay: 0.1 }}
           >
             <ErrorBoundary fallback={ErrorFallback}>
-              <MatchGrid showStats={false} />
+              <MatchGrid showStats={false} onCreateMatch={handleCreateMatch} />
             </ErrorBoundary>
           </motion.div>
 

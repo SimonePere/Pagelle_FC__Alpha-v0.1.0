@@ -44,6 +44,7 @@ interface EnrichedMatch {
 
 interface UseEnrichedMatchesReturn {
     matches: EnrichedMatch[];
+    abstainedInfoLoading: boolean;
     isLoading: {
         matches: boolean;
         users: boolean;
@@ -64,6 +65,7 @@ interface UseEnrichedMatchesReturn {
 
 export const useEnrichedMatches = (): UseEnrichedMatchesReturn => {
     const { matches, sessions, users, isLoading, error, refreshData } = useAppData();
+    const abstainedInfoLoading = isLoading.sessions || isLoading.users;
 
     const enrichedMatches = useMemo(() => {
         // 🛡️ SAFE FALLBACKS: Se non abbiamo dati, ritorna matches originali
@@ -138,6 +140,7 @@ export const useEnrichedMatches = (): UseEnrichedMatchesReturn => {
 
     return {
         matches: enrichedMatches,
+        abstainedInfoLoading,
         isLoading,
         error,
         refreshData

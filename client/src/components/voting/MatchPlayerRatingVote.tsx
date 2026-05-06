@@ -5,10 +5,11 @@ import { fetchMatchById } from '../../redux/slices/matchSlice';
 import { Button } from '../ui/button';
 import { RatingSlider } from '../RatingSlider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Skeleton } from '../ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
-import { Loader2, Send, Trophy, User, ChevronDown, Check } from 'lucide-react';
+import { Loader2, Send, Trophy, User, ChevronDown, Check, Vote as VotingIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import type { MatchPlayerRatingVote as MatchPlayerRatingVoteType, PlayerMatchBadge } from '../../types/voting';
@@ -113,6 +114,33 @@ const getCompactDate = (date?: string) => {
   }
 };
 
+const MatchVoteFormSkeleton: React.FC = () => {
+  return (
+    <div className="space-y-4">
+      <Card className="overflow-hidden">
+        <CardContent className="p-4 sm:p-6 space-y-4">
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-44" />
+            <Skeleton className="h-4 w-56" />
+          </div>
+
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-5/6" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+
+          <Skeleton className="h-10 w-full" />
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 export function MatchPlayerRatingVote({ sessionId, startInEditMode = false, onVoteComplete }: MatchPlayerRatingVoteProps) {
   const dispatch = useAppDispatch();
   const session = useAppSelector(state =>
@@ -123,6 +151,8 @@ export function MatchPlayerRatingVote({ sessionId, startInEditMode = false, onVo
   const [isEditMode, setIsEditMode] = useState(false);
   const [isLoadingMyVote, setIsLoadingMyVote] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [hasTriedAutoEdit, setHasTriedAutoEdit] = useState(false);
+  const [showDelayedLoadingSkeleton, setShowDelayedLoadingSkeleton] = useState(false);
 
   const voterId = user?.id || user?._id || null;
   // Lista utenti astenuti della sessione: questi player possono ricevere
@@ -153,10 +183,10 @@ export function MatchPlayerRatingVote({ sessionId, startInEditMode = false, onVo
 
   // Auto-enter edit mode se richiesto (click da VoteCard "Modifica Voto")
   useEffect(() => {
-    if (startInEditMode && session?.hasVoted && !isEditMode && matchPlayers.length > 0) {
+    if (startInEditMode && session?.hasVoted && !isEditMode && matchPlayers.length > 0 && !hasTriedAutoEdit) {
       handleEnterEditMode();
     }
-  }, [startInEditMode, session?.hasVoted, matchPlayers.length]);
+  }, [startInEditMode, session?.hasVoted, isEditMode, matchPlayers.length, hasTriedAutoEdit]);
 
   // Inizializza i rating quando i giocatori del match sono disponibili
   useEffect(() => {
@@ -182,6 +212,7 @@ export function MatchPlayerRatingVote({ sessionId, startInEditMode = false, onVo
   useEffect(() => {
     setCurrentPlayerIndex(0);
     setConfirmedPlayerIds([]);
+    setHasTriedAutoEdit(false);
   }, [sessionId]);
 
   useEffect(() => {
@@ -192,6 +223,28 @@ export function MatchPlayerRatingVote({ sessionId, startInEditMode = false, onVo
 
   const fieldType = currentMatch?.playersCount || matchPlayers.length || 8;
   const matchTypeTitle = `CALCIO A ${fieldType}`;
+  const shouldAutoEnterEdit = !!(startInEditMode && session?.hasVoted);
+  const isPreparingMatchData = matchLoading || matchPlayers.length === 0;
+  const isPreparingEditData = shouldAutoEnterEdit && !isEditMode && (!hasTriedAutoEdit || isLoadingMyVote);
+  const shouldBlockForLoading = isPreparingMatchData || isPreparingEditData;
+
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    if (shouldBlockForLoading) {
+      timeoutId = setTimeout(() => {
+        setShowDelayedLoadingSkeleton(true);
+      }, 260);
+    } else {
+      setShowDelayedLoadingSkeleton(false);
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [shouldBlockForLoading]);
 
   // Calcolo statistiche generali
   const averageRating = Object.keys(playerRatings).length > 0
@@ -312,12 +365,12 @@ export function MatchPlayerRatingVote({ sessionId, startInEditMode = false, onVo
       setPlayerRatings(restored);
       setMatchComments(voteData.overallComment || '');
       setIsEditMode(true);
-      toast.info('Modifica il tuo voto e reinvia');
     } catch (error) {
       toast.error('Errore nel recupero del voto');
       console.error('Errore fetch my vote:', error);
     } finally {
       setIsLoadingMyVote(false);
+      setHasTriedAutoEdit(true);
     }
   };
 
@@ -420,16 +473,13 @@ export function MatchPlayerRatingVote({ sessionId, startInEditMode = false, onVo
     );
   }
 
-  // Loading del match
-  if (matchLoading || matchPlayers.length === 0) {
+  if (shouldBlockForLoading && !showDelayedLoadingSkeleton) {
+    return null;
+  }
+
+  if (shouldBlockForLoading) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <p className="text-center text-muted-foreground">
-            Caricamento giocatori...
-          </p>
-        </CardContent>
-      </Card>
+      <MatchVoteFormSkeleton />
     );
   }
 
@@ -454,9 +504,12 @@ export function MatchPlayerRatingVote({ sessionId, startInEditMode = false, onVo
       {/* Header B: rail compatta senza card alta */}
       <div className="space-y-2.5">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-xl sm:text-2xl font-display font-bold tracking-tight text-foreground truncate leading-none">
-            Votazione partita
-          </p>
+          <div className="flex items-center gap-2 min-w-0">
+            <VotingIcon className="h-5 w-5 text-primary shrink-0" />
+            <p className="text-xl sm:text-2xl font-display font-bold tracking-tight text-foreground truncate leading-none">
+              Votazione partita
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-1.5 text-[15px] sm:text-base font-semibold min-w-0">
@@ -648,6 +701,13 @@ export function MatchPlayerRatingVote({ sessionId, startInEditMode = false, onVo
                       ? 'Confermi l\'ultimo voto e invii tutte le valutazioni in un unico invio.'
                       : `Confermi il voto di ${currentPlayer.name} e passi al prossimo giocatore da valutare.`}
                   </p>
+
+                  {(isSubmitting || isLoadingMyVote) && (
+                    <div className="flex items-center gap-2 px-1">
+                      <Skeleton className="h-3 w-32" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                  )}
 
                   <div className="flex flex-col sm:flex-row gap-3">
                     {currentPlayerIndex > 0 && (

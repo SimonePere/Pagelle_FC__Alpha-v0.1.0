@@ -10,7 +10,6 @@ import {
   fetchTeamMembers,
   selectPlayerCardSessions,
   selectActivePlayerCardSessions,
-  selectPlayerCardDashboardStats,
   selectTeamMembers,
   selectIsLoadingTeamMembers
 } from '@/redux/slices/votingSlice';
@@ -19,6 +18,7 @@ import { PlayerCardNavigator } from '@/components/PlayerCardNavigator';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { motion } from "framer-motion";
@@ -26,6 +26,42 @@ import { Users, CheckCircle2, Clock, Star, X, Info } from "lucide-react";
 import { toast } from "sonner";
 import { apiCall } from "@/lib/api";
 import { calculateAge } from "@/utils/playerCardCalculations";
+
+const PlayerCardsContentSkeleton = () => {
+  return (
+    <div className="space-y-4 mt-4">
+      <div className="bg-card/80 backdrop-blur-sm border border-border shadow-card rounded-lg p-4 sm:p-6 space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-3 flex-1">
+            <Skeleton className="h-7 w-40 sm:h-8 sm:w-48" />
+            <Skeleton className="h-4 w-full max-w-sm" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-12" />
+            <Skeleton className="h-10 w-14 sm:h-11 sm:w-16" />
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {Array.from({ length: 8 }).map((_, idx) => (
+            <Skeleton key={`player-cards-row-skeleton-${idx}`} className="h-4 w-full" />
+          ))}
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 pt-2">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-center gap-3">
+        <Skeleton className="h-9 w-9 rounded-md" />
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="h-9 w-9 rounded-md" />
+      </div>
+    </div>
+  );
+};
 
 export default function PlayerCards() {
   const navigate = useNavigate();
@@ -36,7 +72,6 @@ export default function PlayerCards() {
   // Redux selectors
   const playerCardSessions = useSelector(selectPlayerCardSessions);
   const activePlayerCardSessions = useSelector(selectActivePlayerCardSessions);
-  const dashboardStats = useSelector(selectPlayerCardDashboardStats);
   const teamMembers = useSelector(selectTeamMembers);
   const isLoadingTeamMembers = useSelector(selectIsLoadingTeamMembers);
 
@@ -214,37 +249,32 @@ export default function PlayerCards() {
     });
   }, [playerCardSessions]);
 
+  const shouldShowPageSkeleton = isLoadingTeamMembers;
+  const shouldShowContentSkeleton = !showVoteForm && isLoadingSessions;
+
   return (
     <DashboardLayout>
-      <div className="pb-24 lg:pb-8">
-        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
-          {/* Loading state - aspetta che teamMembers sia caricato */}
-          {isLoadingTeamMembers && (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-center space-y-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                <p className="text-muted-foreground">Caricamento team members...</p>
-              </div>
-            </div>
-          )}
+      <div className="pb-4 lg:pb-8">
+        <div className="p-4 pt-2 lg:p-8 space-y-5 lg:space-y-8 max-w-7xl mx-auto">
+          {shouldShowPageSkeleton && <PlayerCardsContentSkeleton />}
 
 
 
 
 
           {/* Content - mostra solo dopo aver caricato teamMembers */}
-          {!isLoadingTeamMembers &&
+          {!shouldShowPageSkeleton &&
             (
               <>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-sm border-border shadow-card p-8"
+                  className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-sm border-border shadow-card p-5 sm:p-6 lg:p-8"
                 >
                   <div className="relative z-10">
                     <div className="flex items-center justify-between">
-                      <h1 className="font-display text-4xl font-bold text-foreground flex items-center gap-3">
-                        <Users className="w-8 h-8 text-primary" />
+                      <h1 className="font-display text-3xl sm:text-4xl leading-none font-bold text-foreground flex items-center gap-2 sm:gap-3">
+                        <Star className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
                         Player Cards
                       </h1>
                       {!showVoteForm && (
@@ -271,13 +301,6 @@ export default function PlayerCards() {
 
                 </motion.div>
 
-                {/* Loading State */}
-                {isLoadingSessions && (
-                  <div className="text-center py-8">
-                    <div className="text-muted-foreground">Caricamento sessioni PlayerCard...</div>
-                  </div>
-                )}
-
                 {/* Vote Form */}
                 {(() => {
 
@@ -287,7 +310,7 @@ export default function PlayerCards() {
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="space-y-6 mt-6"
+                    className="space-y-4 mt-4"
                   >
                     {/* Header con Nome Dinamico */}
                     <Card className="border-primary/30 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5">
@@ -319,29 +342,10 @@ export default function PlayerCards() {
                 {(() => {
                   return null;
                 })()}
-                {!showVoteForm && allPlayers.length > 0 && (
-                  <div className="space-y-6 mt-6">
-                    {/* Dashboard Stats - Opzione A: Compatte Inline */}
-                    <div className="grid grid-cols-4 gap-2">
-                      <div className="text-center p-3 bg-secondary/50 rounded-lg">
-                        <div className="text-2xl font-bold text-primary">{dashboardStats.totalPlayerCardSessions}</div>
-                        <div className="text-xs text-muted-foreground">Totali</div>
-                      </div>
-                      <div className="text-center p-3 bg-green-500/10 rounded-lg">
-                        <div className="text-2xl font-bold text-green-600">{dashboardStats.activePlayerCardSessions}</div>
-                        <div className="text-xs text-muted-foreground">Attive</div>
-                      </div>
-                      <div className="text-center p-3 bg-yellow-500/10 rounded-lg">
-                        <div className="text-2xl font-bold text-yellow-600">{dashboardStats.pendingPlayerCardVotes}</div>
-                        <div className="text-xs text-muted-foreground">In Attesa</div>
-                      </div>
-                      <div className="text-center p-3 bg-blue-500/10 rounded-lg">
-                        <div className="text-2xl font-bold text-blue-600">{dashboardStats.completedPlayerCardSessions}</div>
-                        <div className="text-xs text-muted-foreground">Complete</div>
-                      </div>
-                    </div>
+                {shouldShowContentSkeleton && <PlayerCardsContentSkeleton />}
 
-
+                {!shouldShowContentSkeleton && !showVoteForm && allPlayers.length > 0 && (
+                  <div className="space-y-4 mt-4">
                     <PlayerCardNavigator
                       players={allPlayers}
                       sessions={mappedSessions}
@@ -349,6 +353,7 @@ export default function PlayerCards() {
                       onVote={handleOpenVoteForm}
                       onLoadResults={handleLoadResults}
                       initialPlayerId={user.id}
+                      showCounter={false}
                     />
                   </div>
                 )}

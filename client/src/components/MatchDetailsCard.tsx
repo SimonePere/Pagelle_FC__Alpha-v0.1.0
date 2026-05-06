@@ -10,6 +10,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import { Skeleton } from './ui/skeleton';
 import {
   Accordion,
   AccordionContent,
@@ -86,6 +87,7 @@ interface VoteCardProps {
 
   isVotingLoading?: boolean;
   votingError?: string | null;
+  isAbstainedInfoLoading?: boolean;
 
   // 🎨 Personalizzazione UI
   index?: number;              // Per animazioni staggered
@@ -113,6 +115,7 @@ export const MatchDetailsCard: React.FC<VoteCardProps> = ({
   submissions = [],
   isVotingLoading = false,
   votingError = null,
+  isAbstainedInfoLoading = false,
   index = 0,
   showVoteButton = true,    // 🎯 MODALITÀ PREFERITA: Pulsante dedicato di default!
   onClick,
@@ -301,7 +304,14 @@ export const MatchDetailsCard: React.FC<VoteCardProps> = ({
                 </div>
 
                 {/* 🚫 Sezione Astenuti - Dopo Giocatori Partecipanti */}
-                {match.hasAbstained && (
+                {isAbstainedInfoLoading && (
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 flex-shrink-0 text-orange-400" />
+                    <Skeleton className="h-4 w-56 max-w-[80%]" />
+                  </div>
+                )}
+
+                {!isAbstainedInfoLoading && match.hasAbstained && (
                   <div className="flex items-center gap-2 text-sm">
                     <Users className="w-4 h-4 flex-shrink-0 text-orange-500" />
                     <span className="text-orange-700 dark:text-orange-400 font-medium">

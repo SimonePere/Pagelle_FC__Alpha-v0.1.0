@@ -4,13 +4,14 @@ import { submitPlayerCardVote } from '../../redux/slices/votingSlice';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
+import { Skeleton } from '../ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Slider } from '../ui/slider';
 import { Textarea } from '../ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
-import { Loader2, Send, Trophy, User, Dumbbell, Target, Star, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { Loader2, Send, Trophy, User, Dumbbell, Target, Star, ArrowLeft, AlertTriangle, Vote as VotingIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import type {
   PlayerCardRatingVote as PlayerCardRatingVoteType,
@@ -252,6 +253,12 @@ export function PlayerCardRatingVote({ sessionId }: PlayerCardRatingVoteProps) {
   // Sistema Tab funzionante
   return (
     <div className="space-y-6">
+      <div className="flex items-center gap-2 min-w-0">
+        <VotingIcon className="h-5 w-5 text-primary shrink-0" />
+        <p className="text-xl sm:text-2xl font-display font-bold tracking-tight text-foreground truncate leading-none">
+          Votazione Player Card
+        </p>
+      </div>
 
 
       {/* Tab System - Solo indicatori di progresso, non più navigazione libera */}
@@ -547,6 +554,13 @@ export function PlayerCardRatingVote({ sessionId }: PlayerCardRatingVoteProps) {
                 Overall Rating verrà calcolato automaticamente dal server
               </div>
             </div>
+
+            {isSubmitting && (
+              <div className="flex items-center justify-center gap-2">
+                <Skeleton className="h-3 w-36" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            )}
 
             <div className="flex gap-2">
               {activeTab !== 'profilo' && (
