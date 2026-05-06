@@ -1,10 +1,3 @@
-/**
- * 🗳️ VOTE CARD - Componente Card Isolato per Votazioni
- * 
- * Basato sul design perfetto di MatchCard da MatchGrid.tsx
- * Riutilizzabile, flessibile e pronto per future features
- */
-
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';

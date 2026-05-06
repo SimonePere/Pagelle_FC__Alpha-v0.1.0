@@ -1,9 +1,3 @@
-/**
- * 🗳️ VOTE PAGE - VERSIONE CORRETTA
- * Template identico a PlayerCards che funziona perfetto su mobile
- * Basato su TestVote.tsx funzionante
- */
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
