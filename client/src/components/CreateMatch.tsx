@@ -193,23 +193,43 @@ const CreateMatch: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-                <div className="space-y-2">
-                    <Label htmlFor="date" className="flex items-center gap-2 text-base">
-                        <Calendar className="h-4 w-4 text-primary" />
-                        Data
-                    </Label>
-                    <Input
-                        id="date"
-                        type="date"
-                        value={date}
-                        onChange={(e) => setDate(e.target.value)}
-                        className="h-12 text-base"
-                    />
+                {/* Data + Formato affiancati */}
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                        <Label htmlFor="date" className="flex items-center gap-1.5 text-sm">
+                            <Calendar className="h-3.5 w-3.5 text-primary" />
+                            Data
+                        </Label>
+                        <Input
+                            id="date"
+                            type="date"
+                            value={date}
+                            onChange={(e) => setDate(e.target.value)}
+                            className="h-11 text-sm"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label className="flex items-center gap-1.5 text-sm">
+                            <Users className="h-3.5 w-3.5 text-primary" />
+                            Formato
+                        </Label>
+                        <Select value={playersCount.toString()} onValueChange={(v) => setPlayersCount(Number(v) as PlayersCount)}>
+                            <SelectTrigger className="h-11 text-sm">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="5">5 vs 5</SelectItem>
+                                <SelectItem value="8">8 vs 8</SelectItem>
+                                <SelectItem value="11">11 vs 11</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
 
                 <div className="space-y-2">
-                    <Label htmlFor="field" className="flex items-center gap-2 text-base">
-                        <MapPin className="h-4 w-4 text-primary" />
+                    <Label htmlFor="field" className="flex items-center gap-1.5 text-sm">
+                        <MapPin className="h-3.5 w-3.5 text-primary" />
                         Campo
                     </Label>
                     <Input
@@ -218,7 +238,7 @@ const CreateMatch: React.FC = () => {
                         placeholder="Es. Sporting Mazzola Beinasco"
                         value={field}
                         onChange={(e) => setField(e.target.value)}
-                        className="h-12 text-base"
+                        className="h-11 text-sm"
                     />
                 </div>
 
@@ -238,23 +258,6 @@ const CreateMatch: React.FC = () => {
                         ) : null}
                     </div>
                 )}
-
-                <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-base">
-                        <Users className="h-4 w-4 text-primary" />
-                        Formato
-                    </Label>
-                    <Select value={playersCount.toString()} onValueChange={(v) => setPlayersCount(Number(v) as PlayersCount)}>
-                        <SelectTrigger className="h-12 text-base">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="5">5 vs 5</SelectItem>
-                            <SelectItem value="8">8 vs 8</SelectItem>
-                            <SelectItem value="11">11 vs 11</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
             </div>
         </div>
     );
@@ -279,7 +282,7 @@ const CreateMatch: React.FC = () => {
                     onClick={setAllPresent}
                 >
                     <UserCheck className="h-3.5 w-3.5" />
-                    Tutti convocati
+                    Tutti
                 </Button>
                 <Button
                     type="button"
@@ -289,7 +292,7 @@ const CreateMatch: React.FC = () => {
                     onClick={setAllAbsent}
                 >
                     <UserX className="h-3.5 w-3.5" />
-                    Nessuno convocato
+                    Nessuno
                 </Button>
             </div>
 
@@ -300,32 +303,29 @@ const CreateMatch: React.FC = () => {
                 </p>
             )}
 
-            {/* Lista giocatori con Switch grandi */}
-            <div className="space-y-1">
-                {playersList.map((player) => (
-                    <div
-                        key={player.id}
-                        className={`flex items-center justify-between p-3 rounded-lg transition-colors ${presentPlayers[player.id]
-                            ? 'bg-green-500/10 border border-green-500/20'
-                            : 'bg-muted/30 border border-transparent opacity-60'
-                            }`}
-                    >
-                        <span className={`text-base font-medium ${!presentPlayers[player.id] ? 'line-through text-muted-foreground' : ''}`}>
+            {/* Chip toggle giocatori */}
+            <div className="flex flex-wrap gap-2">
+                {playersList.map((player) => {
+                    const isPresent = presentPlayers[player.id];
+                    return (
+                        <button
+                            key={player.id}
+                            type="button"
+                            onClick={() => setPresentPlayers({ ...presentPlayers, [player.id]: !isPresent })}
+                            className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${isPresent
+                                ? 'bg-green-500/15 border-green-500/40 text-green-700 dark:text-green-400'
+                                : 'bg-muted/40 border-transparent text-muted-foreground line-through opacity-50'
+                                }`}
+                        >
                             {player.name}
-                        </span>
-                        <Switch
-                            checked={presentPlayers[player.id] || false}
-                            onCheckedChange={(checked) =>
-                                setPresentPlayers({ ...presentPlayers, [player.id]: checked })
-                            }
-                        />
-                    </div>
-                ))}
+                        </button>
+                    );
+                })}
             </div>
 
             {/* Counter */}
             <div className="text-center">
-                <Badge variant="secondary" className="text-sm px-3 py-1">
+                <Badge variant="secondary" className="text-xs px-2.5 py-0.5">
                     {presentCount} su {playersList.length} convocati
                 </Badge>
             </div>
@@ -341,101 +341,84 @@ const CreateMatch: React.FC = () => {
                 <div className="text-center space-y-1">
                     <h2 className="text-xl font-bold">Chi non voterà?</h2>
                     <p className="text-sm text-muted-foreground">
-                        Di solito votano tutti. Imposta eccezioni solo se necessario.
+                        Di solito votano tutti. <br />
+                        Seleziona chi preferisce non votare (opzionale).
                     </p>
                 </div>
 
-                {/* Toggle principale */}
-                <Card className={`border-2 transition-colors ${!showAbstentions ? 'border-green-500/30 bg-green-500/5' : 'border-orange-500/30 bg-orange-500/5'}`}>
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                                <p className="font-medium text-base flex items-center gap-2">
-                                    {!showAbstentions
-                                        ? <><UserCheck className="h-4 w-4 text-green-600" /> Tutti voteranno</>
-                                        : <><UserMinus className="h-4 w-4 text-orange-500" /> Ci sono astensioni</>
-                                    }
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                    {!showAbstentions
-                                        ? `Tutti i ${presentCount} partecipanti potranno votare`
-                                        : 'Seleziona chi parteciperà ma non voterà'
-                                    }
-                                </p>
-                            </div>
-                            <Button
-                                type="button"
-                                variant={showAbstentions ? 'default' : 'outline'}
-                                size="sm"
-                                onClick={() => {
-                                    setShowAbstentions(!showAbstentions);
-                                    if (showAbstentions) resetAbstentions();
-                                }}
-                            >
-                                {showAbstentions ? 'Annulla' : 'Imposta'}
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
+                {/* Quick actions */}
+                <div className="flex gap-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className={`flex-1 text-xs gap-1.5 ${abstainedCount === 0 ? 'border-green-500/50 text-green-700 dark:text-green-400' : ''}`}
+                        onClick={resetAbstentions}
+                    >
+                        <UserCheck className="h-3.5 w-3.5" />
+                        Tutti votano
+                    </Button>
+                    {/* <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className={`flex-1 text-xs gap-1.5 ${abstainedCount === presentPlayersList.length ? 'border-orange-500/50 text-orange-700 dark:text-orange-400' : ''}`}
+                        onClick={() => setAbstainedPlayers(Object.fromEntries(presentPlayersList.map(p => [p.id, true])))}
+                    >
+                        <UserMinus className="h-3.5 w-3.5" />
+                        Nessuno vota
+                    </Button> */}
+                </div>
 
-                {/* Lista astensioni (condizionale) */}
-                {showAbstentions && (
-                    <div className="space-y-1">
-                        <div className="flex gap-2 mb-2">
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="text-xs"
-                                onClick={resetAbstentions}
-                            >
-                                Resetta astensioni
-                            </Button>
-                        </div>
-                        {presentPlayersList.map((player) => (
-                            <div
+                {/* Chip toggle astensioni */}
+                <div className="flex flex-wrap gap-2">
+                    {presentPlayersList.map((player) => {
+                        const isAbstained = abstainedPlayers[player.id];
+                        return (
+                            <button
                                 key={player.id}
-                                className={`flex items-center justify-between p-3 rounded-lg transition-colors ${abstainedPlayers[player.id]
-                                    ? 'bg-orange-500/10 border border-orange-500/20'
-                                    : 'bg-background border border-border'
+                                type="button"
+                                onClick={() => setAbstainedPlayers({ ...abstainedPlayers, [player.id]: !isAbstained })}
+                                className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${isAbstained
+                                    ? 'bg-orange-500/15 border-orange-500/40 text-orange-700 dark:text-orange-400'
+                                    : 'bg-green-500/15 border-green-500/40 text-green-700 dark:text-green-400'
                                     }`}
                             >
-                                <div className="flex items-center gap-2">
-                                    {abstainedPlayers[player.id] && <UserMinus className="h-4 w-4 text-orange-500" />}
-                                    <span className={`text-base ${abstainedPlayers[player.id] ? 'text-orange-700 dark:text-orange-300' : ''}`}>
-                                        {player.name}
-                                    </span>
-                                </div>
-                                <Switch
-                                    checked={abstainedPlayers[player.id] || false}
-                                    onCheckedChange={(checked) =>
-                                        setAbstainedPlayers({ ...abstainedPlayers, [player.id]: checked })
-                                    }
-                                />
-                            </div>
-                        ))}
-                    </div>
-                )}
+                                {player.name}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* Counter */}
+                <div className="text-center">
+                    <Badge variant="secondary" className="text-xs px-2.5 py-0.5">
+                        {abstainedCount === 0
+                            ? `Tutti i ${presentPlayersList.length} partecipanti voteranno`
+                            : `${abstainedCount} astenuti · ${presentPlayersList.length - abstainedCount} voteranno`
+                        }
+                    </Badge>
+                </div>
             </div>
         );
     };
 
     // ─── STEPPER INDICATOR ─────────────────────────────────────
     const renderStepper = () => (
-        <div className="flex items-center justify-center gap-2 mb-4">
+        <div className="flex items-center justify-center gap-1.5 mb-3">
             {[1, 2, 3].map((s) => (
-                <div key={s} className="flex items-center gap-2">
+                <div key={s} className="flex items-center gap-1.5">
                     <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${s === step
+                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors ${s === step
                             ? 'bg-primary text-primary-foreground'
                             : s < step
                                 ? 'bg-green-500 text-white'
                                 : 'bg-muted text-muted-foreground'
                             }`}
                     >
-                        {s < step ? <Check className="w-4 h-4" /> : s}
+                        {s < step ? <Check className="w-3.5 h-3.5" /> : s}
                     </div>
-                    {s < 3 && <div className={`w-8 h-0.5 ${s < step ? 'bg-green-500' : 'bg-muted'}`} />}
+                    {s < 3 && <div className={`w-4 h-px ${s < step ? 'bg-green-500' : 'bg-muted'}`} />}
                 </div>
             ))}
         </div>
@@ -446,9 +429,9 @@ const CreateMatch: React.FC = () => {
         const canContinue = step === 1 ? canContinueStep1 : step === 2 ? canContinueStep2 : true;
 
         return (
-            <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t p-4 z-50">
+            <div className="fixed bottom-16 left-0 right-0 bg-background/95 backdrop-blur-sm border-t p-4 z-[60] lg:bottom-0">
                 {/* Riepilogo numerico */}
-                <div className="flex justify-center gap-4 mb-3 text-xs">
+                {/* <div className="flex justify-center gap-4 mb-3 text-xs">
                     <div className="text-center">
                         <p className="font-bold text-lg text-green-600">{presentCount}</p>
                         <p className="text-muted-foreground">Convocati</p>
@@ -461,7 +444,7 @@ const CreateMatch: React.FC = () => {
                         <p className="font-bold text-lg text-primary">{votersCount}</p>
                         <p className="text-muted-foreground">Votanti</p>
                     </div>
-                </div>
+                </div> */}
 
                 {/* Navigation buttons */}
                 <div className="flex gap-3 max-w-lg mx-auto">
@@ -501,21 +484,55 @@ const CreateMatch: React.FC = () => {
     };
 
     // ─── RENDER ────────────────────────────────────────────────
+    const canContinueStep = step === 1 ? canContinueStep1 : step === 2 ? canContinueStep2 : true;
+
     return (
-        <div className="min-h-screen pb-40">
-            <div className="p-4 max-w-lg mx-auto">
+        <div className="min-h-screen pb-24">
+            <div className="pt-2 px-4 pb-4 max-w-lg mx-auto">
                 {renderStepper()}
 
                 <Card>
-                    <CardContent className="p-4">
+                    <CardContent className="p-4 space-y-4">
                         {step === 1 && renderStep1()}
                         {step === 2 && renderStep2()}
                         {step === 3 && renderStep3()}
+
+                        {/* Navigation buttons — dentro la card */}
+                        <div className="flex gap-3 pt-2">
+                            {step > 1 && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="flex-1 h-12 text-base"
+                                    onClick={() => setStep(step - 1)}
+                                >
+                                    <ChevronLeft className="w-4 h-4 mr-1" /> Indietro
+                                </Button>
+                            )}
+                            {step < 3 ? (
+                                <Button
+                                    type="button"
+                                    className="flex-1 h-12 text-base"
+                                    onClick={() => setStep(step + 1)}
+                                    disabled={!canContinueStep}
+                                >
+                                    Continua <ChevronRight className="w-4 h-4 ml-1" />
+                                </Button>
+                            ) : (
+                                <Button
+                                    type="button"
+                                    className="flex-1 h-12 text-base bg-primary hover:bg-primary/90 text-primary-foreground"
+                                    onClick={handleCreate}
+                                    disabled={presentCount < 2 || creatingMatch}
+                                >
+                                    <Trophy className="w-4 h-4 mr-2" />
+                                    {creatingMatch ? 'Creando...' : 'Crea Partita'}
+                                </Button>
+                            )}
+                        </div>
                     </CardContent>
                 </Card>
             </div>
-
-            {renderFooter()}
         </div>
     );
 };
