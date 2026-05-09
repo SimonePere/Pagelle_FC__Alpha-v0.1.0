@@ -1223,8 +1223,10 @@ class VotingService {
             throw new Error('Invalid session type');
         }
 
-        // Business Rule: Verifica che l'utente sia eligible voter
-        if (!votingSession.eligibleVoters.includes(userId)) {
+        // Business Rule: Qualsiasi membro del team può vedere la sessione (anche se non ha partecipato)
+        const team = await this.teamRepository.findById(votingSession.teamId);
+        if (!team || !team.isMember(userId)) {
+            console.log('⚠️ Accesso negato: utente non è membro del team di questa sessione');
             throw new Error('Not authorized to access this voting session');
         }
 
@@ -1417,10 +1419,15 @@ class VotingService {
             throw new Error('User ID is required');
         }
 
-        // 1. Trova tutte le sessioni match_rating dove l'utente è eligible voter
+        // 1. Trova i team di cui l'utente è membro
+        const userTeams = await this.teamRepository.findAll({ memberIds: { $in: [userId] } });
+        const teamIds = userTeams.map(t => t._id);
+        console.log('👥 Team trovati per user:', teamIds.length);
+
+        // 2. Trova TUTTE le sessioni match_rating dei suoi team (anche partite a cui non ha partecipato)
         const votingSessions = await this.votingSessionRepository.findAll(
             {
-                eligibleVoters: { $in: [userId] },
+                teamId: { $in: teamIds },
                 type: 'match_rating'
             },
             {
@@ -1459,7 +1466,9 @@ class VotingService {
 
             // Business Logic: Determina canVote rules
             const isActive = session.status === 'active';
-            const canVote = isActive && !hasVoted;
+            const isEligibleVoter = session.eligibleVoters.some(id => id.toString() === userId);
+            const isAbstained = typeof session.isUserAbstained === 'function' ? session.isUserAbstained(userId) : false;
+            const canVote = isActive && !hasVoted && isEligibleVoter && !isAbstained;
 
             // 3.1. Recupera i nomi degli utenti partecipanti e astenuti per la sessione (se ci sono)
             const userNames = await this.votingSessionRepository.findByIdWithUsernames(session._id);
