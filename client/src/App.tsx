@@ -12,6 +12,8 @@ import VotePage from "./pages/Vote.tsx";
 import MatchDetails from "./pages/MatchDetails";
 import NotFound from "./pages/NotFound";
 import TeamPage from "./pages/Team.tsx";
+import AdminDashboard from "./pages/AdminDashboard.tsx";
+import JoinByInvite from "./pages/JoinByInvite";
 
 // 🚀 STEP 1: Code splitting per pagine meno critiche
 const TestVote = lazy(() => import("./pages/TestPage.tsx")); // Pagina di test con mock, non critica per il primo accesso
@@ -20,6 +22,7 @@ const TestVote = lazy(() => import("./pages/TestPage.tsx")); // Pagina di test c
 const Profile = lazy(() => import("./pages/Profile"));
 const Stats = lazy(() => import("./pages/Stats"));
 const CreateMatch = lazy(() => import("./pages/CreateMatch"));
+const ClaimGuest = lazy(() => import("./pages/ClaimGuest"));
 
 // 🚀 STEP 3: Code splitting per pagine principali
 const History = lazy(() => import("./pages/History"));
@@ -183,9 +186,13 @@ const App = () => (
         <Routes>
           {/* Route pubbliche */}
           <Route path="/login" element={<Login />} />
+          <Route path="/join" element={<JoinByInvite />} />
           <Route path="/privacy" element={<Suspense fallback={<PageSkeleton />}><Privacy /></Suspense>} />
           <Route path="/terms" element={<Suspense fallback={<PageSkeleton />}><Terms /></Suspense>} />
           <Route path="/cookie-policy" element={<Suspense fallback={<PageSkeleton />}><CookiePolicy /></Suspense>} />
+
+          {/* Route pubblica per registrazione guest (accessibile anche da loggati-guest) */}
+          <Route path="/claim-guest" element={<Suspense fallback={<PageSkeleton />}><ClaimGuest /></Suspense>} />
 
           {/* Route protette con Redux */}
           <Route path="/" element={<ProtectedRouteRedux><Home /></ProtectedRouteRedux>} />
@@ -258,6 +265,18 @@ const App = () => (
               <Suspense fallback={<PageSkeleton />}>
                 <ProtectedRouteRedux>
                   <TestVote />
+                </ProtectedRouteRedux>
+              </Suspense>
+            }
+          />
+          {/* Successivamente andrà messa ad accesso riservato e 
+          VISIBILE SOLAMENTE A ME. CREATORE APP */}
+          <Route
+            path="/admin-dashboard"
+            element={
+              <Suspense fallback={<PageSkeleton />}>
+                <ProtectedRouteRedux>
+                  <AdminDashboard />
                 </ProtectedRouteRedux>
               </Suspense>
             }

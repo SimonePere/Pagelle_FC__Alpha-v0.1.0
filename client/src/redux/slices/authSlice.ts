@@ -6,6 +6,8 @@ interface AuthState {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isGuest: boolean;
+  guestMatchId: string | null;
   error: string | null;
 }
 
@@ -166,11 +168,63 @@ export const changeUserPassword = createAsyncThunk(
   }
 );
 
+// Helper per decodificare il payload JWT senza librerie
+const decodeJwtPayload = (token: string): Record<string, any> | null => {
+  try {
+    return JSON.parse(atob(token.split('.')[1]));
+  } catch {
+    return null;
+  }
+};
+
+export const guestLogin = createAsyncThunk(
+  'auth/guestLogin',
+  async ({ inviteToken }: { inviteToken: string }, { rejectWithValue }) => {
+    try {
+      const response = await api.post('/auth/guest-login', { inviteToken });
+      authHelpers.saveAuth(response.user, response.token);
+      const payload = decodeJwtPayload(response.token);
+      return { user: response.user, matchId: payload?.matchId || null };
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Errore login ospite');
+    }
+  }
+);
+
+export const claimGuest = createAsyncThunk(
+  'auth/claimGuest',
+  async (data: { email: string; password: string; name: string; inviteToken: string }, { rejectWithValue }) => {
+    try {
+      const response = await api.post('/auth/guest-merge-user', data);
+      authHelpers.saveAuth(response.user, response.token);
+      return response.user;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Errore registrazione ospite');
+    }
+  }
+);
+
+// Converte guest autenticato (JWT) in utente reale — senza inviteToken
+export const claimGuestById = createAsyncThunk(
+  'auth/claimGuestById',
+  async (data: { email: string; password: string; name: string }, { rejectWithValue }) => {
+    try {
+      const response = await api.post('/auth/claim-guest-by-id', data);
+      authHelpers.saveAuth(response.user, response.token);
+      return response.user;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Errore registrazione');
+    }
+  }
+);
+
 // Stato iniziale
 const initialState: AuthState = {
   user: null,
   isLoading: true,
   isAuthenticated: false,
+  isGuest: false,
+  guestMatchId: null,
   error: null,
 };
 
@@ -184,6 +238,13 @@ const authSlice = createSlice({
         if (storedUser) {
           state.user = storedUser;
           state.isAuthenticated = true;
+          // Leggi scope e matchId dal JWT
+          const token = localStorage.getItem('token');
+          if (token) {
+            const payload = decodeJwtPayload(token);
+            state.isGuest = payload?.scope === 'guest';
+            state.guestMatchId = payload?.matchId || null;
+          }
         }
       } else {
         authHelpers.clearAuth();
@@ -195,6 +256,8 @@ const authSlice = createSlice({
       state.user = null;
       state.isAuthenticated = false;
       state.isLoading = false;
+      state.isGuest = false;
+      state.guestMatchId = null;
       state.error = null;
 
       authHelpers.clearAuth();
@@ -308,6 +371,63 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(changeUserPassword.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
+
+    // Guest login
+    builder
+      .addCase(guestLogin.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(guestLogin.fulfilled, (state, action) => {
+        state.user = action.payload.user;
+        state.isAuthenticated = true;
+        state.isGuest = true;
+        state.guestMatchId = action.payload.matchId;
+        state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(guestLogin.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
+
+    // Claim guest (converti in full user)
+    builder
+      .addCase(claimGuest.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(claimGuest.fulfilled, (state, action) => {
+        state.user = action.payload;
+        state.isAuthenticated = true;
+        state.isGuest = false;
+        state.guestMatchId = null;
+        state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(claimGuest.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
+
+    // Claim guest by ID (via JWT, no inviteToken)
+    builder
+      .addCase(claimGuestById.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(claimGuestById.fulfilled, (state, action) => {
+        state.user = action.payload;
+        state.isAuthenticated = true;
+        state.isGuest = false;
+        state.guestMatchId = null;
+        state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(claimGuestById.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       });

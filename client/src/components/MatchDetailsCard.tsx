@@ -6,6 +6,7 @@
  */
 
 import React, { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
@@ -24,7 +25,8 @@ import {
   Edit,
   Trash2,
   MapPin,
-  FileText
+  FileText,
+  Copy
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -39,7 +41,7 @@ interface VoteCardProps {
     status: 'completed' | 'active' | 'draft' | 'cancelled';
     playersCount?: number;      // 🏟️ Tipo di campo (5, 8, 11)
     teamMemberIds?: string[];
-    teamMembers?: { id: string; name: string; }[];  // 🆕 Per mapping nomi
+    teamMembers?: { id: string; name: string; isGuest?: boolean; inviteToken?: string; }[];  // 🆕 Per mapping nomi
     notes?: string;             // 📝 Note partita
     // 🆕 Campi astenuti (opzionali)
     hasAbstained?: boolean;
@@ -158,6 +160,32 @@ export const MatchDetailsCard: React.FC<VoteCardProps> = ({
     }
   };
 
+  const { toast } = useToast();
+
+  const copyToClipboard = (text: string, label: string) => {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(() => {
+        toast({ title: 'Link copiato!', description: label });
+      });
+    } else {
+      // Fallback per HTTP locale (mobile)
+      const el = document.createElement('textarea');
+      el.value = text;
+      el.style.position = 'fixed';
+      el.style.opacity = '0';
+      document.body.appendChild(el);
+      el.focus();
+      el.select();
+      try {
+        document.execCommand('copy');
+        toast({ title: 'Link copiato!', description: label });
+      } catch {
+        toast({ title: 'Copia manuale', description: text, variant: 'destructive' });
+      }
+      document.body.removeChild(el);
+    }
+  };
+
   // ✅ Tipo di campo dal backend (playersCount) vs partecipanti effettivi (teamMemberIds.length)
   const getMatchType = () => {
     // Usa playersCount dal backend per il tipo di campo
@@ -220,6 +248,9 @@ export const MatchDetailsCard: React.FC<VoteCardProps> = ({
                 <CardTitle className="font-display text-2xl font-bold">
                   {getMatchType()}
                 </CardTitle>
+                {/* Badge status — commentato temporaneamente, posizionamento da decidere
+                <Badge className={...}>{getStatusLabel(match.status)}</Badge>
+                */}
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Calendar className="w-4 h-4" />
                   <span>{getFormattedDate(match.date)}</span>
@@ -285,11 +316,16 @@ export const MatchDetailsCard: React.FC<VoteCardProps> = ({
                     {match.teamMemberIds?.slice(0, 4).map((playerId, index) => {
                       // Nome completo del giocatore
                       const playerName = getPlayerName(playerId);
+                      const member = match.teamMembers?.find(m => m.id === playerId);
+                      const isGuest = member?.isGuest;
 
                       return (
                         <span
                           key={playerId}
-                          className="px-3 py-2 bg-secondary/40 rounded-lg text-xs text-foreground border border-border/30 text-center"
+                          className={`px-3 py-2 rounded-lg text-xs text-foreground text-center ${isGuest
+                            ? 'bg-orange-500/10 border border-orange-500/40 text-orange-700 dark:text-orange-400'
+                            : 'bg-secondary/40 border border-border/30'
+                            }`}
                         >
                           {playerName}
                         </span>
@@ -319,6 +355,47 @@ export const MatchDetailsCard: React.FC<VoteCardProps> = ({
                     </span>
                   </div>
                 )}
+
+                {/* Link invito ospiti — accordion discreto */}
+                {(() => {
+                  const guests = match.teamMembers?.filter(m => m.isGuest && m.inviteToken) || [];
+                  if (guests.length === 0) return null;
+                  const baseUrl = window.location.origin;
+                  return (
+                    <Accordion type="single" collapsible className="border-none">
+                      <AccordionItem value="guest-links" className="border-none">
+                        <AccordionTrigger className="py-1.5 text-xs text-muted-foreground hover:text-foreground hover:no-underline gap-1.5 [&>svg]:h-3 [&>svg]:w-3">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-orange-400 inline-block" />
+                            Link invito ospiti ({guests.length})
+                          </span>
+                        </AccordionTrigger>
+                        <AccordionContent className="pt-1 pb-0">
+                          <div className="space-y-1.5">
+                            {guests.map((guest) => {
+                              const link = `${baseUrl}/join?token=${guest.inviteToken}`;
+                              return (
+                                <div key={guest.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-muted/30">
+                                  <span className="text-xs flex-1 truncate text-muted-foreground">
+                                    <span className="font-medium text-foreground mr-1">{guest.name}</span>
+                                    {link}
+                                  </span>
+                                  <button
+                                    onClick={() => copyToClipboard(link, guest.name)}
+                                    className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                                    title="Copia link"
+                                  >
+                                    <Copy className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
+                  );
+                })()}
 
 
 
@@ -356,11 +433,12 @@ export const MatchDetailsCard: React.FC<VoteCardProps> = ({
                 </div>
               </div>
             ) : votingError ? (
-              /* ❌ Error state */
+              /* Voti in attesa */
               <div className="text-center py-8">
-                <div className="text-muted-foreground">
-                  Errore nel caricamento delle medie: {votingError}
-                </div>
+                <p className="text-muted-foreground font-medium">Votazioni non ancora concluse</p>
+                <p className="text-sm text-muted-foreground/70 mt-2">
+                  Quando tutti i compagni avranno votato, qui appariranno le medie finali di ogni giocatore.
+                </p>
               </div>
             ) : calculation?.playerResults && Object.keys(calculation.playerResults).length > 0 ? (
               /* ✅ Real data */
@@ -396,11 +474,9 @@ export const MatchDetailsCard: React.FC<VoteCardProps> = ({
             ) : (
               /* 📭 Empty state */
               <div className="text-center py-8">
-                <div className="text-muted-foreground">
-                  Nessun voto disponibile ancora
-                </div>
+                <p className="text-muted-foreground font-medium">Votazioni non ancora concluse</p>
                 <p className="text-sm text-muted-foreground/70 mt-2">
-                  Le medie finali appariranno dopo le votazioni
+                  Quando tutti i compagni avranno votato, qui appariranno le medie finali di ogni giocatore.
                 </p>
               </div>
             )}

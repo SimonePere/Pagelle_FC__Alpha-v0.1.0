@@ -4,13 +4,15 @@
 const {
     MatchRepository,
     TeamRepository,
-    VotingSessionRepository
+    VotingSessionRepository,
+    UserRepository
 } = require('../repositories');
 
 const NewsService = require('./NewsService');
 
 const AppError = require('../utils/AppError');
-const CacheService = require('./CacheService'); // 🆕 Cache invalidation per match updates
+const CacheService = require('./CacheService'); // Cache invalidation per match updates
+const { generateInviteToken } = require('../utils/tokenGenerator');
 
 /**
  * MATCH SERVICE
@@ -35,6 +37,7 @@ class MatchService {
         this.matchRepository = new MatchRepository();
         this.teamRepository = new TeamRepository();
         this.votingSessionRepository = new VotingSessionRepository();
+        this.userRepository = new UserRepository();
         this.newsService = new NewsService();
     }
 
@@ -44,11 +47,12 @@ class MatchService {
      * @param {Object} matchData - Dati del match
      * @returns {Promise<Object>} Match e voting session creati
      */
-    async createMatch(userId, matchData) {
+    async createMatch(userId, matchData,) {
+
         // Input validation
         this.validateMatchCreationInput(matchData);
 
-        const { field, date, playersCount, notes, teamMemberIds, teamId } = matchData;
+        const { field, date, playersCount, notes, teamMemberIds, teamId, guestPlayers = [] } = matchData;
 
         try {
             // 1. Create the match
@@ -64,15 +68,30 @@ class MatchService {
                 finalResults: { teamGoals: 0, opponentGoals: 0 }
             });
 
-            // 2. Auto-create voting session
+            // 2. Crea guest e aggiorna match (se ci sono)
+            let guestResults = [];
+            if (guestPlayers.length > 0) {
+                guestResults = await this._createGuestPlayersForMatch(
+                    match._id, teamId, guestPlayers, userId
+                );
+                // Aggiorna match.teamMemberIds con i guest IDs
+                const guestIds = guestResults.map(g => g.userId);
+                await this.matchRepository.updateById(match._id, {
+                    $push: { teamMemberIds: { $each: guestIds } }
+                });
+                match.teamMemberIds = [...match.teamMemberIds, ...guestIds]; // aggiorna locale
+            }
+
+
+
+            // 3. Auto-create voting session
             const votingSession = await this.createAutoVotingSession(match, userId, matchData.abstainedMembers || []);
 
-            // 🆕 AGGIUNGI: Recupera i nomi dalla voting session appena creata
+            // Recupera i nomi dalla voting session appena creata
             const sessionWithNames = await this.votingSessionRepository.findByIdWithUsernames(votingSession._id);
 
-            // 3. 🗞️ Genera news per creazione match
-            console.log(`✅ Match creato con ID ${match._id} e VotingSession ${votingSession._id} da user ${userId}`);
-
+            // 4. 🗞️ Genera news per creazione match
+            // console.log(`✅ Match creato con ID ${match._id} e VotingSession ${votingSession._id} da user ${userId}`);
             try {
                 const newsData = {
                     teamId: match.teamId,
@@ -88,7 +107,7 @@ class MatchService {
                 };
 
                 const creationNews = await this.newsService.createNewsOnCreateMatch(newsData);
-                console.log('🎉 News creazione match generata:', creationNews?._id || 'News created');
+                // console.log('🎉 News creazione match generata:', creationNews?._id || 'News created');
             } catch (newsError) {
                 console.error('⚠️ Errore generazione news creazione match:', newsError.message);
                 // Non bloccare la creazione match per errori news
@@ -110,7 +129,8 @@ class MatchService {
                     title: votingSession.title,
                     status: votingSession.status,
                     type: votingSession.type
-                }
+                },
+                guestPlayers: guestResults // Ritorna i guest player creati con invite token
             };
 
         } catch (error) {
@@ -435,6 +455,53 @@ class MatchService {
     }
 
     /**
+     * - Crea Guest Player
+     * - Lo aggiunge al Team
+     * - Ritorna i dati del Guest Player creato
+     * - Ritorna inviteToken e InviteUrl
+     */
+
+    async _createGuestPlayersForMatch(matchId, teamId, guestPlayers, creatorId) {
+        const results = [];
+
+        // Recupera il nome del team una sola volta per tutti i guest
+        const team = await this.teamRepository.findById(teamId);
+        const teamName = team ? team.name : '';
+
+        for (const guestData of guestPlayers) {
+            // Genera token unico
+            const inviteToken = generateInviteToken();
+
+            // Crea User guest nel DB (teamName incluso per coerenza con utenti normali)
+            const guestUser = await this.userRepository.create({
+                name: guestData.name.trim(),
+                isGuest: true,
+                teamIds: [teamId],
+                teamName,
+                inviteToken,
+                inviteTokenMatchId: matchId,
+                guestCreatedBy: creatorId,
+                profile: { position: guestData.position || 'UTIL' }
+            });
+
+            // Aggiungi al Team
+            await this.teamRepository.findOneAndUpdate(
+                { _id: teamId },
+                { $addToSet: { memberIds: guestUser._id } }
+            );
+
+            results.push({
+                userId: guestUser._id,
+                name: guestUser.name,
+                inviteToken,
+                inviteUrl: `/join?token=${inviteToken}`
+            });
+        }
+        return results;
+    }
+
+
+    /**
      * INPUT VALIDATION METHODS
      */
 
@@ -458,8 +525,9 @@ class MatchService {
             throw new AppError('abstainedMembers must be an array', 400);
         }
 
-        // Validazione minimo 2 partecipanti
-        const participatingCount = (matchData.teamMemberIds || []).length -
+        // Validazione minimo 2 partecipanti (registrati + guest)
+        const participatingCount = (matchData.teamMemberIds || []).length +
+            (matchData.guestPlayers || []).length -
             (matchData.abstainedMembers || []).length;
 
         if (participatingCount < 2) {

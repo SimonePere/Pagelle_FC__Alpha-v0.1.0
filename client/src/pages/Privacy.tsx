@@ -54,6 +54,15 @@ export default function Privacy() {
           <p className="text-muted-foreground">
             Adottiamo misure tecniche e organizzative adeguate per proteggere i dati. Le password sono memorizzate in forma cifrata.
           </p>
+
+          <h2 className="text-2xl font-bold text-foreground mt-8">8. Donazioni volontarie</h2>
+          <p className="text-muted-foreground">
+            Pagelle FC è un progetto gratuito. È possibile supportarlo con una donazione libera tramite la piattaforma
+            Buy Me a Coffee (<a href="https://buymeacoffee.com/simonemele" target="_blank" rel="noopener noreferrer" className="text-primary underline">buymeacoffee.com/simonemele</a>).
+            Le donazioni sono atti liberali volontari: non raccogliamo dati di pagamento — la transazione avviene interamente
+            sulla piattaforma esterna Buy Me a Coffee, soggetta alla propria privacy policy.
+            Non condividiamo né trattiamo alcun dato finanziario del donatore.
+          </p>
         </article>
       </div>
     </div>

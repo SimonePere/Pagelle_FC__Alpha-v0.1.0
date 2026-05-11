@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/redux/store/store';
-import { logout, loadEnrichedUserData, updateUserProfile, changeUserPassword } from '@/redux/slices/authSlice';
+import { logout, loadEnrichedUserData, updateUserProfile, changeUserPassword, refreshUserData } from '@/redux/slices/authSlice';
 import {
   fetchPlayerCardSessions,
   createPlayerCardSession,
@@ -11,13 +11,15 @@ import {
   selectTeamMembers,
   selectIsLoadingTeamMembers
 } from '@/redux/slices/votingSlice';
+import { createTeam } from '@/redux/slices/teamSlice';
 import { PlayerCardNavigator } from '@/components/PlayerCardNavigator';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { TrendingUp, Target, Users, Trophy, Award, TrendingDown, Star, LogOut, Goal, Hand, User as UserIcon, Lock, KeyRound } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Progress } from '@/components/ui/progress';
@@ -56,6 +58,30 @@ const Profile = () => {
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
   const [showVoteForm, setShowVoteForm] = useState(false);
 
+  // Stato dialog crea team
+  const [createTeamOpen, setCreateTeamOpen] = useState(false);
+  const [newTeamName, setNewTeamName] = useState('');
+  const [isCreatingTeam, setIsCreatingTeam] = useState(false);
+
+  const handleCreateTeamSubmit = async () => {
+    if (!newTeamName.trim()) return;
+    setIsCreatingTeam(true);
+    try {
+      const result = await dispatch(createTeam({ name: newTeamName.trim() }));
+      if (createTeam.fulfilled.match(result)) {
+        toast({ title: 'Team creato!', description: `"${newTeamName.trim()}" creato con successo.` });
+        setCreateTeamOpen(false);
+        setNewTeamName('');
+        await dispatch(refreshUserData());
+        await dispatch(loadEnrichedUserData());
+      } else {
+        toast({ title: 'Errore', description: 'Impossibile creare il team.', variant: 'destructive' });
+      }
+    } finally {
+      setIsCreatingTeam(false);
+    }
+  };
+
   // Semplifichiamo lo stato utilizzando i dati da /auth/me
   const [stats, setStats] = useState<UserStats>({
     averageRating: 0,
@@ -70,6 +96,7 @@ const Profile = () => {
   // Stati per EditModal con debug
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editModalType, setEditModalType] = useState<'user-profile' | 'user-password'>('user-profile');
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
   // Carica team members quando il componente si monta - ESATTAMENTE COME IN PLAYERCARDS
   useEffect(() => {
@@ -535,6 +562,60 @@ const Profile = () => {
           )}
 
 
+          {/* Crea il tuo team - visibile solo se l'utente non ha team */}
+          {!user.teams?.length && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+            >
+              <Card className="bg-accent/10 border-accent/30 shadow-card">
+                <CardContent className="p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center">
+                      <Users className="w-6 h-6 text-accent" />
+                    </div>
+                    <div>
+                      <h3 className="font-display font-bold text-foreground">Nessun team associato</h3>
+                      <p className="text-sm text-muted-foreground">Crea il tuo team per iniziare a giocare</p>
+                    </div>
+                  </div>
+                  <Button onClick={() => setCreateTeamOpen(true)} className="bg-accent text-accent-foreground hover:bg-accent/90 shrink-0">
+                    <Users className="w-4 h-4 mr-2" />
+                    Crea il tuo team
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Dialog creazione team */}
+              <Dialog open={createTeamOpen} onOpenChange={setCreateTeamOpen}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Users className="w-5 h-5 text-accent" />
+                      Crea il tuo team
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="py-2">
+                    <Input
+                      placeholder="Nome del team..."
+                      value={newTeamName}
+                      onChange={(e) => setNewTeamName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleCreateTeamSubmit()}
+                      autoFocus
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setCreateTeamOpen(false)}>Annulla</Button>
+                    <Button onClick={handleCreateTeamSubmit} disabled={!newTeamName.trim() || isCreatingTeam}>
+                      {isCreatingTeam ? 'Creazione...' : 'Crea team'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </motion.div>
+          )}
+
           {/* Player Cards Navigator */}
           {!isLoadingTeamMembers && allPlayers.length > 0 && (
             <motion.div
@@ -682,53 +763,64 @@ const Profile = () => {
           >
             <Card className="bg-card/80 backdrop-blur-sm border-destructive/20 shadow-card hover:border-destructive/40 transition-colors">
               <CardContent className="p-6">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <motion.div
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="cursor-pointer"
-                    >
-                      <div className="flex items-center justify-between p-4 rounded-lg border border-destructive/20 bg-destructive/5 hover:bg-destructive/10 transition-colors group">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-destructive to-red-600 flex items-center justify-center shadow-glow">
-                            <LogOut className="w-6 h-6 text-white" />
-                          </div>
-                          <div>
-                            <h3 className="font-display font-bold text-foreground group-hover:text-destructive transition-colors">
-                              Logout
-                            </h3>
-                          </div>
-                        </div>
-                        <div className="text-destructive opacity-60 group-hover:opacity-100 transition-opacity">
-                          <LogOut className="w-5 h-5" />
-                        </div>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="cursor-pointer"
+                  onClick={() => setLogoutDialogOpen(true)}
+                >
+                  <div className="flex items-center justify-between p-4 rounded-lg border border-destructive/20 bg-destructive/5 hover:bg-destructive/10 transition-colors group">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-destructive to-red-600 flex items-center justify-center shadow-glow">
+                        <LogOut className="w-6 h-6 text-white" />
                       </div>
-                    </motion.div>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle className="flex items-center gap-2">
-                        <LogOut className="w-5 h-5 text-destructive" />
-                        Conferma Logout
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Sei sicuro di voler uscire dal tuo account?
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Annulla</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleLogout}
-                        className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                      >
-                        Esci
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                      <div>
+                        <h3 className="font-display font-bold text-foreground group-hover:text-destructive transition-colors">
+                          Logout
+                        </h3>
+                      </div>
+                    </div>
+                    <div className="text-destructive opacity-60 group-hover:opacity-100 transition-opacity">
+                      <LogOut className="w-5 h-5" />
+                    </div>
+                  </div>
+                </motion.div>
               </CardContent>
             </Card>
+
+            <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
+              <DialogContent
+                className="w-[calc(100%-2rem)] max-w-xs rounded-xl p-0 gap-0"
+                onOpenAutoFocus={(e) => e.preventDefault()}
+              >
+                <DialogHeader className="px-4 pt-4 pb-2">
+                  <DialogTitle className="flex items-center gap-2 text-base">
+                    <LogOut className="w-4 h-4 text-destructive" />
+                    Conferma Logout
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="px-4 pb-3">
+                  <p className="text-sm text-muted-foreground">Sei sicuro di voler uscire dal tuo account?</p>
+                </div>
+                <DialogFooter className="px-4 py-3 flex-row gap-2 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 h-9 text-sm"
+                    onClick={() => setLogoutDialogOpen(false)}
+                  >
+                    Annulla
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="flex-1 h-9 text-sm bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                    onClick={handleLogout}
+                  >
+                    Esci
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </motion.div>
         </div>
       </div>

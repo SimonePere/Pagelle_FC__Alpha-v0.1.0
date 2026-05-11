@@ -299,6 +299,8 @@ export default function TeamPage() {
                 <Input value={editCity} onChange={(e) => setEditCity(e.target.value)} placeholder="Es: Roma, Milano, Napoli" />
                 <p className="text-xs text-muted-foreground">Usata per mostrare le previsioni meteo in Home e nella creazione partita.</p>
               </div>
+              {/* [DISABILITATO] Stemma, colori e impostazioni — commentati temporaneamente,
+                  si mostrano solo: nome team, descrizione, città e salva.
               <div className="space-y-2 overflow-hidden">
                 <Label className="flex items-center gap-2"><Image className="w-4 h-4" /> Stemma del team</Label>
                 <div className="flex items-center gap-3">
@@ -344,6 +346,7 @@ export default function TeamPage() {
                   <Switch checked={editAllowGuestVoting} onCheckedChange={setEditAllowGuestVoting} />
                 </div>
               </div>
+              */}
               <Button onClick={handleSaveDetails} disabled={teamLoading}><Save className="w-4 h-4" /> Salva modifiche</Button>
             </CardContent>
           </Card>

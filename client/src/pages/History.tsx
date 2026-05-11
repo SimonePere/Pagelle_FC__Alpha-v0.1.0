@@ -1,13 +1,19 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useSelector } from 'react-redux';
-import { RootState } from '@/redux/store/store';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '@/redux/store/store';
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { FileText, Info } from "lucide-react";
+import { FileText, Info, Users } from "lucide-react";
 import { motion } from "framer-motion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import MatchGrid from "@/components/MatchGrid";
 import { Component, ReactNode } from "react";
+import { createTeam } from '@/redux/slices/teamSlice';
+import { refreshUserData, loadEnrichedUserData } from '@/redux/slices/authSlice';
+import { toast } from 'sonner';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -52,16 +58,39 @@ function ErrorFallback(error: Error) {
 }
 
 export default function History() {
-  const { user } = useSelector((state: RootState) => state.auth);
+  const { user, isGuest } = useSelector((state: RootState) => state.auth);
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
+
+  const [createTeamOpen, setCreateTeamOpen] = useState(false);
+  const [newTeamName, setNewTeamName] = useState('');
+  const [isCreatingTeam, setIsCreatingTeam] = useState(false);
+
+  const handleCreateTeamSubmit = async () => {
+    if (!newTeamName.trim()) return;
+    setIsCreatingTeam(true);
+    try {
+      const result = await dispatch(createTeam({ name: newTeamName.trim() }));
+      if (createTeam.fulfilled.match(result)) {
+        toast.success(`Team "${newTeamName.trim()}" creato con successo!`);
+        setCreateTeamOpen(false);
+        setNewTeamName('');
+        await dispatch(refreshUserData());
+        await dispatch(loadEnrichedUserData());
+      } else {
+        toast.error('Errore nella creazione del team.');
+      }
+    } finally {
+      setIsCreatingTeam(false);
+    }
+  };
 
   const handleCreateMatch = () => {
-    // Naviga alla pagina CreateMatch per creare un nuovo match
     navigate('/create-match');
   };
 
   useEffect(() => {
-    if (!user || !user.teams?.length) {
+    if (!user) {
       navigate('/login');
       return;
     }
@@ -85,25 +114,66 @@ export default function History() {
                   <FileText className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
                   Storico
                 </h1>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      aria-label="Informazioni storico"
-                      className="p-2 rounded-full hover:bg-primary/10 transition-colors"
-                    >
-                      <Info className="w-5 h-5 text-primary cursor-pointer" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80" side="bottom" align="end">
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-foreground">Come Funziona</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Rivedi le partite passate e quelle in corso del tuo team.
-                      </p>
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                <div className="flex items-center gap-2">
+                  {/* Crea team - solo per utenti registrati senza team */}
+                  {!isGuest && !user?.teams?.length && (
+                    <>
+                      <Button
+                        onClick={() => setCreateTeamOpen(true)}
+                        size="sm"
+                        className="bg-accent text-accent-foreground hover:bg-accent/90"
+                      >
+                        <Users className="w-4 h-4 mr-1" />
+                        Crea il tuo team
+                      </Button>
+
+                      <Dialog open={createTeamOpen} onOpenChange={setCreateTeamOpen}>
+                        <DialogContent className="sm:max-w-md">
+                          <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                              <Users className="w-5 h-5 text-accent" />
+                              Crea il tuo team
+                            </DialogTitle>
+                          </DialogHeader>
+                          <div className="py-2">
+                            <Input
+                              placeholder="Nome del team..."
+                              value={newTeamName}
+                              onChange={(e) => setNewTeamName(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && handleCreateTeamSubmit()}
+                              autoFocus
+                            />
+                          </div>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => setCreateTeamOpen(false)}>Annulla</Button>
+                            <Button onClick={handleCreateTeamSubmit} disabled={!newTeamName.trim() || isCreatingTeam}>
+                              {isCreatingTeam ? 'Creazione...' : 'Crea team'}
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </>
+                  )}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label="Informazioni storico"
+                        className="p-2 rounded-full hover:bg-primary/10 transition-colors"
+                      >
+                        <Info className="w-5 h-5 text-primary cursor-pointer" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80" side="bottom" align="end">
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-foreground">Come Funziona</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Rivedi le partite passate e quelle in corso del tuo team.
+                        </p>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
             </div>
             <div className="absolute top-0 right-0 w-48 h-48 bg-primary/10 rounded-full blur-3xl"></div>
@@ -118,7 +188,7 @@ export default function History() {
             transition={{ delay: 0.1 }}
           >
             <ErrorBoundary fallback={ErrorFallback}>
-              <MatchGrid showStats={false} onCreateMatch={handleCreateMatch} />
+              <MatchGrid showStats={false} onCreateMatch={!isGuest && user?.teams?.length ? handleCreateMatch : undefined} />
             </ErrorBoundary>
           </motion.div>
 

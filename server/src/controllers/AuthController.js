@@ -1,8 +1,10 @@
 const authService = require('../services/AuthService');
 
+/**
 // @desc    Register new user
 // @route   POST /api/v1/auth/register
 // @access  Public
+*/
 const register = async (req, res) => {
   console.log('\n🔵 === REGISTRAZIONE UTENTE ===');
   console.log('📥 Dati ricevuti:', {
@@ -44,9 +46,54 @@ const register = async (req, res) => {
   }
 };
 
+/**
+// @desc    Register guest user
+// @route   POST /api/v1/auth/register-guest
+// @access  Public
+*/
+const registerGuest = async (req, res) => {
+  console.log('\n🔵 === CREAZIONE UTENTE GUEST ===');
+  console.log('📥 Dati ricevuti:', {
+    guestUser: req.body.name,
+    existingTeamId: req.body.existingTeamId || null,
+    position: req.body.position || null
+  });
+
+  try {
+    const { name, existingTeamId, position } = req.body;
+    const result = await authService.registerGuest({ name, existingTeamId, position });
+
+    console.log('✅ Utente Guest creato:', name);
+
+    res.status(201).json({
+      success: true,
+      token: result.token,
+      guestUser: result.guestUser,
+      team: result.team || null
+    });
+
+  } catch (error) {
+    console.log('❌ ERRORE CREAZIONE UTENTE GUEST:', error.message);
+
+    // Gestione errori specifici
+    if (error.message.includes('already exists') ||
+      error.message.includes('Please provide') ||
+      error.message.includes('must be at least') ||
+      error.message.includes('valid email')) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.status(500).json({ error: 'Server error during registration' });
+  }
+
+
+};
+
+/**
 // @desc    Update user profile
 // @route   PUT /api/v1/auth/profile
 // @access  Private
+*/
 const updateProfile = async (req, res, next) => {
   try {
     const userId = req.user.id;
@@ -61,9 +108,11 @@ const updateProfile = async (req, res, next) => {
   }
 };
 
+/**
 // @desc    Change user password
 // @route   PUT /api/v1/auth/password
 // @access  Private
+*/
 const changePassword = async (req, res, next) => {
   try {
     const userId = req.user.id;
@@ -85,9 +134,11 @@ const changePassword = async (req, res, next) => {
   }
 };
 
+/**
 // @desc    Login user
 // @route   POST /api/v1/auth/login
 // @access  Public
+*/
 const login = async (req, res) => {
   console.log('\n🟢 === LOGIN UTENTE ===');
   console.log('📥 Dati ricevuti:', {
@@ -124,9 +175,11 @@ const login = async (req, res) => {
   }
 };
 
+/**
 // @desc    Get current user
 // @route   GET /api/v1/auth/me
 // @access  Private
+*/
 const getMe = async (req, res) => {
   console.log('\n🟡 === GET USER INFO ===');
   console.log('📥 User ID dal token:', req.user?.id);
@@ -158,10 +211,98 @@ const getMe = async (req, res) => {
   }
 };
 
+/**
+// @desc    Valida token di invito guest (endpoint pubblico)
+// @route   GET /api/v1/invite/:token
+// @access  Public
+*/
+const validateInvite = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const result = await authService.validateInvite(token);
+    res.json({ success: true, ...result });
+  } catch (error) {
+    const status = error.statusCode || 500;
+    res.status(status).json({ error: error.message });
+  }
+};
+
+/**
+// @desc    Login guest tramite invite token → JWT con scope guest
+// @route   POST /api/v1/auth/guest-login
+// @access  Public
+*/
+const guestLogin = async (req, res) => {
+  console.log('\n👻 === GUEST LOGIN ===');
+  console.log('📥 Token ricevuto:', req.body.inviteToken ? `${req.body.inviteToken.slice(0, 4)}...` : 'assente');
+
+  try {
+    const { inviteToken } = req.body;
+    const result = await authService.guestLogin({ inviteToken });
+
+    console.log('✅ Guest autenticato:', result.user.name);
+    console.log('👻 === FINE GUEST LOGIN ===\n');
+
+    res.json({ success: true, token: result.token, user: result.user });
+  } catch (error) {
+    console.log('❌ ERRORE GUEST LOGIN:', error.message);
+    const status = error.statusCode || 500;
+    res.status(status).json({ error: error.message });
+  }
+};
+
+/**
+// @desc    Merge guest → utente reale (registrazione con storico intatto)
+// @route   POST /api/v1/auth/guest-merge-user
+// @access  Public
+*/
+const guestMergeUser = async (req, res) => {
+  console.log('\n🔀 === GUEST MERGE USER ===');
+  console.log('📥 Token ricevuto:', req.body.inviteToken ? `${req.body.inviteToken.slice(0, 4)}...` : 'assente');
+
+  try {
+    const { email, password, name, inviteToken } = req.body;
+    const result = await authService.guestMergeUser({ email, password, name, inviteToken });
+
+    console.log('✅ Guest convertito in utente reale:', result.user.email);
+    console.log('🔀 === FINE GUEST MERGE USER ===\n');
+
+    res.status(200).json({ success: true, token: result.token, user: result.user });
+  } catch (error) {
+    console.log('❌ ERRORE GUEST MERGE USER:', error.message);
+    const status = error.statusCode || 500;
+    res.status(status).json({ error: error.message });
+  }
+};
+
+/**
+// @desc    Converte il guest autenticato in utente reale (via JWT, no inviteToken)
+// @route   POST /api/v1/auth/claim-guest-by-id
+// @access  Private (solo scope guest)
+*/
+const claimGuestById = async (req, res) => {
+  console.log('\n🔀 === CLAIM GUEST BY ID ===');
+  try {
+    const { email, password, name } = req.body;
+    const userId = req.user.id;
+    const result = await authService.claimGuestById({ userId, email, password, name });
+    console.log('✅ Guest convertito:', result.user.email);
+    res.status(200).json({ success: true, token: result.token, user: result.user });
+  } catch (error) {
+    console.log('❌ ERRORE CLAIM GUEST BY ID:', error.message);
+    const status = error.statusCode || 500;
+    res.status(status).json({ error: error.message });
+  }
+};
+
 module.exports = {
   register,
   login,
   getMe,
   updateProfile,
-  changePassword
+  changePassword,
+  validateInvite,
+  guestLogin,
+  guestMergeUser,
+  claimGuestById
 };

@@ -14,6 +14,7 @@ interface MatchState {
   isLoading: boolean;
   isSubmittingRatings: boolean;
   error: string | null;
+  lastCreatedGuestPlayers: Array<{ name: string; inviteToken: string; inviteUrl: string }> | null;
   filter: {
     status: Match['status'] | 'all';
   };
@@ -71,8 +72,10 @@ export const createMatch = createAsyncThunk(
       // Refresh dei match del team dopo creazione
       dispatch(fetchTeamMatches(matchData.teamId));
 
-      // Restituiamo solo il match object dalla risposta
-      return response.match;
+      return {
+        match: response.match,
+        guestPlayers: (response.guestPlayers || []) as Array<{ name: string; inviteToken: string; inviteUrl: string }>,
+      };
     } catch (error: any) {
       console.error('❌ Errore creazione match:', error);
       return rejectWithValue(error.message || 'Errore nella creazione della partita');
@@ -153,6 +156,7 @@ const initialState: MatchState = {
   isLoading: false,
   isSubmittingRatings: false,
   error: null,
+  lastCreatedGuestPlayers: null,
   filter: {
     status: 'all'
   }
@@ -254,8 +258,9 @@ const matchSlice = createSlice({
         state.error = null;
       })
       .addCase(createMatch.fulfilled, (state, action) => {
-        state.matches.unshift(action.payload); // Aggiungi all'inizio della lista
-        state.currentMatch = action.payload;
+        state.matches.unshift(action.payload.match);
+        state.currentMatch = action.payload.match;
+        state.lastCreatedGuestPlayers = action.payload.guestPlayers.length > 0 ? action.payload.guestPlayers : null;
         state.isLoading = false;
       })
       .addCase(createMatch.rejected, (state, action) => {

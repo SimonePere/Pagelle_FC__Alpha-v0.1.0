@@ -10,9 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import {
-  Calendar, CloudRain, Trophy, Target, Users, ArrowLeft,
-  CheckCircle, Clock, Trash2, AlertCircle, Award, FileText, Edit, Search
+  Calendar, CloudRain, Trophy, Target, Users,
+  CheckCircle, Clock, Trash2, AlertCircle, Award, Search, Copy
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Match, User } from '@/types/match';
@@ -23,7 +24,7 @@ import useEnrichedMatches from '@/hooks/useEnrichedMatches';
 
 export default function MatchDetails() {
   const { matchId } = useParams();
-  const { user } = useSelector((state: RootState) => state.auth);
+  const { user, isGuest } = useSelector((state: RootState) => state.auth);
   const { isLoading, error, matches } = useSelector((state: RootState) => state.matches);
 
   // 🗳️ Voting data selector 
@@ -55,6 +56,7 @@ export default function MatchDetails() {
   }, [currentMatch, matchId, dispatch]);
 
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -65,20 +67,24 @@ export default function MatchDetails() {
     if (matchId) {
       dispatch(fetchMatchById(matchId));
     }
-    // Assicura che le voting sessions siano caricate per trovare la session del match
-    dispatch(fetchUserVotingSessions({ page: 1, limit: 50 }));
-  }, [matchId, user, navigate, dispatch]);
+    // Carica sessions solo per utenti full (i guest usano il session ID dalla risposta match)
+    if (!isGuest) {
+      dispatch(fetchUserVotingSessions({ page: 1, limit: 50 }));
+    }
+  }, [matchId, user, navigate, dispatch, isGuest]);
 
-  // 🆕 Trova la voting session per questo match direttamente dalle sessions Redux
-  const matchVotingSession = sessions.find((s: any) => s.targetId === matchId);
+  // 🆕 Usa votingSession.id direttamente dal match (funziona per guest e full)
+  // Fallback: cerca nelle sessions Redux già caricate (utenti full)
+  const matchVotingSessionId = currentMatch?.votingSession?.id
+    || sessions.find((s: any) => s.targetId === matchId)?.id;
 
   useEffect(() => {
-    if (matchVotingSession?.id) {
-      dispatch(fetchMatchVotingData(matchVotingSession.id));
+    if (matchVotingSessionId) {
+      dispatch(fetchMatchVotingData(matchVotingSessionId));
     } else if (matchId) {
       dispatch(clearMatchVotingData());
     }
-  }, [matchVotingSession?.id, matchId, dispatch]);
+  }, [matchVotingSessionId, matchId, dispatch]);
 
   if (!user) return null;
 
@@ -180,24 +186,26 @@ export default function MatchDetails() {
     }
   };
 
-  const handleDeleteMatch = async () => {
-    if (window.confirm('Sei sicuro di voler eliminare questa partita?')) {
-      try {
-        await dispatch(deleteMatch(currentMatch.id)).unwrap();
+  const handleDeleteMatch = () => {
+    setShowDeleteDialog(true);
+  };
 
-        toast({
-          title: 'Match eliminato!',
-          description: 'La partita è stata cancellata con successo.'
-        });
-        navigate('/');
-      } catch (error) {
-        toast({
-          title: 'Errore',
-          description: 'Non è stato possibile eliminare la partita.',
-          variant: 'destructive'
-        });
-      }
+  const confirmDeleteMatch = async () => {
+    try {
+      await dispatch(deleteMatch(currentMatch.id)).unwrap();
+      toast({
+        title: 'Match eliminato!',
+        description: 'La partita è stata cancellata con successo.'
+      });
+      navigate('/');
+    } catch (error) {
+      toast({
+        title: 'Errore',
+        description: 'Non è stato possibile eliminare la partita.',
+        variant: 'destructive'
+      });
     }
+    setShowDeleteDialog(false);
   };
 
   // 🔄 RIATTIVAZIONE UTENTE ASTENUTO
@@ -255,61 +263,6 @@ export default function MatchDetails() {
     <DashboardLayout>
       <div className="pb-24 lg:pb-8">
         <div className="p-6 lg:p-8 space-y-8 max-w-6xl mx-auto">
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-3"
-          >
-            {/* 🔙 Solo icona per mobile, testo nascosto */}
-            <Button
-              variant="secondary"
-              onClick={() => navigate('/history')}
-              className="border-2 border-border hover:bg-secondary/80"
-              size="sm"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="sr-only">Torna allo Storico</span>
-            </Button>
-
-            {/* 🔧 Pulsanti Azione - Icona + Testo sempre visibili */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleEditMatch}
-              className="border-2 border-border hover:bg-secondary/80"
-            >
-              <Edit className="w-4 h-4 mr-2" />
-              Modifica
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleDeleteMatch}
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Elimina
-            </Button>
-
-          </motion.div>
-
-          {/* Messaggio informativo per partite non completate */}
-          {currentMatch.status !== 'completed' && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05 }}
-            >
-              <Alert className="bg-blue-50/50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
-                <FileText className="h-4 w-4" />
-                <AlertTitle>Dati in fase di completamento</AlertTitle>
-                <AlertDescription>
-                  Questa partita è in stato "{getStatusLabel(currentMatch.status)}".
-                  Alcuni dati potrebbero essere ancora incompleti o in aggiornamento.
-                </AlertDescription>
-              </Alert>
-            </motion.div>
-          )}
 
 
 
@@ -335,7 +288,7 @@ export default function MatchDetails() {
                 votingProgress: 65,
                 votingDeadline: '2025-12-20T23:59:59Z'
               }}
-              showActionButtons={false}
+              showActionButtons={!isGuest}
               onEditMatch={handleEditMatch}
               onDeleteMatch={handleDeleteMatch}
               // 🆕 Voting data from Redux
@@ -353,6 +306,41 @@ export default function MatchDetails() {
 
         </div>
       </div>
+
+      {/* Dialog conferma eliminazione */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent
+          className="w-[calc(100%-2rem)] max-w-xs rounded-xl p-0 gap-0"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <DialogHeader className="px-4 pt-4 pb-2">
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Trash2 className="w-4 h-4 text-destructive" />
+              Elimina Partita
+            </DialogTitle>
+          </DialogHeader>
+          <div className="px-4 pb-3">
+            <p className="text-sm text-muted-foreground">Sei sicuro di voler eliminare questa partita? L'operazione non è reversibile.</p>
+          </div>
+          <DialogFooter className="px-4 py-3 flex-row gap-2 border-t">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 h-9 text-sm"
+              onClick={() => setShowDeleteDialog(false)}
+            >
+              Annulla
+            </Button>
+            <Button
+              size="sm"
+              className="flex-1 h-9 text-sm bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              onClick={confirmDeleteMatch}
+            >
+              Elimina
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* EditModal per modificare match */}
       <EditModal

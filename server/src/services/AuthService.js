@@ -4,7 +4,6 @@ const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const AppError = require('../utils/AppError');
 
-// 🎯 REPOSITORY PATTERN - Accesso dati tramite Repository
 const {
     UserRepository,
     MatchRepository,
@@ -19,7 +18,7 @@ const TeamService = require('./TeamService');
 /**
  * AuthService - Business Logic Layer per Autenticazione
  * 
- * 🔄 AGGIORNATO CON REPOSITORY PATTERN:
+ *   REPOSITORY PATTERN:
  * - Non accede più direttamente ai Model Mongoose
  * - Usa Repository per separare data access da business logic
  * 
@@ -48,11 +47,15 @@ class AuthService {
      * @param {string} userId - User ID
      * @returns {string} JWT token
      */
-    generateToken(userId) {
-        const token = jwt.sign({ id: userId }, process.env.JWT_SECRET, {
-            expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-        });
-        return token;
+    generateToken(userId, extraPayload = {}) {
+        const expiresIn = extraPayload.scope === 'guest'
+            ? '48h'
+            : (process.env.JWT_EXPIRES_IN || '7d');
+        return jwt.sign(
+            { id: userId, ...extraPayload },
+            process.env.JWT_SECRET,
+            { expiresIn }
+        );
     }
 
     /**
@@ -80,6 +83,22 @@ class AuthService {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
             throw new Error('Please provide a valid email address');
+        }
+    }
+
+    /**
+     * Validate guest registration input
+     * @param {Object} data - Guest registration data
+     * @param {string} data.name - User name
+     * @throws {Error} If validation fails
+     */
+    validateGuestRegistrationInput({ name }) {
+        if (!name) {
+            throw new Error('Please provide name');
+        }
+
+        if (name.trim().length < 2) {
+            throw new Error('Name must be at least 2 characters long');
         }
     }
 
@@ -230,6 +249,68 @@ class AuthService {
                 totalTeams: user.totalTeams
             },
             team: teamJoined
+        };
+    }
+
+    /**
+     * Register - Create new GUEST user with limited access
+     * @param {Object} userData - User registration data
+     * @param {string} userData.name - User name
+     * @param {string} userData.position - User position (optional)
+     * @param {string} userData.existingTeamId - Existing team ID to join (optional)
+     * @returns {Promise<Object>} Created user and token
+     */
+    async registerGuest({ name, position, existingTeamId }) {
+        // 1. Input validation
+        this.validateGuestRegistrationInput({ name, position });
+
+        // 2. Check if user exists
+        // const userExists = await this.userExistsByName(name);
+        // if (userExists) {
+        //     throw new Error('User already exists with this name');
+        // }
+
+        // 3. Create Guest user with specific scope e limitazioni
+        const user = await this.userRepository.create({
+            name: name.trim(),
+            teamIds: [existingTeamId], // Associato al Team di cui fa parte l'utente che lo ha creato
+            isGuest: true,
+            profile: {
+                position: position || '',
+                preferredFoot: 'right'
+            }
+        });
+
+        // 4. Generate token
+        const token = this.generateToken(user._id);
+
+        // // 5. Team join opzionale
+        // let teamJoined = null;
+        // if (existingTeamId) {
+        //     // Prima recupera il team per ottenere l'inviteCode
+        //     const team = await this.teamRepository.findById(existingTeamId);
+        //     if (!team) {
+        //         throw new Error('Team non trovato');
+        //     }
+        //     // Poi chiama joinTeam con l'inviteCode corretto
+        //     teamJoined = await this.teamService.joinTeam(user._id.toString(), team.inviteCode);
+        //     console.log(`✅ Utente Guest ${user._id} unito al team ${existingTeamId} durante la creazione`);
+        // }
+
+
+
+        return {
+            message: "Utente Guest creato con successo",
+            token,
+            user: {
+                id: user._id,
+                name: user.name,
+                isGuest: user.isGuest,
+                teamIds: user.teamIds,
+                teamName: user.teamName,
+                profile: user.profile,
+                totalTeams: user.totalTeams
+            },
         };
     }
 
@@ -575,6 +656,193 @@ class AuthService {
             teams: user.teamIds,
             totalTeams: user.totalTeams,
             hasTeams: user.hasTeams
+        };
+    }
+
+    /**
+     * Valida un token di invito guest (endpoint pubblico)
+     * @param {string} token - Il token di invito
+     * @returns {Promise<Object>} Info pubbliche su giocatore, team e partita
+     */
+    async validateInvite(token) {
+        if (!token) throw new AppError('Token richiesto', 400);
+
+        const guestUser = await this.userRepository.findOne({ inviteToken: token });
+        if (!guestUser) throw new AppError('Link non valido', 404);
+
+        if (!guestUser.isGuest) throw new AppError('Invito già utilizzato', 410);
+
+        const match = await this.matchRepository.findById(guestUser.inviteTokenMatchId);
+        if (!match) throw new AppError('Partita non trovata', 404);
+
+        if (match.status === 'completed' || match.status === 'cancelled') {
+            throw new AppError('Partita chiusa', 410);
+        }
+
+        const team = await this.teamRepository.findById(match.teamId);
+
+        return {
+            playerName: guestUser.name,
+            teamName: team ? team.name : '',
+            matchDate: match.date,
+            matchField: match.field,
+            matchId: match._id
+        };
+    }
+
+    /**
+     * Autentica un guest tramite inviteToken → restituisce JWT con scope guest
+     * @param {Object} data
+     * @param {string} data.inviteToken - Token di invito
+     * @returns {Promise<Object>} JWT guest + dati utente
+     */
+    async guestLogin({ inviteToken }) {
+        if (!inviteToken) throw new AppError('Token invito richiesto', 400);
+
+        const guestUser = await this.userRepository.findOne({ inviteToken, isGuest: true });
+        if (!guestUser) throw new AppError('Link non valido o già utilizzato', 404);
+
+        const match = await this.matchRepository.findById(guestUser.inviteTokenMatchId);
+        if (!match) throw new AppError('Partita non trovata', 404);
+
+        if (match.status === 'completed' || match.status === 'cancelled') {
+            throw new AppError('Partita chiusa, registrati per continuare a usare l\'app', 410);
+        }
+
+        const token = this.generateToken(guestUser._id, {
+            scope: 'guest',
+            matchId: guestUser.inviteTokenMatchId
+        });
+
+        return {
+            token,
+            user: {
+                id: guestUser._id,
+                name: guestUser.name,
+                isGuest: true,
+                teamIds: guestUser.teamIds,
+                teamName: guestUser.teamName,
+                matchId: guestUser.inviteTokenMatchId,
+                scope: 'guest'
+            }
+        };
+    }
+
+    /**
+     * Merge guest → utente reale (claim-guest / registrazione con storico)
+     * Il guest User già esiste nel DB con lo stesso _id.
+     * Basta togliere isGuest e aggiungere email/password.
+     * Tutto lo storico (voti, partite, stats) resta intatto.
+     *
+     * @param {Object} data
+     * @param {string} data.email - Email del nuovo account
+     * @param {string} data.password - Password in chiaro
+     * @param {string} data.name - Nome (opzionale, tieni quello esistente se non passato)
+     * @param {string} data.inviteToken - Token del guest da convertire
+     * @returns {Promise<Object>} JWT full + dati utente
+     */
+    async guestMergeUser({ email, password, name, inviteToken }) {
+        if (!inviteToken) throw new AppError('Token invito richiesto', 400);
+        if (!email || !password) throw new AppError('Email e password richieste', 400);
+
+        // 1. Trova il guest
+        const guestUser = await this.userRepository.findOne({ inviteToken, isGuest: true });
+        if (!guestUser) throw new AppError('Token non valido o già utilizzato', 404);
+
+        // 2. Verifica che l'email non sia già usata da un altro utente
+        const emailTaken = await this.userRepository.findOne({
+            email: email.toLowerCase().trim(),
+            _id: { $ne: guestUser._id }
+        });
+        if (emailTaken) throw new AppError('Email già in uso da un altro account', 400);
+
+        // 3. Valida e hash password
+        this.validatePassword(password);
+        const hashedPassword = await this.hashPassword(password);
+
+        // 4. Aggiorna il guest in-place: stesso _id, stesso storico
+        const updatedUser = await this.userRepository.updateById(guestUser._id, {
+            isGuest: false,
+            email: email.toLowerCase().trim(),
+            password: hashedPassword,
+            name: name ? name.trim() : guestUser.name,
+            inviteToken: null,
+            inviteTokenMatchId: null,
+            birthdate: new Date().toISOString().split('T')[0] // placeholder — aggiornabile dopo
+        });
+
+        // 5. Genera JWT full
+        const token = this.generateToken(updatedUser._id, { scope: 'full' });
+
+        return {
+            token,
+            user: {
+                id: updatedUser._id,
+                name: updatedUser.name,
+                email: updatedUser.email,
+                isGuest: false,
+                teamIds: updatedUser.teamIds,
+                teamName: updatedUser.teamName,
+                scope: 'full'
+            }
+        };
+    }
+    /**
+     * Converte un guest autenticato (JWT) in utente reale — senza inviteToken.
+     * Usa req.user.id per trovare il guest, poi applica la stessa logica di guestMergeUser.
+     * 
+     * @param {Object} data
+     * @param {string} data.userId - ID del guest (dal JWT)
+     * @param {string} data.email - Email del nuovo account
+     * @param {string} data.password - Password in chiaro
+     * @param {string} data.name - Nome (opzionale, usa quello esistente se non passato)
+     * @returns {Promise<Object>} JWT full + dati utente
+     */
+    async claimGuestById({ userId, email, password, name }) {
+        if (!userId) throw new AppError('User ID richiesto', 400);
+        if (!email || !password) throw new AppError('Email e password richieste', 400);
+
+        // 1. Trova il guest per ID
+        const guestUser = await this.userRepository.findById(userId);
+        if (!guestUser) throw new AppError('Utente non trovato', 404);
+        if (!guestUser.isGuest) throw new AppError('Utente non è un ospite', 400);
+
+        // 2. Verifica che l'email non sia già usata
+        const emailTaken = await this.userRepository.findOne({
+            email: email.toLowerCase().trim(),
+            _id: { $ne: guestUser._id }
+        });
+        if (emailTaken) throw new AppError('Email già in uso da un altro account', 400);
+
+        // 3. Valida e hash password
+        this.validatePassword(password);
+        const hashedPassword = await this.hashPassword(password);
+
+        // 4. Aggiorna in-place: stesso _id, stesso storico
+        const updatedUser = await this.userRepository.updateById(guestUser._id, {
+            isGuest: false,
+            email: email.toLowerCase().trim(),
+            password: hashedPassword,
+            name: name ? name.trim() : guestUser.name,
+            inviteToken: null,
+            inviteTokenMatchId: null,
+            birthdate: new Date().toISOString().split('T')[0]
+        });
+
+        // 5. Genera JWT full
+        const token = this.generateToken(updatedUser._id, { scope: 'full' });
+
+        return {
+            token,
+            user: {
+                id: updatedUser._id,
+                name: updatedUser.name,
+                email: updatedUser.email,
+                isGuest: false,
+                teamIds: updatedUser.teamIds,
+                teamName: updatedUser.teamName,
+                scope: 'full'
+            }
         };
     }
 }

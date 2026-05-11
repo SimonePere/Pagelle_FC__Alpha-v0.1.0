@@ -19,7 +19,6 @@ export default function CookiePolicy() {
           <ul className="text-muted-foreground list-disc pl-6">
             <li>Mantenere la sessione di accesso (login)</li>
             <li>Salvare le tue preferenze (tema, onboarding visto)</li>
-            <li>Memorizzare lo stato di sblocco app</li>
           </ul>
 
           <h2 className="text-2xl font-bold text-foreground mt-8">Cosa NON usiamo</h2>

@@ -22,6 +22,7 @@ export interface User {
   teamIds?: string[];
   teamName?: string;
   role?: string;
+  isGuest?: boolean;
   profile?: any;
   totalTeams?: number;
   createdAt?: string;
@@ -207,7 +208,11 @@ export interface CreateMatchRequest {
   abstainedMembers?: Array<{
     userId: string;
     abstainedBy: string;
-  }>;                         // Array ID membri assenti (opzionale)
+  }>;                       // Array ID membri assenti (opzionale)
+  guestPlayers?: Array<{
+    name: string;
+    position?: 'POR' | 'DIF' | 'CEN' | 'ATT' | 'UTIL';
+  }>;
 }
 
 export interface SubmitRatingsRequest {

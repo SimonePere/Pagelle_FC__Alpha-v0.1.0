@@ -24,9 +24,10 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import {
-    Calendar, MapPin, Users, ChevronRight, ChevronLeft, Check, UserMinus, Trophy, UserCheck, UserX
+    Calendar, MapPin, Users, ChevronRight, ChevronLeft, Check, UserMinus, Trophy, UserCheck, UserX, UserPlus, Copy, ExternalLink
 } from 'lucide-react';
 import { getForecastForDate, isWithinForecastWindow, WeatherSnapshot } from '@/lib/weather';
 
@@ -54,10 +55,20 @@ const CreateMatch: React.FC = () => {
     const [step, setStep] = useState(1);
     const [creatingMatch, setCreatingMatch] = useState(false);
 
+    // Dialog aggiungi ospite
+    const [guestDialogOpen, setGuestDialogOpen] = useState(false);
+    const [guestName, setGuestName] = useState('');
+    const [guestPosition, setGuestPosition] = useState<'POR' | 'DIF' | 'CEN' | 'ATT' | 'UTIL' | ''>('');
+
+    // Modale invite link post-creazione
+    const [inviteLinksOpen, setInviteLinksOpen] = useState(false);
+    const [inviteLinks, setInviteLinks] = useState<Array<{ name: string; inviteToken: string; inviteUrl: string }>>([]);
+
     // Step 1 — Dati partita
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [field, setField] = useState('');
     const [playersCount, setPlayersCount] = useState<PlayersCount>(8);
+    const [guestPlayers, setGuestPlayers] = useState<Array<{ name: string; position?: 'POR' | 'DIF' | 'CEN' | 'ATT' | 'UTIL' }>>([]);
 
     // Meteo
     const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
@@ -156,16 +167,24 @@ const CreateMatch: React.FC = () => {
                     userId,
                     abstainedBy: user?.id || ''
                 })),
+                guestPlayers: guestPlayers,
             };
 
             const result = await dispatch(createMatch(matchData));
 
             if (createMatch.fulfilled.match(result)) {
-                toast({
-                    title: 'Partita creata',
-                    description: 'Puoi invitare il gruppo a votare dopo la partita.',
-                });
-                navigate('/vote');
+                const guests = result.payload.guestPlayers;
+                if (guests && guests.length > 0) {
+                    setInviteLinks(guests);
+                    setInviteLinksOpen(true);
+                    // la navigate avviene dopo che l'utente chiude il modale
+                } else {
+                    toast({
+                        title: 'Partita creata',
+                        description: 'Puoi invitare il gruppo a votare dopo la partita.',
+                    });
+                    navigate('/vote');
+                }
             } else {
                 throw new Error(result.payload as string || 'Errore nella creazione');
             }
@@ -178,6 +197,28 @@ const CreateMatch: React.FC = () => {
         } finally {
             setCreatingMatch(false);
         }
+    };
+
+    // ─── GESTIONE OSPITI ─────────────────────────────────────
+    const handleAddGuest = () => {
+        if (!guestName.trim()) return;
+        setGuestPlayers(prev => [
+            ...prev,
+            { name: guestName.trim(), position: guestPosition || undefined }
+        ]);
+        setGuestName('');
+        setGuestPosition('');
+        setGuestDialogOpen(false);
+    };
+
+    const handleRemoveGuest = (index: number) => {
+        setGuestPlayers(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const copyInviteLink = (url: string) => {
+        navigator.clipboard.writeText(url).then(() => {
+            toast({ title: 'Link copiato!', description: url });
+        });
     };
 
     // ─── STEP NAVIGATION GUARDS ──────────────────────────────
@@ -303,7 +344,7 @@ const CreateMatch: React.FC = () => {
                 </p>
             )}
 
-            {/* Chip toggle giocatori */}
+            {/* Chip toggle giocatori regolari */}
             <div className="flex flex-wrap gap-2">
                 {playersList.map((player) => {
                     const isPresent = presentPlayers[player.id];
@@ -321,12 +362,42 @@ const CreateMatch: React.FC = () => {
                         </button>
                     );
                 })}
+
+                {/* Chip ospiti — sempre selezionati, non de-selezionabili */}
+                {guestPlayers.map((guest, i) => (
+                    <div key={`guest-${i}`} className="flex items-center gap-1">
+                        <span className="px-3 py-1.5 rounded-full text-sm font-medium border bg-orange-500/15 border-orange-500/40 text-orange-700 dark:text-orange-400">
+                            {guest.name}
+                        </span>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 border-orange-400/50 text-orange-600">Ospite</Badge>
+                        <button
+                            type="button"
+                            onClick={() => handleRemoveGuest(i)}
+                            className="text-muted-foreground hover:text-destructive text-xs ml-0.5"
+                            aria-label="Rimuovi ospite"
+                        >
+                            ×
+                        </button>
+                    </div>
+                ))}
             </div>
+
+            {/* Bottone aggiungi ospite */}
+            <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full text-xs gap-1.5 border-dashed"
+                onClick={() => setGuestDialogOpen(true)}
+            >
+                <UserPlus className="h-3.5 w-3.5" />
+                Aggiungi giocatore ospite
+            </Button>
 
             {/* Counter */}
             <div className="text-center">
                 <Badge variant="secondary" className="text-xs px-2.5 py-0.5">
-                    {presentCount} su {playersList.length} convocati
+                    {presentCount + guestPlayers.length} su {playersList.length + guestPlayers.length} convocati
                 </Badge>
             </div>
         </div>
@@ -533,6 +604,87 @@ const CreateMatch: React.FC = () => {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Dialog — Aggiungi ospite */}
+            <Dialog open={guestDialogOpen} onOpenChange={setGuestDialogOpen}>
+                <DialogContent
+                    className="w-[calc(100%-2rem)] max-w-xs rounded-xl p-0 gap-0"
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                >
+                    <DialogHeader className="px-4 pt-4 pb-2">
+                        <DialogTitle className="text-base">Aggiungi giocatore ospite</DialogTitle>
+                    </DialogHeader>
+                    <div className="px-4 pb-2 space-y-3">
+                        <div className="space-y-1.5">
+                            <Label htmlFor="guest-name" className="text-sm">Nome *</Label>
+                            <Input
+                                id="guest-name"
+                                value={guestName}
+                                onChange={(e) => setGuestName(e.target.value)}
+                                placeholder="Es. Marco"
+                                className="h-10 text-sm"
+                                onKeyDown={(e) => e.key === 'Enter' && handleAddGuest()}
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label className="text-sm">Posizione (opzionale)</Label>
+                            <Select value={guestPosition} onValueChange={(v) => setGuestPosition(v as any)}>
+                                <SelectTrigger className="h-10 text-sm">
+                                    <SelectValue placeholder="Seleziona posizione" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="POR">Portiere</SelectItem>
+                                    <SelectItem value="DIF">Difensore</SelectItem>
+                                    <SelectItem value="CEN">Centrocampista</SelectItem>
+                                    <SelectItem value="ATT">Attaccante</SelectItem>
+                                    <SelectItem value="UTIL">Jolly</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter className="px-4 py-3 flex-row gap-2 border-t">
+                        <Button variant="outline" size="sm" className="flex-1 h-9 text-sm" onClick={() => setGuestDialogOpen(false)}>Annulla</Button>
+                        <Button size="sm" className="flex-1 h-9 text-sm" onClick={handleAddGuest} disabled={!guestName.trim()}>Aggiungi</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog — Invite links */}
+            <Dialog open={inviteLinksOpen} onOpenChange={(open) => { if (!open) navigate('/vote'); setInviteLinksOpen(open); }}>
+                <DialogContent
+                    className="w-[calc(100%-2rem)] max-w-xs rounded-xl p-0 gap-0"
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                >
+                    <DialogHeader className="px-4 pt-4 pb-2">
+                        <DialogTitle className="text-base">Partita creata! 🎉</DialogTitle>
+                    </DialogHeader>
+                    <div className="px-4 pb-2 space-y-2">
+                        <p className="text-sm text-muted-foreground">Condividi questi link con i giocatori ospiti:</p>
+                        {inviteLinks.map((guest, i) => (
+                            <div key={i} className="flex items-center gap-2 p-3 rounded-lg border bg-muted/30">
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium">{guest.name}</p>
+                                    <p className="text-xs text-muted-foreground truncate">{guest.inviteUrl}</p>
+                                </div>
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8 shrink-0"
+                                    onClick={() => copyInviteLink(guest.inviteUrl)}
+                                    title="Copia link"
+                                >
+                                    <Copy className="h-3.5 w-3.5" />
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                    <DialogFooter className="px-4 py-3 border-t">
+                        <Button size="sm" className="w-full h-9 text-sm" onClick={() => { setInviteLinksOpen(false); navigate('/vote'); }}>
+                            Vai alle Votazioni
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

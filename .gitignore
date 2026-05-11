@@ -155,6 +155,8 @@ README_RAILWAY.md
 ARCHIVIO_IDEE_COMPLETE.md
 GUIDA_IMPLEMENTAZIONE_FEATURE_COMPLETA.md
 ROADMAP_PRIORITA_DEFINITIVA.md
+lovable_football/
+external-player.md
 
 # Server debug utilities (not needed in version control)
 server/debug-utils/add-missing-davide.js

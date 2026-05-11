@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -383,39 +383,77 @@ const EditModal = ({ isOpen, onClose, type, data, onSave, onReactivateUser }: Ed
         }
     };
 
+    const isCompact = true;
+    const isMatch = type === 'match';
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="bg-card/90 backdrop-blur-sm border-border shadow-card max-w-md">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 text-foreground font-display text-xl">
-                        {type === 'user-profile' && <><User className="w-5 h-5 text-primary" />Modifica Profilo</>}
-                        {type === 'user-password' && <><Lock className="w-5 h-5 text-primary" />Cambia Password</>}
+            <DialogContent
+                className={
+                    isMatch
+                        ? 'w-[calc(100%-2rem)] max-w-sm rounded-xl p-0 gap-0'
+                        : 'w-[calc(100%-2rem)] max-w-xs rounded-xl p-0 gap-0'
+                }
+                onOpenAutoFocus={(e) => e.preventDefault()}
+            >
+                <DialogHeader className="px-4 pt-4 pb-2">
+                    <DialogTitle className={isMatch ? 'flex items-center gap-2 text-base' : 'flex items-center gap-2 text-base'}>
+                        {type === 'user-profile' && <><User className="w-4 h-4 text-primary" />Modifica Profilo</>}
+                        {type === 'user-password' && <><Lock className="w-4 h-4 text-primary" />Cambia Password</>}
                         {type === 'match' && <><Trophy className="w-5 h-5 text-primary" />Modifica Partita</>}
                     </DialogTitle>
                 </DialogHeader>
 
-                <div className="space-y-4 mt-4">
-                    {renderForm()}
-
-                    <div className="flex gap-3 pt-4">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={onClose}
-                            className="flex-1"
-                        >
-                            Annulla
-                        </Button>
-                        <Button
-                            type="button"
-                            disabled={loading || !isPasswordFormValid()}
-                            onClick={handleSubmit}
-                            className="flex-1"
-                        >
-                            {loading ? 'Salvataggio...' : 'Salva'}
-                        </Button>
+                {isCompact ? (
+                    <>
+                        <div className="px-4 pb-2 space-y-3 max-h-[70vh] overflow-y-auto">
+                            {renderForm()}
+                        </div>
+                        <DialogFooter className="px-4 py-3 flex-row gap-2 border-t">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={onClose}
+                                className="flex-1 h-9 text-sm"
+                            >
+                                Annulla
+                            </Button>
+                            <Button
+                                type="button"
+                                size="sm"
+                                disabled={loading || !isPasswordFormValid()}
+                                onClick={handleSubmit}
+                                className="flex-1 h-9 text-sm"
+                            >
+                                {loading ? 'Salvataggio...' : 'Salva'}
+                            </Button>
+                        </DialogFooter>
+                    </>
+                ) : (
+                    // ramo morto — isCompact è sempre true ora
+                    <div className="space-y-4 mt-4">
+                        {renderForm()}
+                        <div className="flex gap-3 pt-4">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={onClose}
+                                className="flex-1"
+                            >
+                                Annulla
+                            </Button>
+                            <Button
+                                type="button"
+                                disabled={loading || !isPasswordFormValid()}
+                                onClick={handleSubmit}
+                                className="flex-1"
+                            >
+                                {loading ? 'Salvataggio...' : 'Salva'}
+                            </Button>
+                        </div>
                     </div>
-                </div>
+                )}
             </DialogContent>
         </Dialog>
     );

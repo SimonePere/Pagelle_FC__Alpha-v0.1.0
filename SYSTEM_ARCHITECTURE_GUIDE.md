@@ -3,17 +3,17 @@
 ## 📋 **OVERVIEW**
 
 **Data Creazione:** 18 Dicembre 2025  
-**Ultimo Aggiornamento:** 8 Gennaio 2026  
-**Versione Sistema:** v0.1.0 Alpha - Post News System & Cache Integration  
+**Ultimo Aggiornamento:** 11 Maggio 2026  
+**Versione Sistema:** v0.1.0 Alpha — External Player + Guest JWT + UI Refinements  
 **Architettura:** Service Layer + Repository Pattern + Cache Layer + Adapter Pattern  
 
-Questa guida spiega **come funziona tutto il sistema Pagelle FC** nella versione Alpha v0.1.0 con tutte le nuove feature implementate:
+Questa guida spiega **come funziona tutto il sistema Pagelle FC** nella versione Alpha v0.1.0:
 
-🆕 **NEWS SYSTEM** - Sistema intelligente di generazione notizie automatiche  
-🆕 **CACHE SERVICE** - Layer di caching con Adapter Pattern (Memory/Redis)  
-🆕 **MATCH NOTIFICATIONS** - Sistema notifiche per eventi match  
-🆕 **TEMPLATE-BASED NEWS** - Generazione dinamica contenuti con template JSON  
-🆕 **INTELLIGENT NEWS REPLACEMENT** - Sistema sostituzione notizie per categoria  
+🆕 **EXTERNAL PLAYER (Guest User)** — Ospiti senza registrazione con link invito personale e JWT scope-based  
+🆕 **JWT SCOPE SYSTEM** — Token `"guest"` con permessi limitati, separati dagli utenti registrati  
+🆕 **NEWS SYSTEM** — Sistema intelligente di generazione notizie automatiche  
+🆕 **CACHE SERVICE** — Layer di caching con Adapter Pattern (Memory/Redis)  
+🆕 **MATCH NOTIFICATIONS** — Sistema notifiche per eventi match  
 
 Non è solo un refactor - è una **piattaforma enterprise completa** con features production-ready.
 
@@ -42,6 +42,84 @@ Il sistema è ora strutturato su **3 layer distinti** con responsabilità ben se
 ---
 
 ## 🚀 **NUOVE FEATURE PRINCIPALI v0.1.0 ALPHA**
+
+### **👤 EXTERNAL PLAYER (Guest User)**
+
+Permette di aggiungere giocatori occasionali a una partita **senza che si debbano registrare**.
+
+**Architettura scelta: Guest User (flag su modello `User`)**  
+L’ospite è un `User` reale nel DB con `isGuest: true`. Zero refactoring sulle query esistenti.
+Se l’ospite si registra, l’ID User rimane lo stesso — merge storico automatico e silenzioso.
+
+**Flusso completo:**
+```
+[Membro] crea partita + aggiunge ospite
+    ↓
+Backend crea User { isGuest: true, inviteToken: "ABCD1234", inviteExpiry: +48h }
+    ↓
+Link: /join?token=ABCD1234  (condiviso dal membro al giocatore ospite)
+    ↓
+[Ospite] apre link → AuthService.loginAsGuest(token)
+    ↓
+JWT emesso con { scope: "guest", userId: <guestId>, exp: 48h }
+    ↓
+[Ospite] può votare, vedere risultati, storico team (read-only)
+    ↓ (opzionale)
+[Ospite] si registra → stesso userId, isGuest: false — storico intatto
+```
+
+**Permessi guest (scope: "guest"):**
+- ✅ Vota la partita
+- ✅ Vede risultati e medie finali
+- ✅ Vede storico team (read-only)
+- ❌ Crea partite
+- ❌ Gestisce team
+- ❌ Accede a Player Cards
+- ❌ Azioni admin
+
+**Nuovi file:**
+```
+server/src/utils/tokenGenerator.js          — generazione token univoci
+server/src/middleware/requireMatchAccess.js  — accesso partita per token guest
+server/src/middleware/requireScope.js        — limita permessi per scope JWT
+server/src/routes/invite.js                  — GET /join, POST /invite/claim
+client/src/pages/JoinByInvite.tsx            — pagina link invito (3 modalità)
+client/src/pages/ClaimGuest.tsx              — merge account ospite → registrato
+```
+
+**Modifiche ai file esistenti:**
+- `User.js`: campi `isGuest`, `inviteToken`, `inviteExpiry`
+- `AuthController/AuthService`: `loginAsGuest()`, JWT con scope
+- `auth.js middleware`: gestione scope nel verify token
+- `MatchController/MatchService`: creazione ospiti, link invito
+- `authSlice.ts`: stato `isGuest`, `loginAsGuest`, `refreshUserData`
+- `CreateMatch.tsx`: aggiunta ospiti al volo, badge Ospite, copia link
+- `MatchDetailsCard.tsx`: accordion link invito, badge Ospite giocatori
+
+---
+
+### **🔐 JWT SCOPE SYSTEM**
+
+Il token JWT ora include un campo `scope` per differenziare i permessi:
+
+```javascript
+// Utente registrato (default)
+{ userId, teamId, scope: "full", exp: 7d }
+
+// Ospite (guest User)
+{ userId, scope: "guest", exp: 48h }
+```
+
+Il middleware `requireScope.js` verifica lo scope prima di ogni route sensibile:
+```javascript
+// Solo utenti con scope "full" possono creare partite
+router.post('/matches', requireScope('full'), matchController.create);
+
+// Ospiti possono accedere ai dettagli partita
+router.get('/matches/:id', requireMatchAccess, matchController.getById);
+```
+
+---
 
 ### **📰 NEWS SYSTEM - Generazione Automatica Notizie**
 

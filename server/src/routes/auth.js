@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/AuthController');
 const auth = require('../middleware/auth');
+const requireScope = require('../middleware/requireScope');
 
 // @route   POST /api/v1/auth/register
 // @desc    Register user
@@ -27,5 +28,20 @@ router.put('/profile', auth, authController.updateProfile);
 // @desc    Change user password
 // @access  Private
 router.put('/password', auth, authController.changePassword);
+
+// @route   POST /api/v1/auth/guest-login
+// @desc    Autentica guest tramite invite token → JWT scope guest
+// @access  Public
+router.post('/guest-login', authController.guestLogin);
+
+// @route   POST /api/v1/auth/guest-merge-user
+// @desc    Converte guest in utente reale (storico intatto, stesso _id)
+// @access  Public
+router.post('/guest-merge-user', authController.guestMergeUser);
+
+// @route   POST /api/v1/auth/claim-guest-by-id
+// @desc    Converte il guest autenticato in utente reale (usa JWT, senza inviteToken)
+// @access  Private (scope guest)
+router.post('/claim-guest-by-id', auth, requireScope('guest'), authController.claimGuestById);
 
 module.exports = router;

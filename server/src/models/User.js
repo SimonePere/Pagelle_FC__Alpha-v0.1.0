@@ -10,24 +10,76 @@ const userSchema = new mongoose.Schema({
   },
   email: {
     type: String,
-    required: true, // Optional come nel frontend
+
+    // Obbligatoria SOLO se NON guest
+    required: function () {
+      return !this.isGuest;
+    },
+    // match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email'],
+
+    // Valida email SOLO per utenti non guest
+    validate: {
+      validator: function (v) {
+
+        // Se guest -> salta completamente il controllo email
+        if (this.isGuest) return true;
+
+        // Se NON guest -> controlla regex email
+        return /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v);
+      },
+      message: 'Please enter a valid email'
+    },
+
     unique: true,
     sparse: true, // Permette multiple null values
     lowercase: true,
     trim: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
   },
   birthdate: {
     type: String,
     format: 'YYYY-MM-DD',
-    required: true
+    required: function () {
+      return !this.isGuest;
+    },
+
+    // Valida birthdate  SOLO per utenti non guest
+    validate: {
+      validator: function (v) {
+
+        // Se guest -> salta controlli birthdate
+        if (this.isGuest) return true;
+
+        // Se NON guest -> controlla formato YYYY-MM-DD
+        return /^\d{4}-\d{2}-\d{2}$/.test(v);
+      },
+      message: 'Birthdate must be a valid date in YYYY-MM-DD format'
+    }
   },
   password: {
     type: String,
-    required: [true, 'Password is required'],
+
+    // Obbligatoria SOLO se NON guest
+    required: function () {
+      return !this.isGuest;
+    },
     minlength: [6, 'Password must be at least 6 characters'],
-    select: false // Don't include password in queries by default
+    select: false, // Don't include password in queries by default
+
+    // Valida password SOLO per utenti non guest
+    validate: {
+      validator: function (v) {
+
+        // Se guest -> salta controlli password
+        if (this.isGuest) return true;
+
+        // Se NON guest -> password deve esistere
+        return v && v.length >= 6;
+      },
+      message: 'Password must be at least 6 characters'
+    }
   },
+
+
   teamIds: {
     type: [mongoose.Schema.Types.ObjectId],
     ref: 'Team',
@@ -48,6 +100,27 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['player', 'admin', 'moderator'],
     default: 'player'
+  },
+  // Nuovi Campi per utenti guest: possibilità da parte di un utente registrato,
+  // di creare un utente Guest per aggiungerlo ad una partita a cui partecipa, fargli votare la stessa e vedere classifche, risultati ecc
+  // CON SCOPE RIDOTTO (READ ONLY) 
+  // Guest senza email/password, con un token di invito
+  isGuest: {
+    type: Boolean,
+    default: false
+  },
+  inviteToken: {
+    type: String,
+    unique: true,
+    sparse: true  // permette null multipli
+  },
+  inviteTokenMatchId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Match'
+  },
+  guestCreatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   },
   profile: {
     position: {

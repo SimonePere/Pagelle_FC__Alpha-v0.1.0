@@ -103,12 +103,11 @@ export const useAppData = (): UseAppDataReturn => {
 
     // 🔄 Auto-fetch iniziale
     useEffect(() => {
-        if (!user || !user.teams?.length) {
+        if (!user || !activeTeamId) {
             return;
         }
 
         const teamId = activeTeamId;
-        if (!teamId) return;
         dispatch(fetchTeamMatches(teamId));
         dispatch(fetchTeamUsers(teamId));
         dispatch(fetchTeamPlayerCards(teamId));
@@ -118,12 +117,11 @@ export const useAppData = (): UseAppDataReturn => {
 
     // 🔄 Auto-refresh su visibility change (per tutte le pagine)
     useEffect(() => {
-        if (!user || !user.teams?.length) {
+        if (!user || !activeTeamId) {
             return;
         }
 
         const teamId = activeTeamId;
-        if (!teamId) return;
 
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
@@ -146,10 +144,9 @@ export const useAppData = (): UseAppDataReturn => {
 
     // 🛠️ Refresh manuale
     const refreshData = () => {
-        if (!user || !user.teams?.length) return;
+        if (!user || !activeTeamId) return;
 
         const teamId = activeTeamId;
-        if (!teamId) return;
         // 🔄 Refresh manuale di tutti i dati
         dispatch(fetchTeamMatches(teamId));
         dispatch(fetchTeamUsers(teamId));

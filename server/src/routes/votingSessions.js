@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const votingSessionController = require('../controllers/VotingSessionController');
 const auth = require('../middleware/auth');
+const requireScope = require('../middleware/requireScope');
+const requireMatchAccess = require('../middleware/requireMatchAccess');
 
 // =============================================
 //  ALL VOTING SESSION ROUTES ARE PRIVATE
@@ -10,57 +12,56 @@ const auth = require('../middleware/auth');
 
 // @route   POST /api/v1/voting-sessions
 // @desc    Create new voting session
-// @access  Private
-router.post('/', auth, votingSessionController.createVotingSession);
+// @access  Private (solo utenti registrati)
+router.post('/', auth, requireScope('full'), votingSessionController.createVotingSession);
 
 // @route   GET /api/v1/voting-sessions
 // @desc    Get voting sessions for current user
 // @access  Private
-router.get('/', auth, votingSessionController.getUserVotingSessions);
+router.get('/', auth, requireScope('full', 'guest'), votingSessionController.getUserVotingSessions);
 
 // --- Sub-resource routes FIRST (before /:id catch-all) ---
 
 // @route   GET /api/v1/voting-sessions/:id/my-vote
 // @desc    Get current user's active vote for a session
 // @access  Private
-router.get('/:id/my-vote', auth, votingSessionController.getMyVote);
+router.get('/:id/my-vote', auth, requireScope('full', 'guest'), votingSessionController.getMyVote);
 
 // @route   GET /api/v1/voting-sessions/:id/calculation
-// @desc    Calculate and get voting results (average ratings, self-reported goals/assists)
+// @desc    Calculate and get voting results
 // @access  Private
-// @note    Uses simplified calculation: average ratings with dynamic divisor, self-reported stats
-router.get('/:id/calculation', auth, votingSessionController.getVotingCalculation);
+router.get('/:id/calculation', auth, requireScope('full', 'guest'), votingSessionController.getVotingCalculation);
 
 // @route   GET /api/v1/voting-sessions/:id/submissions
-// @desc    Get all individual vote submissions for a session (complete with vote details)
-// @access  Private
-router.get('/:id/submissions', auth, votingSessionController.getSessionSubmissions);
+// @desc    Get all individual vote submissions for a session
+// @access  Private (guest vede solo sessioni completate)
+router.get('/:id/submissions', auth, requireScope('full', 'guest'), votingSessionController.getSessionSubmissions);
 
 // @route   POST /api/v1/voting-sessions/:id/vote
 // @desc    Submit vote for a voting session
-// @access  Private
-router.post('/:id/vote', auth, votingSessionController.submitVote);
+// @access  Private (guest può votare solo la sua partita)
+router.post('/:id/vote', auth, requireScope('full', 'guest'), requireMatchAccess, votingSessionController.submitVote);
 
 // @route   PATCH /api/v1/voting-sessions/:id/vote
 // @desc    Update user's vote for a match rating session
-// @access  Private
-router.patch('/:id/vote', auth, votingSessionController.updateVote);
+// @access  Private (guest può modificare solo la sua partita)
+router.patch('/:id/vote', auth, requireScope('full', 'guest'), requireMatchAccess, votingSessionController.updateVote);
 
 // @route   PATCH /api/v1/voting-sessions/:id/activate
-// @desc    Activate a voting session (change from draft to active)
-// @access  Private
-router.patch('/:id/activate', auth, votingSessionController.activateVotingSession);
+// @desc    Activate a voting session
+// @access  Private (solo utenti registrati)
+router.patch('/:id/activate', auth, requireScope('full'), votingSessionController.activateVotingSession);
 
 // @route   POST /api/v1/voting-sessions/:id/complete
-// @desc    Complete session and save official results (allow reopen)
-// @access  Private
-router.post('/:id/complete', auth, votingSessionController.completeVotingSession);
+// @desc    Complete session and save official results
+// @access  Private (solo utenti registrati)
+router.post('/:id/complete', auth, requireScope('full'), votingSessionController.completeVotingSession);
 
 // --- Catch-all :id route LAST ---
 
 // @route   GET /api/v1/voting-sessions/:id
 // @desc    Get specific voting session details
 // @access  Private
-router.get('/:id', auth, votingSessionController.getVotingSession);
+router.get('/:id', auth, requireScope('full', 'guest'), votingSessionController.getVotingSession);
 
 module.exports = router;

@@ -1,13 +1,20 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import { RootState } from '@/redux/store/store';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '@/redux/store/store';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Trophy, Medal, Target, TrendingUp, Crown, AlertCircle, Star, Goal, BarChart3, Hand } from 'lucide-react';
+import { Trophy, Medal, Target, TrendingUp, Crown, AlertCircle, Star, Goal, BarChart3, Hand, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { FakeNews } from '@/components/FakeNews';
 import { BadgesSection } from '@/components/BadgesSection';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { createTeam } from '@/redux/slices/teamSlice';
+import { refreshUserData } from '@/redux/slices/authSlice';
+import { toast } from 'sonner';
 import MatchCard from '@/components/MatchCard';
 import { OnboardingTutorial } from '@/components/OnboardingTutorial';
 import useHomeDashboard from '@/hooks/useHomeDashboard';
@@ -17,8 +24,31 @@ import { WeatherWidget } from '@/components/WeatherWidget';
 type LeaderboardType = 'rating' | 'goals' | 'assists' | 'playercard' | 'stats-per-match';
 
 const Home = () => {
-  const { user } = useSelector((state: RootState) => state.auth);
+  const { user, isGuest } = useSelector((state: RootState) => state.auth);
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
+
+  const [createTeamOpen, setCreateTeamOpen] = useState(false);
+  const [newTeamName, setNewTeamName] = useState('');
+  const [isCreatingTeam, setIsCreatingTeam] = useState(false);
+
+  const handleCreateTeam = async () => {
+    if (!newTeamName.trim()) return;
+    setIsCreatingTeam(true);
+    try {
+      const result = await dispatch(createTeam({ name: newTeamName.trim() }));
+      if (createTeam.fulfilled.match(result)) {
+        toast.success(`Team "${newTeamName.trim()}" creato con successo!`);
+        setCreateTeamOpen(false);
+        setNewTeamName('');
+        await dispatch(refreshUserData());
+      } else {
+        toast.error('Errore nella creazione del team.');
+      }
+    } finally {
+      setIsCreatingTeam(false);
+    }
+  };
 
   // 🎯 Usa useHomeDashboard invece di logica duplicata
   const {
@@ -168,15 +198,54 @@ const Home = () => {
                   🏆 Team {user.teams?.[0]?.name || user.teamName || 'Football Club'}
                 </p>
               </div>
-              <motion.div whileTap={{ scale: 0.95 }}>
-                <button
-                  onClick={() => navigate('/create-match')}
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 text-lg font-semibold rounded-lg bg-primary text-primary-foreground shadow-glow"
-                >
-                  <Target className="w-5 h-5" />
-                  Crea Partita
-                </button>
-              </motion.div>
+              {!isGuest && (
+                <motion.div whileTap={{ scale: 0.95 }}>
+                  {user.teams?.length ? (
+                    <button
+                      onClick={() => navigate('/create-match')}
+                      className="inline-flex items-center justify-center gap-2 px-6 py-3 text-lg font-semibold rounded-lg bg-primary text-primary-foreground shadow-glow"
+                    >
+                      <Target className="w-5 h-5" />
+                      Crea Partita
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setCreateTeamOpen(true)}
+                      className="inline-flex items-center justify-center gap-2 px-6 py-3 text-lg font-semibold rounded-lg bg-accent text-accent-foreground shadow-glow"
+                    >
+                      <Users className="w-5 h-5" />
+                      Crea il tuo team
+                    </button>
+                  )}
+                </motion.div>
+              )}
+
+              {/* Dialog creazione team */}
+              <Dialog open={createTeamOpen} onOpenChange={setCreateTeamOpen}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Users className="w-5 h-5 text-accent" />
+                      Crea il tuo team
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="py-2">
+                    <Input
+                      placeholder="Nome del team..."
+                      value={newTeamName}
+                      onChange={(e) => setNewTeamName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleCreateTeam()}
+                      autoFocus
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setCreateTeamOpen(false)}>Annulla</Button>
+                    <Button onClick={handleCreateTeam} disabled={!newTeamName.trim() || isCreatingTeam}>
+                      {isCreatingTeam ? 'Creazione...' : 'Crea team'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
             <WeatherWidget />
 

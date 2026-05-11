@@ -24,11 +24,16 @@ export default function Terms() {
             Sei responsabile di tutte le attività svolte tramite il tuo account.
           </p>
 
-          <h2 className="text-2xl font-bold text-foreground mt-8">3. Pagamento una tantum</h2>
+          <h2 className="text-2xl font-bold text-foreground mt-8">3. Servizio gratuito e supporto volontario</h2>
           <p className="text-muted-foreground">
-            L'accesso completo richiede un pagamento una tantum di importo indicato nella pagina di sblocco.
-            Il pagamento è <strong>non rimborsabile</strong> salvo i casi previsti dalla normativa applicabile a tutela del consumatore
-            (artt. 52–58 D.lgs. 206/2005 ove applicabile).
+            Pagelle FC è un servizio <strong>completamente gratuito</strong>, nato dalla passione per il calcio e creato nel tempo libero.
+            Non è previsto alcun pagamento obbligatorio per accedere alle funzionalità dell'app.
+          </p>
+          <p className="text-muted-foreground mt-2">
+            Se l'app ti piace e vuoi dimostrare il tuo apprezzamento, puoi farlo in modo del tutto volontario tramite
+            la funzione <strong>"Offrimi un caffè"</strong> presente nella barra laterale. Si tratta di una donazione libera,
+            non vincolata ad alcun servizio o vantaggio aggiuntivo, effettuata tramite la piattaforma Buy Me a Coffee.
+            Le donazioni non sono rimborsabili in quanto atto liberale volontario.
           </p>
 
           <h2 className="text-2xl font-bold text-foreground mt-8">4. Comportamento utenti</h2>

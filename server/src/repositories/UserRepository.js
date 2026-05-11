@@ -10,7 +10,7 @@ const User = require('../models/User');
  * - Ricerca utenti per email, username, ecc.
  */
 class UserRepository extends BaseRepository {
-    
+
     constructor() {
         super(User);
     }
@@ -42,7 +42,7 @@ class UserRepository extends BaseRepository {
      * @returns {Array} Lista utenti attivi
      */
     async findActiveUsers() {
-        return this.findAll({ 
+        return this.findAll({
             isActive: true,
             isDeleted: { $ne: true }
         }, {
@@ -52,7 +52,7 @@ class UserRepository extends BaseRepository {
     }
 
     /**
-     * ✅ Verifica se email esiste già
+     * Verifica se email esiste già
      * @param {string} email - Email da verificare
      * @param {string} excludeId - ID utente da escludere (per update)
      * @returns {boolean} True se email già in uso
@@ -66,7 +66,7 @@ class UserRepository extends BaseRepository {
     }
 
     /**
-     * ✅ Verifica se username esiste già
+     * Verifica se username esiste già
      * @param {string} username - Username da verificare
      * @param {string} excludeId - ID utente da escludere (per update)
      * @returns {boolean} True se username già in uso
@@ -80,7 +80,7 @@ class UserRepository extends BaseRepository {
     }
 
     /**
-     * 🔄 Aggiorna ultimo accesso
+     * Aggiorna ultimo accesso
      * @param {string} userId - ID utente
      * @returns {Object|null} Utente aggiornato
      */

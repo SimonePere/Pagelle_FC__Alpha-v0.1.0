@@ -13,14 +13,18 @@ const CacheService = require('../services/CacheService');
  * - GET /api/v1/matches/:id
  * - PATCH /api/v1/matches/:id/activate
  * - PATCH /api/v1/matches/:id/complete
+ * - POST /api/v1/matches/:matchId/reactivate-voter/:userId
+ * - POST /api/v1/matches/:matchId/guest-player
  */
 
 // Initialize service
 const matchService = new MatchService();
 
+/**
 // @desc    Create new match
 // @route   POST /api/v1/matches
 // @access  Private
+*/
 const createMatch = async (req, res, next) => {
   try {
     const userId = req.user.id;
@@ -35,9 +39,11 @@ const createMatch = async (req, res, next) => {
   }
 };
 
+/**
 // @desc    Update match
 // @route   PUT /api/v1/matches/:id
 // @access  Private (team members only)
+*/
 const updateMatch = async (req, res, next) => {
   try {
     const matchId = req.params.id;
@@ -53,9 +59,11 @@ const updateMatch = async (req, res, next) => {
   }
 };
 
+/**
 // @desc    Delete match
 // @route   DELETE /api/v1/matches/:id
 // @access  Private (team members only)
+*/
 const deleteMatch = async (req, res, next) => {
   try {
     const matchId = req.params.id;
@@ -70,9 +78,11 @@ const deleteMatch = async (req, res, next) => {
   }
 };
 
+/**
 // @desc    Get matches for a team
 // @route   GET /api/v1/matches/team/:teamId
 // @access  Private
+*/
 const getTeamMatches = async (req, res, next) => {
   try {
     const { teamId } = req.params;
@@ -177,9 +187,11 @@ const getTeamMatches = async (req, res, next) => {
   }
 };
 
+/**
 // @desc    Get single match details
 // @route   GET /api/v1/matches/:id
 // @access  Private
+*/
 const getMatch = async (req, res, next) => {
   try {
     const matchId = req.params.id;
@@ -220,9 +232,11 @@ const getMatch = async (req, res, next) => {
   }
 };
 
+/**
 // @desc    Activate match to start voting sessions
 // @route   PATCH /api/v1/matches/:id/activate
 // @access  Private  
+*/
 const activateMatch = async (req, res, next) => {
   try {
     const matchId = req.params.id;
@@ -237,9 +251,11 @@ const activateMatch = async (req, res, next) => {
   }
 };
 
+/**
 // @desc    Mark match as completed
 // @route   PATCH /api/v1/matches/:id/complete
 // @access  Private
+*/
 const completeMatch = async (req, res, next) => {
   try {
     const matchId = req.params.id;
@@ -254,9 +270,11 @@ const completeMatch = async (req, res, next) => {
   }
 };
 
+/**
 // @desc    Riattiva un utente astenuto
 // @route   POST /api/v1/matches/:matchId/reactivate-voter/:userId
 // @access  Private
+*/
 const reactivateVoter = async (req, res, next) => {
   try {
     const { matchId, userId } = req.params;
@@ -270,6 +288,24 @@ const reactivateVoter = async (req, res, next) => {
   }
 };
 
+/**
+// @desc Aggiunge un giocatore ospite a un match
+// @route POST /api/v1/matches/:matchId/guest-player
+// @access Public (no auth required)
+*/
+
+const addGuestPlayer = async (req, res, next) => {
+  try {
+    const { matchId } = req.params;
+    const { name, teamId } = req.body;
+
+    const result = await matchService.addGuestPlayer(matchId, { name, teamId });
+
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
 
 module.exports = {
   createMatch,
@@ -279,5 +315,6 @@ module.exports = {
   completeMatch,
   updateMatch,
   deleteMatch,
-  reactivateVoter
+  reactivateVoter,
+  addGuestPlayer
 };

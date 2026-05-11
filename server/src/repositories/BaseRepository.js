@@ -1,7 +1,7 @@
 /**
- * 🏗️ BASE REPOSITORY - Classe madre per tutti i Repository
+ * BASE REPOSITORY - Classe madre per tutti i Repository
  * 
- * 📝 COSA FA IL REPOSITORY PATTERN:
+ * COSA FA IL REPOSITORY PATTERN:
  * Il Repository Pattern separa la logica di accesso ai dati (MongoDB/Mongoose) 
  * dalla business logic nei Service. Invece di:
  * 
@@ -10,13 +10,13 @@
  * Ora abbiamo:
  * Service -> Repository -> Model
  * 
- * 🎯 VANTAGGI:
+ * VANTAGGI:
  * - Separazione delle responsabilità
  * - Facilita i test (possiamo mockare i repository)
  * - Centralizza operazioni database comuni
  * - Rende il codice più modulare e manutenibile
  * 
- * 📂 COME FUNZIONA:
+ * COME FUNZIONA:
  * Ogni entità (User, Match, ecc.) avrà il suo Repository che estende BaseRepository.
  * I Service useranno i Repository invece di accedere direttamente ai Model.
  */
@@ -96,7 +96,7 @@ class BaseRepository {
     }
 
     /**
-     * ➕ Crea un nuovo documento
+     * Crea un nuovo documento
      * @param {Object} data - Dati del documento da creare
      * @returns {Object} Documento creato
      */
@@ -110,7 +110,7 @@ class BaseRepository {
     }
 
     /**
-     * 🔄 Aggiorna un documento per ID
+     * Aggiorna un documento per ID
      * @param {string} id - ID del documento
      * @param {Object} updateData - Dati di aggiornamento
      * @param {Object} options - Opzioni aggiornamento
@@ -134,7 +134,7 @@ class BaseRepository {
     }
 
     /**
-     * 🔄 Aggiorna uno o più documenti con filtri
+     * Aggiorna uno o più documenti con filtri
      * @param {Object} filter - Filtri per trovare i documenti
      * @param {Object} updateData - Dati di aggiornamento
      * @param {Object} options - Opzioni aggiornamento
@@ -149,7 +149,7 @@ class BaseRepository {
     }
 
     /**
-     * 🗑️ Elimina un documento per ID
+     * Elimina un documento per ID
      * @param {string} id - ID del documento
      * @returns {Object|null} Documento eliminato o null
      */
@@ -162,7 +162,7 @@ class BaseRepository {
     }
 
     /**
-     * 🗑️ Elimina uno o più documenti con filtri
+     * Elimina uno o più documenti con filtri
      * @param {Object} filter - Filtri per trovare i documenti
      * @returns {Object} Risultato dell'operazione (deletedCount)
      */
@@ -175,7 +175,7 @@ class BaseRepository {
     }
 
     /**
-     * 🗑️ Elimina un singolo documento con filtri
+     * Elimina un singolo documento con filtri
      * @param {Object} filter - Filtri per trovare il documento
      * @returns {Object} Risultato dell'operazione
      */
@@ -188,7 +188,7 @@ class BaseRepository {
     }
 
     /**
-     * 🔄 Trova e aggiorna un documento
+     * Trova e aggiorna un documento
      * @param {Object} filter - Filtri per trovare il documento
      * @param {Object} update - Aggiornamento da applicare
      * @param {Object} options - Opzioni (new: true, upsert, ecc.)
@@ -207,7 +207,7 @@ class BaseRepository {
     // ===========================
 
     /**
-     * 📊 Conta documenti che matchano i filtri
+     * Conta documenti che matchano i filtri
      * @param {Object} filter - Filtri MongoDB
      * @returns {number} Numero di documenti
      */
@@ -220,14 +220,14 @@ class BaseRepository {
     }
 
     /**
-     * 📊 Alias per count (compatibilità)
+     * Alias per count (compatibilità)
      */
     async countDocuments(filter = {}) {
         return this.count(filter);
     }
 
     /**
-     * 📊 Esegue aggregazione personalizzata
+     * Esegue aggregazione personalizzata
      * @param {Array} pipeline - Pipeline di aggregazione MongoDB
      * @returns {Array} Risultati dell'aggregazione
      */
@@ -244,7 +244,7 @@ class BaseRepository {
     // ========================
 
     /**
-     * ✅ Verifica se esiste un documento con i filtri specificati
+     * Verifica se esiste un documento con i filtri specificati
      * @param {Object} filter - Filtri MongoDB
      * @returns {boolean} True se esiste, false altrimenti
      */
@@ -258,7 +258,7 @@ class BaseRepository {
     }
 
     /**
-     * 🔍 Trova documenti con paginazione
+     * Trova documenti con paginazione
      * @param {Object} filter - Filtri MongoDB
      * @param {Object} options - Opzioni (page, limit, sort, populate, ecc.)
      * @returns {Object} Oggetto con documents, totalPages, currentPage, ecc.
@@ -308,7 +308,7 @@ class BaseRepository {
     // ===============================
 
     /**
-     * 💾 Salva un documento modificato
+     * Salva un documento modificato
      * @param {Object} document - Documento da salvare
      * @returns {Object} Documento salvato
      */
@@ -321,7 +321,7 @@ class BaseRepository {
     }
 
     /**
-     * 🧮 Conta documenti con filtro
+     * Conta documenti con filtro
      * @param {Object} filter - Filtri MongoDB
      * @returns {number} Numero di documenti
      */
@@ -334,7 +334,7 @@ class BaseRepository {
     }
 
     /**
-     * ✅ Verifica se esistono documenti con filtro
+     * Verifica se esistono documenti con filtro
      * @param {Object} filter - Filtri MongoDB
      * @returns {boolean} True se esistono documenti
      */
@@ -352,7 +352,7 @@ class BaseRepository {
     // ==============================
 
     /**
-     * 📊 Esegue aggregation pipeline
+     * Esegue aggregation pipeline
      * @param {Array} pipeline - Array di stage MongoDB aggregation
      * @returns {Array} Risultati aggregation
      */

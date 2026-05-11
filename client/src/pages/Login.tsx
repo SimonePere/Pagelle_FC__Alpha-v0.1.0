@@ -7,16 +7,17 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Lock, User, Calendar as CalendarIcon, Users, KeyRound, Check, X } from 'lucide-react';
+import { Mail, Lock, User, Calendar as CalendarIcon, Users, Check, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { loginUser, registerUser, refreshUserData } from '@/redux/slices/authSlice';
-import { createTeam, joinTeam } from '@/redux/slices/teamSlice';
+import { createTeam /*, joinTeam */ } from '@/redux/slices/teamSlice'; // [DISABILITATO] joinTeam – tab "Unisciti" rimossa temporaneamente
 import { RootState, AppDispatch } from '@/redux/store/store';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Login = () => {
   const [tab, setTab] = useState<'login' | 'signup'>('login');
-  const [signupMode, setSignupMode] = useState<'create' | 'join'>('create');
+  // [DISABILITATO] Tab "Unisciti" rimossa temporaneamente – tenuto solo il flusso "Crea team"
+  // const [signupMode, setSignupMode] = useState<'create' | 'join'>('create');
 
   // Campi condivisi
   const [email, setEmail] = useState('');
@@ -26,7 +27,7 @@ const Login = () => {
   const [name, setName] = useState('');
   const [birthdate, setBirthdate] = useState('');
   const [teamName, setTeamName] = useState('');
-  const [teamCode, setTeamCode] = useState('');
+  // const [teamCode, setTeamCode] = useState(''); // [DISABILITATO] usato solo da "Unisciti"
   const [acceptTerms, setAcceptTerms] = useState(false);
 
   const navigate = useNavigate();
@@ -92,14 +93,16 @@ const Login = () => {
       return;
     }
 
-    if (signupMode === 'create' && !teamName.trim()) {
+    if (!teamName.trim()) {
       toast({ title: 'Errore', description: 'Inserisci il nome del team.', variant: 'destructive' });
       return;
     }
+    /* [DISABILITATO] Validazione codice team – sezione "Unisciti" rimossa temporaneamente
     if (signupMode === 'join' && !teamCode.trim()) {
       toast({ title: 'Errore', description: 'Inserisci il codice team.', variant: 'destructive' });
       return;
     }
+    */
 
     try {
       // Step 1: Registra utente
@@ -111,13 +114,16 @@ const Login = () => {
       }
 
       // Step 2: Crea o unisciti al team
-      if (signupMode === 'create') {
-        const teamResult = await dispatch(createTeam({ name: teamName.trim() }));
-        if (createTeam.fulfilled.match(teamResult)) {
-          toast({ title: 'Registrazione completata!', description: `Team "${teamName}" creato. Condividi il codice invito con i compagni.` });
-        } else {
-          toast({ title: 'Attenzione', description: 'Account creato, ma errore nella creazione del team. Potrai crearlo dopo.', variant: 'destructive' });
-        }
+      // Flusso unico attivo: crea il team
+      const teamResult = await dispatch(createTeam({ name: teamName.trim() }));
+      if (createTeam.fulfilled.match(teamResult)) {
+        toast({ title: 'Account e team creati!', description: `Team "${teamName}" pronto. Crea una partita e invita i tuoi compagni!` });
+      } else {
+        toast({ title: 'Attenzione', description: 'Account creato, ma errore nella creazione del team. Potrai crearlo dal profilo.', variant: 'destructive' });
+      }
+
+      /* [DISABILITATO] Branch "Unisciti" – per ora il flusso consigliato è che chi gestisce
+         il team crei direttamente l'account del nuovo membro, oppure lo inviti alla partita.
       } else {
         const joinResult = await dispatch(joinTeam({ inviteCode: teamCode.trim() }));
         if (joinTeam.fulfilled.match(joinResult)) {
@@ -126,6 +132,7 @@ const Login = () => {
           toast({ title: 'Attenzione', description: 'Account creato, ma il codice team non è valido. Potrai unirti dopo.', variant: 'destructive' });
         }
       }
+      */
 
       // Step 3: Aggiorna i dati utente (enriched con teams) prima di navigare
       await dispatch(refreshUserData());
@@ -209,7 +216,21 @@ const Login = () => {
 
             {/* ========== SIGNUP TAB ========== */}
             <TabsContent value="signup" className="space-y-4 mt-4">
-              {/* Sub-tabs: Crea team / Unisciti */}
+              {/* Descrizione del flusso di registrazione */}
+              <div className="rounded-lg bg-primary/10 border border-primary/20 p-3 space-y-1.5">
+                <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <Users className="w-4 h-4 text-primary" /> Diventa il capitano del tuo team
+                </p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Registrandoti crei subito il tuo team e ne diventi il capitano.
+                  Quando organizzerai una partita potrai <strong>invitare i tuoi compagni</strong>: chi accetta
+                  entra nel team, vota i compagni e riceve le proprie pagelle a fine gara.
+                </p>
+              </div>
+
+              {/* [DISABILITATO] Sub-tabs "Crea team / Unisciti" – rimosso temporaneamente.
+                  Il flusso "Unisciti" sarà reintrodotto in futuro; per ora il capitano
+                  gestisce i nuovi membri tramite invito alla partita.
               <Tabs value={signupMode} onValueChange={(v) => setSignupMode(v as 'create' | 'join')}>
                 <TabsList className="grid grid-cols-2 w-full">
                   <TabsTrigger value="create" className="gap-1.5">
@@ -220,6 +241,7 @@ const Login = () => {
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
+              */}
 
               <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
@@ -276,35 +298,43 @@ const Login = () => {
                   )}
                 </div>
 
-                {/* Campi team in base al mode */}
-                {signupMode === 'create' ? (
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-primary" /> Nome del nuovo team
-                    </Label>
-                    <Input value={teamName} onChange={(e) => setTeamName(e.target.value)} required className="h-12" placeholder="Es: I Guerrieri" />
-                    <p className="text-xs text-muted-foreground">
-                      Dopo la registrazione riceverai un codice da condividere con i compagni.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <KeyRound className="w-4 h-4 text-primary" /> Codice team
-                    </Label>
-                    <Input
-                      value={teamCode}
-                      onChange={(e) => setTeamCode(e.target.value.toUpperCase())}
-                      required
-                      className="h-12 uppercase tracking-widest font-mono"
-                      placeholder="ABC123"
-                      maxLength={10}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Inserisci il codice ricevuto da un membro del team.
-                    </p>
-                  </div>
-                )}
+                {/* Nome del team (unico campo attivo) */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-primary" /> Nome del tuo team
+                  </Label>
+                  <Input
+                    value={teamName}
+                    onChange={(e) => setTeamName(e.target.value)}
+                    required
+                    className="h-12"
+                    placeholder="Es: I Guerrieri, FC Amici..."
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Scegli un nome riconoscibile — apparirà in ogni partita e pagella del team.
+                  </p>
+                </div>
+
+                {/* [DISABILITATO] Campo "Unisciti con codice" – rimosso temporaneamente.
+                    Il flusso consigliato: il capitano crea la partita e invia l'invito;
+                    i compagni entrano nel team partecipando alla prima partita.
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <KeyRound className="w-4 h-4 text-primary" /> Codice team
+                  </Label>
+                  <Input
+                    value={teamCode}
+                    onChange={(e) => setTeamCode(e.target.value.toUpperCase())}
+                    required
+                    className="h-12 uppercase tracking-widest font-mono"
+                    placeholder="ABC123"
+                    maxLength={10}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Inserisci il codice ricevuto da un membro del team.
+                  </p>
+                </div>
+                */}
 
                 <div className="flex items-start gap-2 pt-2">
                   <Checkbox id="terms" checked={acceptTerms} onCheckedChange={(v) => setAcceptTerms(!!v)} />
@@ -327,7 +357,7 @@ const Login = () => {
                   disabled={isLoading || !isPasswordValid() || !acceptTerms}
                   className="w-full h-12 font-display font-bold text-lg shadow-glow disabled:opacity-50"
                 >
-                  {isLoading ? 'Attendere...' : 'Registrati'}
+                  {isLoading ? 'Creazione in corso...' : 'Crea account e Team'}
                 </Button>
               </form>
             </TabsContent>

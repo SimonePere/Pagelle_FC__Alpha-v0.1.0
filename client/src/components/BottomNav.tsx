@@ -13,6 +13,7 @@ import { useActiveTeamId } from "@/hooks/useActiveTeamId";
 
 export function BottomNav() {
   const { user } = useSelector((state: RootState) => state.auth);
+  const isGuest = useSelector((state: RootState) => state.auth.isGuest);
   const { activeTeamId } = useActiveTeamId();
   const [pendingVotesCount, setPendingVotesCount] = useState(0);
   const [pendingCardsCount, setPendingCardsCount] = useState(0);
@@ -51,14 +52,15 @@ export function BottomNav() {
     return () => clearInterval(interval);
   }, [user]);
 
-  const navItems = [
-    { icon: Home, label: "Home", path: "/" },
-    { icon: Vote, label: "Vota", path: "/vote", showVoteBadge: true },
-    { icon: FileText, label: "Storico", path: "/history", showVoteBadge: true },
-    { icon: Star, label: "Cards", path: "/player-cards", showCardsBadge: true },
-    { icon: Shield, label: "Team", path: "/team", showCardsBadge: true },
-    // { icon: BarChart3, label: "Statistiche", path: "/stats" },
+  const allNavItems = [
+    { icon: Home, label: "Home", path: "/", guestAllowed: true },
+    { icon: Vote, label: "Vota", path: "/vote", showVoteBadge: true, guestAllowed: true },
+    { icon: FileText, label: "Storico", path: "/history", showVoteBadge: true, guestAllowed: true },
+    { icon: Star, label: "Cards", path: "/player-cards", showCardsBadge: true, guestAllowed: false },
+    { icon: Shield, label: "Team", path: "/team", showCardsBadge: true, guestAllowed: false },
   ];
+
+  const navItems = isGuest ? allNavItems.filter(i => i.guestAllowed) : allNavItems;
 
   return (
     <motion.nav
@@ -102,20 +104,23 @@ export function BottomNav() {
             )}
           </NavLink>
         ))}
-        <NavLink
-          to="/profile"
-          className="flex flex-col items-center gap-1 p-2 transition-all duration-300 relative flex-1"
-          activeClassName=""
-        >
-          {({ isActive }) => (
-            <div className="flex flex-col items-center gap-1">
-              <User className={`w-6 h-6 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
-              <span className={`text-xs font-medium ${isActive ? "text-primary" : "text-muted-foreground"}`}>
-                Profilo
-              </span>
-            </div>
-          )}
-        </NavLink>
+        {/* Profilo solo per utenti full */}
+        {!isGuest && (
+          <NavLink
+            to="/profile"
+            className="flex flex-col items-center gap-1 p-2 transition-all duration-300 relative flex-1"
+            activeClassName=""
+          >
+            {({ isActive }) => (
+              <div className="flex flex-col items-center gap-1">
+                <User className={`w-6 h-6 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+                <span className={`text-xs font-medium ${isActive ? "text-primary" : "text-muted-foreground"}`}>
+                  Profilo
+                </span>
+              </div>
+            )}
+          </NavLink>
+        )}
 
 
       </div>

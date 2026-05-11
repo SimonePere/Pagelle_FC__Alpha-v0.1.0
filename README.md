@@ -6,7 +6,7 @@
 
 **🏆 Sistema completo di gestione squadra calcistica con carte giocatori stile FIFA e votazioni collaborative**
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/SimonePere/Pagelle_FC__Alpha-v0.1.0)
+[![Version](https://img.shields.io/badge/version-Alpha%20v0.1.0-blue.svg)](https://github.com/SimonePere/Pagelle_FC__Alpha-v0.1.0)
 [![License](https://img.shields.io/badge/license-UNLICENSED-red.svg)]()
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248.svg)](https://www.mongodb.com)
@@ -53,7 +53,15 @@ Il tutto con un'interfaccia moderna, responsive e pensata per essere utilizzata 
 - **Trending e confronti**: Sistema di comparazione giocatori avanzato
 - **Export dati**: Funzionalità di backup e esportazione
 
-### 👥 **Team Management**
+### � **External Player — Giocatori Ospiti**
+- **Nessuna registrazione richiesta**: aggiungi giocatori occasionali come ospiti direttamente dalla creazione partita
+- **Link invito personale**: ogni ospite riceve un link univoco (`/join?token=XXX`) per votare la partita
+- **JWT con scope limitato**: gli ospiti ottengono un token temporaneo (48h) con permessi read-only
+- **Merge automatico**: se l'ospite si registra in futuro, tutto lo storico (voti, partite, medie) viene trasferito automaticamente al nuovo account — l'ID User è lo stesso
+- **Badge "Ospite"** visibile nella lista giocatori e nei dettagli partita
+- **Zero refactoring**: l'ospite è un `User` reale nel DB con flag `isGuest: true`, compatibile con tutte le query esistenti
+
+### �👥 **Team Management**
 - **Gestione membri**: Inviti, ruoli e permessi granulari
 - **Profili personalizzabili**: Informazioni dettagliate e foto profilo
 - **Sistema team multipli**: Supporto per più squadre per utente
@@ -156,9 +164,8 @@ npm run seed:test
 ## 🎮 Utilizzo
 
 ### 1. **Registrazione e Team Setup**
-- Crea un account o accedi con credenziali esistenti
-- Crea un nuovo team o unisciti a uno esistente
-- Invita i tuoi compagni di squadra
+- Crea un account: ti registri e crei subito il tuo team, diventandone il capitano
+- Invita i compagni di squadra creando una partita e condividendo il link
 
 ### 2. **Creazione Carte Giocatore**
 - Vai su "Player Cards" per creare le carte dei giocatori
@@ -167,7 +174,8 @@ npm run seed:test
 
 ### 3. **Gestione Partite**
 - Crea una nuova partita dal dashboard principale
-- Aggiungi i giocatori presenti
+- Aggiungi i giocatori del team e, se vuoi, **giocatori ospiti** (senza account)
+- Condividi il link invito personale con ogni ospite
 - Avvia la sessione di votazione post-partita
 
 ### 4. **Votazioni e Risultati**
@@ -199,20 +207,22 @@ Il backend espone API RESTful complete:
 - **Matches**: `/api/v1/matches/*` - Gestione partite
 - **Voting**: `/api/v1/voting-sessions/*` - Sistema votazioni
 - **Player Cards**: `/api/v1/player-card-sessions/*` - Carte giocatori
+- **Invite**: `/api/v1/invite/*` - Link invito ospiti, claim account guest
 
 ## 🗺️ Roadmap
 
-### ✅ **Rilasciato (v1.0.0)**
+### ✅ **Rilasciato (Alpha v0.1.0)**
 - [x] Sistema base votazioni e carte giocatori
 - [x] Architettura Service Layer robusta
 - [x] UI responsive con Shadcn/UI
 - [x] Sistema autenticazione JWT
 - [x] Database MongoDB con backup automatico
 - [x] **CRUD Avanzato**: Edit/Delete partite e profili utente
-- [x] **Team Join Fluido**: Dropdown team pubblici
 - [x] **Sistema Astensioni**: Voto opzionale per inclusività
 - [x] **Attributi Portieri**: Specializzazione ruoli
 - [x] **WEB APP PWA**: Versione scaricabile iOS/Android
+- [x] **External Player (Guest User)**: Ospiti senza registrazione con link invito personale, JWT scope limitato e merge automatico storico alla registrazione
+- [x] **UI semplificata**: registrazione solo "Crea Team", dialog modali coerenti, modale elimina/logout, social links, Buy Me a Coffee
 
 ### 🔮 **Pianificato (v1.2.0+)**
 - [ ] **Dashboard Comparazioni**: Analisi avanzate giocatori
@@ -272,9 +282,11 @@ server/src/
 
 ## 🤝 Community e Supporto
 
-- **📧 Email**: [simone@example.com](mailto:simone@example.com)
+- **� Instagram**: [@limone_pere](https://www.instagram.com/limone_pere/)
+- **💼 LinkedIn**: [Simone Mele](https://www.linkedin.com/in/simone-mele/)
+- **🐙 GitHub**: [SimonePere](https://github.com/SimonePere)
+- **☕ Supporta il progetto**: [Buy Me a Coffee](https://buymeacoffee.com/simonemele) — se l'app ti piace, offrimi un caffè!
 - **🐛 Issues**: [GitHub Issues](https://github.com/SimonePere/Pagelle_FC__Alpha-v0.1.0/issues)
-- **💬 Discussioni**: [GitHub Discussions](https://github.com/SimonePere/Pagelle_FC__Alpha-v0.1.0/discussions)
 
 ## 📄 Licenza
 

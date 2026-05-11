@@ -1,4 +1,5 @@
-import { Home, PlusCircle, User, Trophy, LogOut, History, BarChart3, Vote, Clock, Star, FileText, Archive, Shield } from "lucide-react";
+import { Home, PlusCircle, User, Trophy, LogOut, History, BarChart3, Vote, Clock, Star, FileText, Archive, Shield, Github, Linkedin, Instagram, Coffee } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@/redux/store/store';
@@ -20,19 +21,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
-const navItems = [
-  { title: "Home", url: "/", icon: Home },
-  { title: "Vota Partite", url: "/vote", icon: Vote, showVoteBadge: true },
-  { title: "Storico", url: "/history", icon: FileText }, // Alternative: Archive
-  { title: "Statistiche", url: "/stats", icon: BarChart3, inDevelopment: true },
-  { title: "Player Cards", url: "/player-cards", icon: Star, showCardsBadge: true },
-  { title: "Crea Partita", url: "/create-match", icon: PlusCircle },
-  { title: "Team", url: "/team", icon: Shield },
+const allNavItems = [
+  { title: "Home", url: "/", icon: Home, guestAllowed: true },
+  { title: "Vota Partite", url: "/vote", icon: Vote, showVoteBadge: true, guestAllowed: true },
+  { title: "Storico", url: "/history", icon: FileText, guestAllowed: false },
+  // { title: "Statistiche", url: "/stats", icon: BarChart3, inDevelopment: true, guestAllowed: false }, // [DISABILITATO]
+  { title: "Player Cards", url: "/player-cards", icon: Star, showCardsBadge: true, guestAllowed: false },
+  { title: "Crea Partita", url: "/create-match", icon: PlusCircle, guestAllowed: false },
+  { title: "Team", url: "/team", icon: Shield, guestAllowed: false },
 ];
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const { user } = useSelector((state: RootState) => state.auth);
+  const isGuest = useSelector((state: RootState) => state.auth.isGuest);
   const { activeTeam } = useActiveTeamId();
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -40,13 +42,21 @@ export function AppSidebar() {
   const [pendingVotesCount, setPendingVotesCount] = useState(0);
   const [pendingCardsCount, setPendingCardsCount] = useState(0);
 
+  const navItems = isGuest ? allNavItems.filter(i => i.guestAllowed) : allNavItems;
+
   useEffect(() => {
     // Future: VotingSession integration will calculate pending counts
     setPendingVotesCount(0);
     setPendingCardsCount(0);
   }, [user]);
 
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+
   const handleLogout = () => {
+    setLogoutDialogOpen(true);
+  };
+
+  const confirmLogout = () => {
     dispatch(logout());
     navigate('/login');
   };
@@ -101,6 +111,20 @@ export function AppSidebar() {
             </div>
           )}
         </div>
+
+        {/* Banner guest */}
+        {isGuest && !isCollapsed && (
+          <div className="mx-4 mb-2 p-3 rounded-lg bg-orange-500/10 border border-orange-500/30 text-xs text-orange-700 dark:text-orange-300">
+            <p className="font-semibold mb-1">Modalità Ospite</p>
+            <p className="text-orange-600/80 dark:text-orange-400/80 mb-2">Alcune funzioni non sono disponibili.</p>
+            <button
+              onClick={() => { navigate('/claim-guest'); }}
+              className="underline font-medium hover:no-underline"
+            >
+              Registrati per l'accesso completo →
+            </button>
+          </div>
+        )}
 
         {/* Navigation */}
         <SidebarGroup>
@@ -188,30 +212,55 @@ export function AppSidebar() {
                 </Badge>
               </div>
 
-              {/* Alpha Testing Notice */}
-              <div className="text-xs text-sidebar-muted-foreground text-center py-2 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-200 dark:border-amber-800">
-                🧪 App in fase Alpha<br />
-                Gruppo ristretto di tester
-              </div>
-
               {/* Creator Info */}
               <div className="space-y-2">
                 <p className="text-xs text-sidebar-muted-foreground">Creato da</p>
                 <div className="text-xs">
                   <p className="font-medium text-sidebar-foreground">Simone Mele</p>
-                  <div className="flex gap-2 mt-1">
+                  <div className="flex gap-3 mt-2">
                     <a
                       href="https://github.com/SimonePere"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                      title="GitHub"
+                      className="text-sidebar-muted-foreground hover:text-sidebar-foreground transition-colors"
                     >
-                      GitHub
+                      <Github className="w-4 h-4" />
                     </a>
-
+                    <a
+                      href="https://www.linkedin.com/in/simone-mele/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="LinkedIn"
+                      className="text-sidebar-muted-foreground hover:text-blue-500 transition-colors"
+                    >
+                      <Linkedin className="w-4 h-4" />
+                    </a>
+                    <a
+                      href="https://www.instagram.com/limone_pere/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Instagram"
+                      className="text-sidebar-muted-foreground hover:text-pink-500 transition-colors"
+                    >
+                      <Instagram className="w-4 h-4" />
+                    </a>
                   </div>
                 </div>
               </div>
+
+              {/* Buy Me a Coffee */}
+              <a
+                href="https://buymeacoffee.com/simonemele"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors"
+              >
+                <Coffee className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span className="text-xs font-medium text-amber-700 dark:text-amber-300 leading-tight">
+                  Offrimi un caffè ☕
+                </span>
+              </a>
 
               {/* Copyright */}
               <div className="text-xs text-sidebar-muted-foreground text-center pt-2 border-t border-sidebar-border">
@@ -252,6 +301,41 @@ export function AppSidebar() {
           </Button>
         </div>
       </SidebarContent>
+
+      {/* Dialog conferma logout */}
+      <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
+        <DialogContent
+          className="w-[calc(100%-2rem)] max-w-xs rounded-xl p-0 gap-0"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <DialogHeader className="px-4 pt-4 pb-2">
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <LogOut className="w-4 h-4 text-destructive" />
+              Conferma Logout
+            </DialogTitle>
+          </DialogHeader>
+          <div className="px-4 pb-3">
+            <p className="text-sm text-muted-foreground">Sei sicuro di voler uscire dal tuo account?</p>
+          </div>
+          <DialogFooter className="px-4 py-3 flex-row gap-2 border-t">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 h-9 text-sm"
+              onClick={() => setLogoutDialogOpen(false)}
+            >
+              Annulla
+            </Button>
+            <Button
+              size="sm"
+              className="flex-1 h-9 text-sm bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              onClick={confirmLogout}
+            >
+              Esci
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Sidebar>
   );
 }
