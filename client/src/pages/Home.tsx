@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/redux/store/store';
+import { selectPendingVoteSessions } from '@/redux/slices/votingSlice';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Trophy, Medal, Target, TrendingUp, Crown, AlertCircle, Star, Goal, BarChart3, Hand, Users } from 'lucide-react';
+import { Trophy, Medal, Target, TrendingUp, Crown, AlertCircle, Star, Goal, BarChart3, Hand, Users, Vote as VoteIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { FakeNews } from '@/components/FakeNews';
 import { BadgesSection } from '@/components/BadgesSection';
@@ -25,6 +26,7 @@ type LeaderboardType = 'rating' | 'goals' | 'assists' | 'playercard' | 'stats-pe
 
 const Home = () => {
   const { user, isGuest } = useSelector((state: RootState) => state.auth);
+  const pendingVoteSessions = useSelector(selectPendingVoteSessions);
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
@@ -189,7 +191,7 @@ const Home = () => {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-4"
           >
-            <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="space-y-3">
               <div>
                 <h1 className="font-display text-3xl lg:text-4xl font-bold text-foreground mb-1">
                   👋 Ciao {user.name || user.username}!
@@ -199,54 +201,85 @@ const Home = () => {
                 </p>
               </div>
               {!isGuest && (
-                <motion.div whileTap={{ scale: 0.95 }}>
+                <motion.div whileTap={{ scale: 0.95 }} className="flex items-center gap-2 w-full">
                   {user.teams?.length ? (
                     <button
                       onClick={() => navigate('/create-match')}
-                      className="inline-flex items-center justify-center gap-2 px-6 py-3 text-lg font-semibold rounded-lg bg-primary text-primary-foreground shadow-glow"
+                      className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 text-base font-semibold rounded-lg bg-primary text-primary-foreground shadow-glow"
                     >
-                      <Target className="w-5 h-5" />
+                      <Target className="w-4 h-4" />
                       Crea Partita
                     </button>
                   ) : (
                     <button
                       onClick={() => setCreateTeamOpen(true)}
-                      className="inline-flex items-center justify-center gap-2 px-6 py-3 text-lg font-semibold rounded-lg bg-accent text-accent-foreground shadow-glow"
+                      className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 text-base font-semibold rounded-lg bg-accent text-accent-foreground shadow-glow"
                     >
-                      <Users className="w-5 h-5" />
+                      <Users className="w-4 h-4" />
                       Crea il tuo team
                     </button>
                   )}
+
+                  {/* Pulsante Vota Partite */}
+                  {pendingVoteSessions.length > 0 ? (
+                    <button
+                      onClick={() => {
+                        if (pendingVoteSessions.length === 1) {
+                          navigate('/vote', { state: { autoSessionId: pendingVoteSessions[0].id } });
+                        } else {
+                          navigate('/vote');
+                        }
+                      }}
+                      className="flex-1 relative inline-flex items-center justify-center gap-2 px-5 py-3 text-base font-semibold rounded-lg text-primary bg-background/50 overflow-visible"
+                    >
+                      {/* Solo il bordo animato */}
+                      <span className="absolute inset-0 rounded-lg border-2 border-primary animate-pulse pointer-events-none" />
+                      {/* Badge contatore sessioni multiple */}
+                      {pendingVoteSessions.length > 1 && (
+                        <span className="absolute -top-2 -right-2 z-20 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold shadow animate-pulse">
+                          {pendingVoteSessions.length}
+                        </span>
+                      )}
+                      <VoteIcon className="w-4 h-4 relative z-10" />
+                      <span className="relative z-10">Vota ora!</span>
+                    </button>
+                  ) : (
+                    <span className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 text-base font-semibold rounded-lg border-2 border-border/30 text-muted-foreground/50 bg-transparent cursor-default select-none">
+                      <VoteIcon className="w-4 h-4 opacity-40" />
+                      Vota Partita
+                    </span>
+                  )}
                 </motion.div>
               )}
-
-              {/* Dialog creazione team */}
-              <Dialog open={createTeamOpen} onOpenChange={setCreateTeamOpen}>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <Users className="w-5 h-5 text-accent" />
-                      Crea il tuo team
-                    </DialogTitle>
-                  </DialogHeader>
-                  <div className="py-2">
-                    <Input
-                      placeholder="Nome del team..."
-                      value={newTeamName}
-                      onChange={(e) => setNewTeamName(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleCreateTeam()}
-                      autoFocus
-                    />
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setCreateTeamOpen(false)}>Annulla</Button>
-                    <Button onClick={handleCreateTeam} disabled={!newTeamName.trim() || isCreatingTeam}>
-                      {isCreatingTeam ? 'Creazione...' : 'Crea team'}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
             </div>
+
+            {/* Dialog creazione team */}
+            <Dialog open={createTeamOpen} onOpenChange={setCreateTeamOpen}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Users className="w-5 h-5 text-accent" />
+                    Crea il tuo team
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="py-2">
+                  <Input
+                    placeholder="Nome del team..."
+                    value={newTeamName}
+                    onChange={(e) => setNewTeamName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleCreateTeam()}
+                    autoFocus
+                  />
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setCreateTeamOpen(false)}>Annulla</Button>
+                  <Button onClick={handleCreateTeam} disabled={!newTeamName.trim() || isCreatingTeam}>
+                    {isCreatingTeam ? 'Creazione...' : 'Crea team'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
             <WeatherWidget />
 
             {/* Compact Stats Row */}

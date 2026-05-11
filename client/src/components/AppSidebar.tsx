@@ -1,5 +1,6 @@
-import { Home, PlusCircle, User, Trophy, LogOut, History, BarChart3, Vote, Clock, Star, FileText, Archive, Shield, Github, Linkedin, Instagram, Coffee } from "lucide-react";
+import { Home, PlusCircle, User, Trophy, LogOut, History, BarChart3, Vote, Clock, Star, FileText, Archive, Shield, Github, Linkedin, Instagram, Coffee, type LucideIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { SupportModal } from "@/components/SupportModal";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@/redux/store/store';
@@ -21,7 +22,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
-const allNavItems = [
+type NavItem = {
+  title: string;
+  url: string;
+  icon: LucideIcon;
+  guestAllowed: boolean;
+  showVoteBadge?: boolean;
+  showCardsBadge?: boolean;
+  inDevelopment?: boolean;
+};
+
+const allNavItems: NavItem[] = [
   { title: "Home", url: "/", icon: Home, guestAllowed: true },
   { title: "Vota Partite", url: "/vote", icon: Vote, showVoteBadge: true, guestAllowed: true },
   { title: "Storico", url: "/history", icon: FileText, guestAllowed: false },
@@ -51,6 +62,7 @@ export function AppSidebar() {
   }, [user]);
 
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [supportModalOpen, setSupportModalOpen] = useState(false);
 
   const handleLogout = () => {
     setLogoutDialogOpen(true);
@@ -142,57 +154,53 @@ export function AppSidebar() {
                       }`}
                     disabled={item.inDevelopment}
                   >
-                    <div>
-                      {item.inDevelopment ? (
-                        <div className="flex items-center gap-3 w-full">
-                          <item.icon className="w-5 h-5 text-sidebar-foreground/50 shrink-0" />
-                          {!isCollapsed && (
-                            <span className="font-medium text-sidebar-foreground/50 animate-fade-in">
-                              {item.title}
-                            </span>
-                          )}
-                          {!isCollapsed && (
-                            <Badge
-                              variant="outline"
-                              className="ml-auto text-xs px-2 py-1 bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800"
-                            >
-                              In Sviluppo
-                            </Badge>
-                          )}
-                        </div>
-                      ) : (
-                        <NavLink to={item.url}>
-                          <div className="flex items-center gap-3 w-full">
-                            <item.icon className="w-5 h-5 text-sidebar-foreground/80 group-hover:text-sidebar-accent-foreground shrink-0" />
-                            {!isCollapsed && (
-                              <span className="font-medium text-sidebar-foreground group-hover:text-sidebar-accent-foreground animate-fade-in">
-                                {item.title}
-                              </span>
+                    {item.inDevelopment ? (
+                      <div className="flex items-center gap-3 w-full">
+                        <item.icon className="w-5 h-5 text-sidebar-foreground/50 shrink-0" />
+                        {!isCollapsed && (
+                          <span className="font-medium text-sidebar-foreground/50 animate-fade-in">
+                            {item.title}
+                          </span>
+                        )}
+                        {!isCollapsed && (
+                          <Badge
+                            variant="outline"
+                            className="ml-auto text-xs px-2 py-1 bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800"
+                          >
+                            In Sviluppo
+                          </Badge>
+                        )}
+                      </div>
+                    ) : (
+                      <NavLink to={item.url} className="flex items-center gap-3 w-full">
+                        <item.icon className="w-5 h-5 text-sidebar-foreground/80 group-hover:text-sidebar-accent-foreground shrink-0" />
+                        {!isCollapsed && (
+                          <span className="font-medium text-sidebar-foreground group-hover:text-sidebar-accent-foreground animate-fade-in">
+                            {item.title}
+                          </span>
+                        )}
+                        {!isCollapsed && (
+                          <>
+                            {item.showVoteBadge && pendingVotesCount > 0 && (
+                              <Badge
+                                variant="destructive"
+                                className="ml-auto text-xs px-2 py-1 bg-destructive text-destructive-foreground animate-pulse"
+                              >
+                                {pendingVotesCount}
+                              </Badge>
                             )}
-                            {!isCollapsed && (
-                              <>
-                                {item.showVoteBadge && pendingVotesCount > 0 && (
-                                  <Badge
-                                    variant="destructive"
-                                    className="ml-auto text-xs px-2 py-1 bg-destructive text-destructive-foreground animate-pulse"
-                                  >
-                                    {pendingVotesCount}
-                                  </Badge>
-                                )}
-                                {item.showCardsBadge && pendingCardsCount > 0 && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="ml-auto text-xs px-2 py-1 bg-accent text-accent-foreground animate-pulse"
-                                  >
-                                    {pendingCardsCount}
-                                  </Badge>
-                                )}
-                              </>
+                            {item.showCardsBadge && pendingCardsCount > 0 && (
+                              <Badge
+                                variant="secondary"
+                                className="ml-auto text-xs px-2 py-1 bg-accent text-accent-foreground animate-pulse"
+                              >
+                                {pendingCardsCount}
+                              </Badge>
                             )}
-                          </div>
-                        </NavLink>
-                      )}
-                    </div>
+                          </>
+                        )}
+                      </NavLink>
+                    )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -207,8 +215,8 @@ export function AppSidebar() {
               {/* Version Badge */}
               <div className="flex items-center justify-between">
                 <span className="text-xs text-sidebar-muted-foreground">Versione</span>
-                <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
-                  Alpha v0.1.0
+                <Badge variant="secondary" className="bg-violet-50 text-violet-700 border-violet-300 dark:bg-violet-950 dark:text-violet-300 dark:border-violet-800">
+                  Beta
                 </Badge>
               </div>
 
@@ -237,7 +245,7 @@ export function AppSidebar() {
                       <Linkedin className="w-4 h-4" />
                     </a>
                     <a
-                      href="https://www.instagram.com/limone_pere/"
+                      href="https://www.instagram.com/pagellefc?igsh=MW1lajQxNmUxNDAzZg=="
                       target="_blank"
                       rel="noopener noreferrer"
                       title="Instagram"
@@ -250,17 +258,15 @@ export function AppSidebar() {
               </div>
 
               {/* Buy Me a Coffee */}
-              <a
-                href="https://buymeacoffee.com/simonemele"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors"
+              <button
+                onClick={() => setSupportModalOpen(true)}
+                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors text-left"
               >
                 <Coffee className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                 <span className="text-xs font-medium text-amber-700 dark:text-amber-300 leading-tight">
-                  Offrimi un caffè ☕
+                  Offrimi un caffè
                 </span>
-              </a>
+              </button>
 
               {/* Copyright */}
               <div className="text-xs text-sidebar-muted-foreground text-center pt-2 border-t border-sidebar-border">
@@ -336,6 +342,8 @@ export function AppSidebar() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <SupportModal open={supportModalOpen} onOpenChange={setSupportModalOpen} />
     </Sidebar>
   );
 }

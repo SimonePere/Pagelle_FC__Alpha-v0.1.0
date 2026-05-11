@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '../redux/store/store';
 import {
@@ -101,10 +101,12 @@ const Vote: React.FC = () => {
 
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Stati per gestire la votazione attiva
   const [selectedSession, setSelectedSession] = useState<VotingSession | null>(null);
   const [viewMode, setViewMode] = useState<'dashboard' | 'voting'>('dashboard');
+  const [autoSessionHandled, setAutoSessionHandled] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -124,6 +126,20 @@ const Vote: React.FC = () => {
       dispatch(fetchTeamMatches(teamId));
     }
   }, [user, navigate, dispatch]);
+
+  // 🎯 Auto-selezione sessione da location.state (navigazione da Home)
+  useEffect(() => {
+    if (autoSessionHandled || isLoading) return;
+    const autoSessionId = (location.state as { autoSessionId?: string } | null)?.autoSessionId;
+    if (autoSessionId && pendingSessions.length > 0) {
+      const session = pendingSessions.find(s => s.id === autoSessionId);
+      if (session) {
+        setSelectedSession(session);
+        setViewMode('voting');
+        setAutoSessionHandled(true);
+      }
+    }
+  }, [location.state, pendingSessions, isLoading, autoSessionHandled]);
 
   const getSessionStatusColor = (status: string) => {
     switch (status) {

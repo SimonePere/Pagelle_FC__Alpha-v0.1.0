@@ -71,7 +71,7 @@ const slides = [
   {
     icon: Target,
     title: "Pronto a iniziare?",
-    description: "Guarda i badge nella navigazione per sapere cosa devi fare: vota partite e compila le Player Cards dei tuoi compagni!",
+    description: "Usa il menu laterale per navigare tra le sezioni: vota le partite e compila le Player Cards dei tuoi compagni!",
     color: "text-primary",
     bgColor: "bg-primary/20",
     extra: (
@@ -80,13 +80,13 @@ const slides = [
           <div className="w-12 h-12 rounded-full bg-destructive/20 flex items-center justify-center mx-auto mb-2">
             <Vote className="w-6 h-6 text-destructive" />
           </div>
-          <p className="text-xs text-muted-foreground">Partite da votare</p>
+          <p className="text-xs text-muted-foreground">Vota Partite</p>
         </div>
         <div className="text-center">
           <div className="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center mx-auto mb-2">
             <Star className="w-6 h-6 text-accent" />
           </div>
-          <p className="text-xs text-muted-foreground">Cards da compilare</p>
+          <p className="text-xs text-muted-foreground">Player Cards</p>
         </div>
       </div>
     )
