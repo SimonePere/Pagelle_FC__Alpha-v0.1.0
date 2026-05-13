@@ -282,10 +282,10 @@ server/src/
 
 ## 🤝 Community e Supporto
 
-- **� Instagram**: [@limone_pere](https://www.instagram.com/limone_pere/)
+- **📸 Instagram**: [@pagellefc](https://www.instagram.com/pagellefc?igsh=MW1lajQxNmUxNDAzZg==)
 - **💼 LinkedIn**: [Simone Mele](https://www.linkedin.com/in/simone-mele/)
 - **🐙 GitHub**: [SimonePere](https://github.com/SimonePere)
-- **☕ Supporta il progetto**: [Buy Me a Coffee](https://buymeacoffee.com/simonemele) — se l'app ti piace, offrimi un caffè!
+- **☕ Supporta il progetto**: [Ko-fi](https://ko-fi.com/simonemele) — se l'app ti piace, offrimi un caffè!
 - **🐛 Issues**: [GitHub Issues](https://github.com/SimonePere/Pagelle_FC__Alpha-v0.1.0/issues)
 
 ## 📄 Licenza

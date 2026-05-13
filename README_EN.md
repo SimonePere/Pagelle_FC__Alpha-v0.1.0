@@ -6,7 +6,7 @@
 
 **🏆 Complete football team management system with FIFA-style player cards and collaborative voting**
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/SimonePere/Pagelle_FC__Alpha-v0.1.0)
+[![Version](https://img.shields.io/badge/version-Alpha%20v0.1.0-blue.svg)](https://github.com/SimonePere/Pagelle_FC__Alpha-v0.1.0)
 [![License](https://img.shields.io/badge/license-UNLICENSED-red.svg)]()
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248.svg)](https://www.mongodb.com)
@@ -53,7 +53,14 @@ All with a modern, responsive interface designed to be easily used by players of
 - **Trending and comparisons**: Advanced player comparison system
 - **Data export**: Backup and export functionality
 
-### 👥 **Team Management**
+### � **External Player — Guest Users**
+- **No registration required**: add occasional players as guests directly from match creation
+- **Personal invite link**: each guest receives a unique link (`/join?token=XXX`) to vote the match
+- **Scoped JWT**: guests get a temporary token (48h) with read-only permissions
+- **Automatic merge**: if the guest registers in the future, all history (votes, matches, averages) is automatically transferred to the new account
+- **Guest badge** visible in player lists and match details
+
+### �👥 **Team Management**
 - **Member management**: Invites, roles and granular permissions
 - **Customizable profiles**: Detailed information and profile photos
 - **Multi-team system**: Support for multiple teams per user
@@ -167,7 +174,8 @@ npm run seed:test
 
 ### 3. **Match Management**
 - Create a new match from the main dashboard
-- Add present players
+- Add team players and, if needed, **guest players** (no account required)
+- Share the personal invite link with each guest
 - Start post-match voting session
 
 ### 4. **Voting and Results**
@@ -199,10 +207,11 @@ The backend exposes complete RESTful APIs:
 - **Matches**: `/api/v1/matches/*` - Match management
 - **Voting**: `/api/v1/voting-sessions/*` - Voting system
 - **Player Cards**: `/api/v1/player-card-sessions/*` - Player cards
+- **Invite**: `/api/v1/invite/*` - Guest invite links, guest account claim
 
 ## 🗺️ Roadmap
 
-### ✅ **Released (v1.0.0)**
+### ✅ **Released (Alpha v0.1.0)**
 - [x] Basic voting and player cards system
 - [x] Robust Service Layer architecture
 - [x] Responsive UI with Shadcn/UI
@@ -213,6 +222,7 @@ The backend exposes complete RESTful APIs:
 - [x] **Abstention System**: Optional voting for inclusivity
 - [x] **Goalkeeper Attributes**: Role specialization
 - [x] **PWA WEB APP**: Downloadable iOS/Android version
+- [x] **External Player (Guest User)**: Guests without registration, personal invite link, scoped JWT and automatic history merge on registration
 
 ### 🔮 **Planned (v1.2.0+)**
 - [ ] **Comparison Dashboard**: Advanced player analytics
@@ -272,9 +282,11 @@ server/src/
 
 ## 🤝 Community and Support
 
-- **📧 Email**: [simone@example.com](mailto:simone@example.com)
+- **� Instagram**: [@pagellefc](https://www.instagram.com/pagellefc?igsh=MW1lajQxNmUxNDAzZg==)
+- **💼 LinkedIn**: [Simone Mele](https://www.linkedin.com/in/simone-mele/)
+- **🐙 GitHub**: [SimonePere](https://github.com/SimonePere)
+- **☕ Support the project**: [Ko-fi](https://ko-fi.com/simonemele) — if you like the app, buy me a coffee!
 - **🐛 Issues**: [GitHub Issues](https://github.com/SimonePere/Pagelle_FC__Alpha-v0.1.0/issues)
-- **💬 Discussions**: [GitHub Discussions](https://github.com/SimonePere/Pagelle_FC__Alpha-v0.1.0/discussions)
 
 ## 📄 License
 
