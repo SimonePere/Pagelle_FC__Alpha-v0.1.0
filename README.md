@@ -1,4 +1,4 @@
-# ⚽ Pagelle FC - Sistema di Valutazione Collaborativa per Squadre di Calcio
+⚽ Pagelle FC - Sistema di Valutazione Collaborativa per Squadre di Calcio
 
 <div align="center">
 
