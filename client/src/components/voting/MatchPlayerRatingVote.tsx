@@ -34,6 +34,7 @@ interface PlayerRating {
 interface Player {
   id: string;
   name: string;
+  position?: string; // POR | DIF | CEN | ATT | UTIL
 }
 
 // Definizioni badge disponibili
@@ -168,7 +169,8 @@ export function MatchPlayerRatingVote({ sessionId, startInEditMode = false, onVo
   // Estraggo i giocatori dal match
   const matchPlayers: Player[] = currentMatch?.teamMembers?.map((member: any) => ({
     id: member.id,
-    name: member.displayName || member.name
+    name: member.displayName || member.name,
+    position: member.position || member.profile?.position
   })) || [];
 
   // Carico il match quando il componente si monta
@@ -601,8 +603,9 @@ export function MatchPlayerRatingVote({ sessionId, startInEditMode = false, onVo
                   Statistiche partita (Gol/Assist):
                   i controlli sono visibili solo quando statsEditable=true,
                   quindi per il votante stesso o per i giocatori astenuti.
+                  I portieri (POR) NON mostrano gol/assist.
                 */}
-                <div className={`grid grid-cols-2 gap-4 ${canEditPlayerStats(currentPlayer.id) ? 'visible' : 'hidden'}`}>
+                <div className={`grid grid-cols-2 gap-4 ${canEditPlayerStats(currentPlayer.id) && currentPlayer.position !== 'POR' ? 'visible' : 'hidden'}`}>
                   <div className="space-y-2">
                     <Label className="text-sm font-medium flex items-center gap-1">
                       ⚽ Gol

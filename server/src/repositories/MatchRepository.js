@@ -43,14 +43,15 @@ class MatchRepository extends BaseRepository {
             })
             .populate({
                 path: 'teamMemberIds',
-                select: 'name email teamName isGuest inviteToken',
+                select: 'name email teamName isGuest inviteToken profile.position',
                 transform: (doc) => ({
                     id: doc._id,
                     name: doc.name,
                     email: doc.email,
                     teamName: doc.teamName,
                     isGuest: doc.isGuest || false,
-                    inviteToken: doc.isGuest ? doc.inviteToken : undefined
+                    inviteToken: doc.isGuest ? doc.inviteToken : undefined,
+                    position: doc.profile?.position
                 })
             })
             .populate({
@@ -88,14 +89,15 @@ class MatchRepository extends BaseRepository {
             })
             .populate({
                 path: 'teamMemberIds',
-                select: 'name email teamName isGuest inviteToken',
+                select: 'name email teamName isGuest inviteToken profile.position',
                 transform: (doc) => ({
                     id: doc._id,
                     name: doc.name,
                     email: doc.email,
                     teamName: doc.teamName,
                     isGuest: doc.isGuest || false,
-                    inviteToken: doc.isGuest ? doc.inviteToken : undefined
+                    inviteToken: doc.isGuest ? doc.inviteToken : undefined,
+                    position: doc.profile?.position
                 })
             })
             .populate({

@@ -21,7 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, MapPin, Users, LogIn, UserPlus, Loader2 } from 'lucide-react';
+import { Calendar, MapPin, Users, LogIn, UserPlus, Loader2, Trophy } from 'lucide-react';
 
 interface InviteInfo {
     playerName: string;
@@ -29,6 +29,8 @@ interface InviteInfo {
     matchDate: string;
     matchField: string;
     matchId: string;
+    playersCount?: number;
+    participants?: string[];
 }
 
 type View = 'loading' | 'error' | 'invite' | 'register';
@@ -71,7 +73,8 @@ const JoinByInvite = () => {
 
         const fetchInvite = async () => {
             try {
-                const data = await api.get(`/invite/${token}`, { noAuth: true } as any);
+                // Endpoint pubblico: nessun token in localStorage = nessun header Authorization aggiunto
+                const data = await api.get(`/invite/${token}`);
                 setInviteInfo(data);
                 // Pre-compila il nome nel form di registrazione
                 setRegName(data.playerName || '');
@@ -182,7 +185,11 @@ const JoinByInvite = () => {
                 <div className="w-full max-w-sm space-y-4">
                     {/* Header */}
                     <div className="text-center space-y-1">
-                        <div className="text-4xl mb-2">⚽</div>
+                        <img
+                            src="/pwa-192x192.png"
+                            alt="Pagelle FC"
+                            className="mx-auto mb-2 h-16 w-16 rounded-xl shadow-lg"
+                        />
                         <h1 className="text-2xl font-bold text-white">Ciao, {inviteInfo.playerName}!</h1>
                         <p className="text-slate-300 text-sm">Sei stato invitato a votare la partita</p>
                     </div>
@@ -203,6 +210,30 @@ const JoinByInvite = () => {
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                     <MapPin className="h-4 w-4 shrink-0" />
                                     <span>{inviteInfo.matchField}</span>
+                                </div>
+                            )}
+                            {inviteInfo.playersCount && (
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <Trophy className="h-4 w-4 shrink-0" />
+                                    <span>Formato {inviteInfo.playersCount} vs {inviteInfo.playersCount}</span>
+                                </div>
+                            )}
+                            {inviteInfo.participants && inviteInfo.participants.length > 0 && (
+                                <div className="pt-2 border-t space-y-1.5">
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                        Partecipanti ({inviteInfo.participants.length})
+                                    </p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {inviteInfo.participants.map((name, i) => (
+                                            <Badge
+                                                key={i}
+                                                variant={name === inviteInfo.playerName ? 'default' : 'outline'}
+                                                className="text-xs font-normal"
+                                            >
+                                                {name}
+                                            </Badge>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                         </CardContent>

@@ -58,7 +58,7 @@ const CreateMatch: React.FC = () => {
     // Dialog aggiungi ospite
     const [guestDialogOpen, setGuestDialogOpen] = useState(false);
     const [guestName, setGuestName] = useState('');
-    const [guestPosition, setGuestPosition] = useState<'POR' | 'DIF' | 'CEN' | 'ATT' | 'UTIL' | ''>('');
+    const [guestPosition, setGuestPosition] = useState<'POR' | 'DIF' | 'CEN' | 'ATT' | ''>('');
 
     // Modale invite link post-creazione
     const [inviteLinksOpen, setInviteLinksOpen] = useState(false);
@@ -68,7 +68,7 @@ const CreateMatch: React.FC = () => {
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [field, setField] = useState('');
     const [playersCount, setPlayersCount] = useState<PlayersCount>(8);
-    const [guestPlayers, setGuestPlayers] = useState<Array<{ name: string; position?: 'POR' | 'DIF' | 'CEN' | 'ATT' | 'UTIL' }>>([]);
+    const [guestPlayers, setGuestPlayers] = useState<Array<{ name: string; position?: 'POR' | 'DIF' | 'CEN' | 'ATT' }>>([]);
 
     // Meteo
     const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
@@ -84,6 +84,8 @@ const CreateMatch: React.FC = () => {
     // Step 3 — Astensioni
     const [showAbstentions, setShowAbstentions] = useState(false);
     const [abstainedPlayers, setAbstainedPlayers] = useState<Record<string, boolean>>({});
+    // Astensioni ospiti — chiave = indice nell'array guestPlayers (gli ospiti non hanno ancora un userId)
+    const [abstainedGuests, setAbstainedGuests] = useState<Record<number, boolean>>({});
 
     // ─── WEATHER FORECAST ─────────────────────────────────────
     useEffect(() => {
@@ -135,6 +137,9 @@ const CreateMatch: React.FC = () => {
     const presentCount = Object.values(presentPlayers).filter(Boolean).length;
     const abstainedCount = Object.entries(abstainedPlayers).filter(([id, v]) => v && presentPlayers[id]).length;
     const votersCount = presentCount - abstainedCount;
+    // Conteggio reale votanti includendo ospiti (e astensioni ospiti)
+    const abstainedGuestsCount = guestPlayers.reduce((acc, _, i) => acc + (abstainedGuests[i] ? 1 : 0), 0);
+    const totalVoters = (presentCount + guestPlayers.length) - (abstainedCount + abstainedGuestsCount);
 
     // Quick actions
     const setAllPresent = () => setPresentPlayers(Object.fromEntries(playersList.map(p => [p.id, true])));
@@ -157,6 +162,10 @@ const CreateMatch: React.FC = () => {
 
         setCreatingMatch(true);
         try {
+            // Esclude gli ospiti contrassegnati come "non voteranno":
+            // non vengono creati lato server (quindi nessun invito generato).
+            const votingGuestPlayers = guestPlayers.filter((_, i) => !abstainedGuests[i]);
+
             const matchData: CreateMatchRequest = {
                 teamId: (currentTeam as any).id || '',
                 date,
@@ -167,7 +176,7 @@ const CreateMatch: React.FC = () => {
                     userId,
                     abstainedBy: user?.id || ''
                 })),
-                guestPlayers: guestPlayers,
+                guestPlayers: votingGuestPlayers,
             };
 
             const result = await dispatch(createMatch(matchData));
@@ -213,17 +222,93 @@ const CreateMatch: React.FC = () => {
 
     const handleRemoveGuest = (index: number) => {
         setGuestPlayers(prev => prev.filter((_, i) => i !== index));
+        // Rimuovi e re-indicizza le astensioni ospite
+        setAbstainedGuests(prev => {
+            const next: Record<number, boolean> = {};
+            Object.entries(prev).forEach(([k, v]) => {
+                const i = Number(k);
+                if (i < index) next[i] = v;
+                else if (i > index) next[i - 1] = v;
+            });
+            return next;
+        });
     };
 
-    const copyInviteLink = (url: string) => {
-        navigator.clipboard.writeText(url).then(() => {
-            toast({ title: 'Link copiato!', description: url });
-        });
+    const copyInviteLink = async (
+        url: string,
+        ev?: React.MouseEvent<HTMLButtonElement>
+    ) => {
+        // 1) Clipboard API moderna (richiede HTTPS / contesto sicuro)
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(url);
+                toast({ title: 'Link copiato!', description: url });
+                return;
+            }
+        } catch {
+            // continua con il fallback
+        }
+
+        // 2) Fallback: textarea + execCommand.
+        //    IMPORTANTE: il textarea va inserito DENTRO il dialog (dentro il focus trap di Radix),
+        //    altrimenti focus()/select() falliscono silenziosamente e copy ritorna stringa vuota.
+        try {
+            const host =
+                (ev?.currentTarget as HTMLElement | undefined) ||
+                (document.activeElement as HTMLElement | null) ||
+                document.body;
+            const container = host.parentElement || document.body;
+
+            const textarea = document.createElement('textarea');
+            textarea.value = url;
+            textarea.setAttribute('readonly', '');
+            // Stili per evitare scroll/zoom su mobile, ma deve restare focusable
+            textarea.style.position = 'absolute';
+            textarea.style.left = '-9999px';
+            textarea.style.top = '0';
+            textarea.style.opacity = '0';
+            textarea.style.pointerEvents = 'none';
+            container.appendChild(textarea);
+
+            // iOS richiede contentEditable + range per consentire selezione
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            if (isIOS) {
+                textarea.contentEditable = 'true';
+                const range = document.createRange();
+                range.selectNodeContents(textarea);
+                const selection = window.getSelection();
+                selection?.removeAllRanges();
+                selection?.addRange(range);
+                textarea.setSelectionRange(0, url.length);
+            } else {
+                textarea.focus();
+                textarea.select();
+                textarea.setSelectionRange(0, url.length);
+            }
+
+            const ok = document.execCommand('copy');
+            container.removeChild(textarea);
+
+            if (ok) {
+                toast({ title: 'Link copiato!', description: url });
+                return;
+            }
+            throw new Error('execCommand copy returned false');
+        } catch {
+            // 3) Ultimo fallback: prompt per copia manuale
+            toast({
+                title: 'Copia non disponibile',
+                description: 'Copia manualmente il link qui sotto.',
+                variant: 'destructive',
+            });
+            try { window.prompt('Copia il link di invito:', url); } catch { /* ignore */ }
+        }
     };
 
     // ─── STEP NAVIGATION GUARDS ──────────────────────────────
     const canContinueStep1 = true; // campo opzionale
     const canContinueStep2 = presentCount >= 2;
+    // Step 3: validato dinamicamente nel render perché dipende anche dagli ospiti astenuti.
 
     // ─── STEP 1: DATI PARTITA ──────────────────────────────────
     const renderStep1 = () => (
@@ -406,6 +491,10 @@ const CreateMatch: React.FC = () => {
     // ─── STEP 3: ASTENSIONI ────────────────────────────────────
     const renderStep3 = () => {
         const presentPlayersList = playersList.filter(p => presentPlayers[p.id]);
+        const totalAbstainedCount = abstainedCount + abstainedGuestsCount;
+        const totalParticipants = presentPlayersList.length + guestPlayers.length;
+        const votersCountStep3 = totalParticipants - totalAbstainedCount;
+        const tooFewVoters = votersCountStep3 < 2;
 
         return (
             <div className="space-y-4">
@@ -423,25 +512,15 @@ const CreateMatch: React.FC = () => {
                         type="button"
                         variant="outline"
                         size="sm"
-                        className={`flex-1 text-xs gap-1.5 ${abstainedCount === 0 ? 'border-green-500/50 text-green-700 dark:text-green-400' : ''}`}
-                        onClick={resetAbstentions}
+                        className={`flex-1 text-xs gap-1.5 ${totalAbstainedCount === 0 ? 'border-green-500/50 text-green-700 dark:text-green-400' : ''}`}
+                        onClick={() => { resetAbstentions(); setAbstainedGuests({}); }}
                     >
                         <UserCheck className="h-3.5 w-3.5" />
                         Tutti votano
                     </Button>
-                    {/* <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className={`flex-1 text-xs gap-1.5 ${abstainedCount === presentPlayersList.length ? 'border-orange-500/50 text-orange-700 dark:text-orange-400' : ''}`}
-                        onClick={() => setAbstainedPlayers(Object.fromEntries(presentPlayersList.map(p => [p.id, true])))}
-                    >
-                        <UserMinus className="h-3.5 w-3.5" />
-                        Nessuno vota
-                    </Button> */}
                 </div>
 
-                {/* Chip toggle astensioni */}
+                {/* Chip toggle astensioni — membri team */}
                 <div className="flex flex-wrap gap-2">
                     {presentPlayersList.map((player) => {
                         const isAbstained = abstainedPlayers[player.id];
@@ -459,17 +538,42 @@ const CreateMatch: React.FC = () => {
                             </button>
                         );
                     })}
+                    {/* Chip toggle astensioni — ospiti */}
+                    {guestPlayers.map((guest, i) => {
+                        const isAbstained = !!abstainedGuests[i];
+                        return (
+                            <button
+                                key={`guest-${i}`}
+                                type="button"
+                                onClick={() => setAbstainedGuests({ ...abstainedGuests, [i]: !isAbstained })}
+                                className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${isAbstained
+                                    ? 'bg-orange-500/15 border-orange-500/40 text-orange-700 dark:text-orange-400'
+                                    : 'bg-blue-500/15 border-blue-500/40 text-blue-700 dark:text-blue-400'
+                                    }`}
+                                title="Ospite"
+                            >
+                                {guest.name} <span className="opacity-70 text-[10px]">ospite</span>
+                            </button>
+                        );
+                    })}
                 </div>
 
                 {/* Counter */}
                 <div className="text-center">
                     <Badge variant="secondary" className="text-xs px-2.5 py-0.5">
-                        {abstainedCount === 0
-                            ? `Tutti i ${presentPlayersList.length} partecipanti voteranno`
-                            : `${abstainedCount} astenuti · ${presentPlayersList.length - abstainedCount} voteranno`
+                        {totalAbstainedCount === 0
+                            ? `Tutti i ${totalParticipants} partecipanti voteranno`
+                            : `${totalAbstainedCount} astenuti · ${totalParticipants - totalAbstainedCount} voteranno`
                         }
                     </Badge>
                 </div>
+
+                {/* Messaggio validazione minimo votanti */}
+                {tooFewVoters && (
+                    <p className="text-sm text-red-500 text-center font-medium">
+                        Servono almeno 2 votanti per creare la partita
+                    </p>
+                )}
             </div>
         );
     };
@@ -543,7 +647,7 @@ const CreateMatch: React.FC = () => {
                             type="button"
                             className="flex-1 h-12 text-base bg-primary hover:bg-primary/90 text-primary-foreground"
                             onClick={handleCreate}
-                            disabled={presentCount < 2 || creatingMatch}
+                            disabled={presentCount < 2 || totalVoters < 2 || creatingMatch}
                         >
                             <Trophy className="w-4 h-4 mr-2" />
                             {creatingMatch ? 'Creando...' : 'Crea Partita'}
@@ -594,7 +698,7 @@ const CreateMatch: React.FC = () => {
                                     type="button"
                                     className="flex-1 h-12 text-base bg-primary hover:bg-primary/90 text-primary-foreground"
                                     onClick={handleCreate}
-                                    disabled={presentCount < 2 || creatingMatch}
+                                    disabled={presentCount < 2 || totalVoters < 2 || creatingMatch}
                                 >
                                     <Trophy className="w-4 h-4 mr-2" />
                                     {creatingMatch ? 'Creando...' : 'Crea Partita'}
@@ -637,7 +741,6 @@ const CreateMatch: React.FC = () => {
                                     <SelectItem value="DIF">Difensore</SelectItem>
                                     <SelectItem value="CEN">Centrocampista</SelectItem>
                                     <SelectItem value="ATT">Attaccante</SelectItem>
-                                    <SelectItem value="UTIL">Jolly</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -650,9 +753,10 @@ const CreateMatch: React.FC = () => {
             </Dialog>
 
             {/* Dialog — Invite links */}
-            <Dialog open={inviteLinksOpen} onOpenChange={(open) => { if (!open) navigate('/vote'); setInviteLinksOpen(open); }}>
+            <Dialog open={inviteLinksOpen} onOpenChange={(open) => { if (!open) navigate('/vote'); setInviteLinksOpen(open); }}
+            >
                 <DialogContent
-                    className="w-[calc(100%-2rem)] max-w-xs rounded-xl p-0 gap-0"
+                    className=" rounded-xl p-0 gap-0"
                     onOpenAutoFocus={(e) => e.preventDefault()}
                 >
                     <DialogHeader className="px-4 pt-4 pb-2">
@@ -660,23 +764,31 @@ const CreateMatch: React.FC = () => {
                     </DialogHeader>
                     <div className="px-4 pb-2 space-y-2">
                         <p className="text-sm text-muted-foreground">Condividi questi link con i giocatori ospiti:</p>
-                        {inviteLinks.map((guest, i) => (
-                            <div key={i} className="flex items-center gap-2 p-3 rounded-lg border bg-muted/30">
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium">{guest.name}</p>
-                                    <p className="text-xs text-muted-foreground truncate">{guest.inviteUrl}</p>
+                        {inviteLinks.map((guest, i) => {
+                            // Costruisci link assoluto come in MatchDetailsCard
+                            const fullUrl = guest.inviteToken
+                                ? `${window.location.origin}/join?token=${guest.inviteToken}`
+                                : (guest.inviteUrl?.startsWith('http')
+                                    ? guest.inviteUrl
+                                    : `${window.location.origin}${guest.inviteUrl}`);
+                            return (
+                                <div key={i} className="flex items-center gap-2 p-3 rounded-lg border bg-muted/30 min-w-0 overflow-hidden w-full">
+                                    <div className="flex-1 min-w-0 overflow-hidden">
+                                        <p className="text-sm font-medium truncate">{guest.name}</p>
+                                        <p className="text-xs text-muted-foreground truncate block max-w-full">{fullUrl}</p>
+                                    </div>
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-8 w-8 shrink-0"
+                                        onClick={(e) => copyInviteLink(fullUrl, e)}
+                                        title="Copia link"
+                                    >
+                                        <Copy className="h-3.5 w-3.5" />
+                                    </Button>
                                 </div>
-                                <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-8 w-8 shrink-0"
-                                    onClick={() => copyInviteLink(guest.inviteUrl)}
-                                    title="Copia link"
-                                >
-                                    <Copy className="h-3.5 w-3.5" />
-                                </Button>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                     <DialogFooter className="px-4 py-3 border-t">
                         <Button size="sm" className="w-full h-9 text-sm" onClick={() => { setInviteLinksOpen(false); navigate('/vote'); }}>

@@ -681,12 +681,41 @@ class AuthService {
 
         const team = await this.teamRepository.findById(match.teamId);
 
+        // Recupera i nomi di tutti i partecipanti (membri team + ospiti)
+        let participants = [];
+        try {
+            const memberIds = (match.teamMemberIds || []).map(id => id?.toString?.() || id);
+            const matchIdStr = match._id?.toString?.() || match._id;
+
+            const [members, guests] = await Promise.all([
+                memberIds.length
+                    ? this.userRepository.findAll(
+                        { _id: { $in: memberIds }, isGuest: { $ne: true } },
+                        { select: 'name' }
+                    )
+                    : Promise.resolve([]),
+                this.userRepository.findAll(
+                    { isGuest: true, inviteTokenMatchId: matchIdStr },
+                    { select: 'name' }
+                ),
+            ]);
+
+            const memberNames = (members || []).map(u => u.name).filter(Boolean);
+            const guestNames = (guests || []).map(u => u.name).filter(Boolean);
+            participants = [...memberNames, ...guestNames];
+        } catch (err) {
+            // Non bloccare l'invito se il recupero partecipanti fallisce
+            participants = [];
+        }
+
         return {
             playerName: guestUser.name,
             teamName: team ? team.name : '',
             matchDate: match.date,
             matchField: match.field,
-            matchId: match._id
+            matchId: match._id,
+            playersCount: match.playersCount,
+            participants,
         };
     }
 

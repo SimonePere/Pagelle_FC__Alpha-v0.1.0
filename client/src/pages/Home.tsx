@@ -251,6 +251,38 @@ const Home = () => {
                   )}
                 </motion.div>
               )}
+
+              {/* Guest: solo pulsante "Vota Partite" full-width (non può creare partita) */}
+              {isGuest && (
+                <motion.div whileTap={{ scale: 0.95 }} className="w-full">
+                  {pendingVoteSessions.length > 0 ? (
+                    <button
+                      onClick={() => {
+                        if (pendingVoteSessions.length === 1) {
+                          navigate('/vote', { state: { autoSessionId: pendingVoteSessions[0].id } });
+                        } else {
+                          navigate('/vote');
+                        }
+                      }}
+                      className="w-full relative inline-flex items-center justify-center gap-2 px-5 py-3 text-base font-semibold rounded-lg text-primary bg-background/50 overflow-visible"
+                    >
+                      <span className="absolute inset-0 rounded-lg border-2 border-primary animate-pulse pointer-events-none" />
+                      {pendingVoteSessions.length > 1 && (
+                        <span className="absolute -top-2 -right-2 z-20 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold shadow animate-pulse">
+                          {pendingVoteSessions.length}
+                        </span>
+                      )}
+                      <VoteIcon className="w-4 h-4 relative z-10" />
+                      <span className="relative z-10">Vota Partita</span>
+                    </button>
+                  ) : (
+                    <span className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-base font-semibold rounded-lg border-2 border-border/30 text-muted-foreground/50 bg-transparent cursor-default select-none">
+                      <VoteIcon className="w-4 h-4 opacity-40" />
+                      Vota Partita
+                    </span>
+                  )}
+                </motion.div>
+              )}
             </div>
 
             {/* Dialog creazione team */}
@@ -333,7 +365,7 @@ const Home = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
             >
-              <Card className="bg-card/80 backdrop-blur-sm border-border shadow-card border-accent/30">
+              <Card className="bg-card/80 backdrop-blur-sm shadow-card border-accent/30">
                 <CardHeader className="border-b border-border bg-accent/10">
                   <CardTitle className="flex items-center gap-3 font-display text-2xl">
                     <AlertCircle className="w-6 h-6 text-accent" />
