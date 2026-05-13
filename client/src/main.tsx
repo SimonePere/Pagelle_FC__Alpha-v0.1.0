@@ -9,6 +9,13 @@ import { initializeAuth } from "./redux/slices/authSlice.ts";
 
 store.dispatch(initializeAuth());
 
+// 🔄 Ricarica automatica quando un nuovo Service Worker prende il controllo
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
+  });
+}
+
 // 🧪 DEBUG: Esponi store globalmente per testing
 if (import.meta.env.DEV) {
   (window as any).store = store;
