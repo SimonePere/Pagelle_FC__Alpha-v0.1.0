@@ -17,6 +17,7 @@ import { motion } from 'framer-motion';
 import { fetchTeamById, leaveTeam, updateTeam, removeMember } from '@/redux/slices/teamSlice';
 import { refreshUserData } from '@/redux/slices/authSlice';
 import { useActiveTeamId } from '@/hooks/useActiveTeamId';
+import { isTeamAdmin } from '@/utils/permissions';
 
 export default function TeamPage() {
   const navigate = useNavigate();
@@ -347,7 +348,9 @@ export default function TeamPage() {
                 </div>
               </div>
               */}
-              <Button onClick={handleSaveDetails} disabled={teamLoading}><Save className="w-4 h-4" /> Salva modifiche</Button>
+              {isTeamAdmin(user, currentTeam as any) && (
+                <Button onClick={handleSaveDetails} disabled={teamLoading}><Save className="w-4 h-4" /> Salva modifiche</Button>
+              )}
             </CardContent>
           </Card>
 

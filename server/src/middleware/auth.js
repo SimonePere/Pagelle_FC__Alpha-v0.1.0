@@ -1,6 +1,5 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const Match = require('../models/Match');
 
 const auth = async (req, res, next) => {
   try {
@@ -21,15 +20,12 @@ const auth = async (req, res, next) => {
     req.user.scope = decoded.scope || 'full';
     if (decoded.matchId) req.user.matchId = decoded.matchId;
 
-    // Scadenza contestuale per guest: se la partita è chiusa il JWT è inutile
-    if (decoded.scope === 'guest' && decoded.matchId) {
-      const match = await Match.findById(decoded.matchId).select('status');
-      if (!match || match.status === 'completed' || match.status === 'cancelled') {
-        return res.status(403).json({
-          error: 'Partita chiusa. Registrati per continuare ad usare l\'app.'
-        });
-      }
-    }
+    // 🟢 Guest: link/JWT SEMPRE valido come punto di accesso all'app, anche se
+    //    la partita è stata completata o cancellata. Il guest può così consultare
+    //    i risultati in read-only e usare il link come gancio per la registrazione
+    //    (claim/merge → utente full). Le restrizioni sui voti sono già garantite
+    //    da VotingSession.canUserVote (sessione 'active' + non scaduta) e da
+    //    requireRole/requireScope sulle azioni amministrative.
 
     next();
   } catch (error) {

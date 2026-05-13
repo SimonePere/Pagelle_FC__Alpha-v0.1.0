@@ -14,6 +14,7 @@ import { Component, ReactNode } from "react";
 import { createTeam } from '@/redux/slices/teamSlice';
 import { refreshUserData, loadEnrichedUserData } from '@/redux/slices/authSlice';
 import { toast } from 'sonner';
+import { isAdmin } from '@/utils/permissions';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -188,7 +189,7 @@ export default function History() {
             transition={{ delay: 0.1 }}
           >
             <ErrorBoundary fallback={ErrorFallback}>
-              <MatchGrid showStats={false} onCreateMatch={!isGuest && user?.teams?.length ? handleCreateMatch : undefined} />
+              <MatchGrid showStats={false} onCreateMatch={isAdmin(user) && user?.teams?.length ? handleCreateMatch : undefined} />
             </ErrorBoundary>
           </motion.div>
 

@@ -15,18 +15,26 @@ const {
 
 // Import middleware
 const auth = require('../middleware/auth'); // Assumendo middleware auth esistente
+const requireScope = require('../middleware/requireScope');
+const requireRole = require('../middleware/requireRole');
 
 console.log('📋 Loading PlayerCard routes...');
 
 // === PLAYER CARD SESSION MANAGEMENT ===
+//
+// Permessi:
+//   - Create / Complete sessione: solo admin globali (Six/Dux/Gaga)
+//   - Submit voto / lettura: tutti gli user 'full' (non guest)
+//   - I guest NON accedono alle PlayerCards: sono valutazioni interne
+//     al team, fuori dal perimetro guest "votazione singola match".
 
 /**
  * @desc    Create new PlayerCard voting session
  * @route   POST /api/v1/player-cards/sessions
- * @access  Private
+ * @access  Private (admin only)
  * @body    { targetPlayerId, title?, description?, deadline?, teamId? }
  */
-router.post('/sessions', auth, createPlayerCardSession);
+router.post('/sessions', auth, requireScope('full'), requireRole('admin'), createPlayerCardSession);
 
 /**
  * @desc    Get all PlayerCard sessions for current user
@@ -34,21 +42,21 @@ router.post('/sessions', auth, createPlayerCardSession);
  * @access  Private
  * @query   ?status=active|completed&limit=20
  */
-router.get('/sessions', auth, getUserPlayerCardSessions);
+router.get('/sessions', auth, requireScope('full'), getUserPlayerCardSessions);
 
 /**
  * @desc    Get specific PlayerCard session by ID
  * @route   GET /api/v1/player-cards/sessions/:id
  * @access  Private
  */
-router.get('/sessions/:id', auth, getPlayerCardSession);
+router.get('/sessions/:id', auth, requireScope('full'), getPlayerCardSession);
 
 // === PLAYER CARD VOTING ===
 
 /**
  * @desc    Submit vote for PlayerCard session
  * @route   POST /api/v1/player-cards/sessions/:id/vote
- * @access  Private
+ * @access  Private (any full user)
  * @body    { 
  *            vote: {
  *              attributes: { tir, pas, dri, fin, vis, res, for },
@@ -59,7 +67,7 @@ router.get('/sessions/:id', auth, getPlayerCardSession);
  *            deviceInfo?, timeSpent?
  *          }
  */
-router.post('/sessions/:id/vote', auth, submitPlayerCardVote);
+router.post('/sessions/:id/vote', auth, requireScope('full'), submitPlayerCardVote);
 
 
 
@@ -70,15 +78,15 @@ router.post('/sessions/:id/vote', auth, submitPlayerCardVote);
  * @route   GET /api/v1/player-cards/sessions/:id/calculation
  * @access  Private
  */
-router.get('/sessions/:id/calculation', auth, getPlayerCardCalculation);
+router.get('/sessions/:id/calculation', auth, requireScope('full'), getPlayerCardCalculation);
 
 /**
  * @desc    Complete PlayerCard session and save official results
  * @route   POST /api/v1/player-cards/sessions/:id/complete
- * @access  Private
+ * @access  Private (admin only)
  * @body    { forceReopen?: boolean }
  */
-router.post('/sessions/:id/complete', auth, completePlayerCardSession);
+router.post('/sessions/:id/complete', auth, requireScope('full'), requireRole('admin'), completePlayerCardSession);
 
 /**
  * @desc    Get PlayerCard results for specific user
@@ -86,7 +94,7 @@ router.post('/sessions/:id/complete', auth, completePlayerCardSession);
  * @access  Private (team members only)
  * @query   ?limit=10 (optional limit for results)
  */
-router.get('/results/user/:userId', auth, getPlayerCardResults);
+router.get('/results/user/:userId', auth, requireScope('full'), getPlayerCardResults);
 
 
 

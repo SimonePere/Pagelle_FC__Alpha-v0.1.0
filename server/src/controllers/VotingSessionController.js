@@ -519,6 +519,49 @@ const updateVote = async (req, res) => {
   }
 };
 
+// @desc    Forza la chiusura di una sessione di voto astenendo d'ufficio i pending.
+//          Usata dal bottone admin "Chiudi votazione adesso" lato UI.
+//          Tutti gli aventi diritto che non hanno votato vengono marcati
+//          come astenuti con reason='deadline_expired' (azione di sistema/admin),
+//          poi la sessione viene completata e il VoteResult salvato.
+//          Se nessuno ha votato → la sessione viene 'cancelled' (no medie possibili).
+// @route   POST /api/v1/voting-sessions/:id/force-close
+// @access  Private (solo admin globali — requireScope('full') + requireRole('admin'))
+const forceCloseVotingSession = async (req, res) => {
+  try {
+    console.log('\n🔒 === FORCE CLOSE VOTING SESSION ===');
+    console.log('👤 Admin:', req.user?.name, '(', req.user?.email, ')');
+    console.log('📋 Session ID:', req.params.id);
+
+    const { id: sessionId } = req.params;
+
+    // Delega la logica al service: marca pending come astenuti + completa.
+    // completionType='manual' perché è un admin che la sta forzando manualmente
+    // (distinto da 'automatic_deadline' usato dal cron).
+    const votingService = new VotingService();
+    const result = await votingService.closeWithAbstainedPending(sessionId, 'manual');
+
+    console.log('✅ Force-close eseguito. Action:', result.action);
+    console.log('🔒 === FINE FORCE CLOSE VOTING SESSION ===\n');
+
+    return res.json({
+      success: true,
+      ...result
+    });
+  } catch (error) {
+    console.error('❌ ERRORE FORCE CLOSE VOTING SESSION:', error.message);
+    console.log('🔒 === FINE FORCE CLOSE VOTING SESSION (ERRORE) ===\n');
+
+    if (error.message.includes('not found')) {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message.includes('Invalid') || error.message.includes('required')) {
+      return res.status(400).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Server error forzando la chiusura della votazione' });
+  }
+};
+
 module.exports = {
   createVotingSession,
   getUserVotingSessions,
@@ -527,6 +570,7 @@ module.exports = {
   activateVotingSession,
   getVotingCalculation,
   completeVotingSession,
+  forceCloseVotingSession,
   getSessionSubmissions,
   getMyVote,
   updateVote

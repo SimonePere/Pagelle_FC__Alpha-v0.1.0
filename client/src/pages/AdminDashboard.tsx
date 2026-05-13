@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/redux/store/store';
+import { toast } from 'sonner';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +22,7 @@ import { Match } from '@/types/match';
 // Per ora usiamo User da api.ts; adattare i filtri di conseguenza.
 import { User, Team } from '@/types/api';
 import { PlayerCard } from '@/types/playerCard';
+import { isAdmin } from '@/utils/permissions';
 
 interface KpiProps {
   icon: React.ElementType;
@@ -52,6 +57,18 @@ const Kpi = ({ icon: Icon, label, value, hint, accent }: KpiProps) => (
 );
 
 export default function AdminDashboard() {
+  const { user } = useSelector((state: RootState) => state.auth);
+  const navigate = useNavigate();
+
+  // Guard di pagina: solo admin globali. Anche se al momento i widget
+  // sono placeholder (TODO endpoint admin), blindiamo la rotta diretta.
+  useEffect(() => {
+    if (user && !isAdmin(user)) {
+      toast.error('Area riservata agli amministratori.');
+      navigate('/history', { replace: true });
+    }
+  }, [user, navigate]);
+
   const [users, setUsers] = useState<User[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [players, setPlayers] = useState<User[]>([]);
@@ -221,6 +238,10 @@ export default function AdminDashboard() {
     { name: 'Registrati', value: stats.linkedPlayers, color: 'hsl(var(--primary))' },
     { name: 'Ospiti', value: stats.guestPlayers, color: 'hsl(var(--accent))' },
   ];
+
+  // Early-return: se non sei admin globale, non rendere nulla mentre il
+  // useEffect ti redirige. Evita un "flash" del contenuto.
+  if (!user || !isAdmin(user)) return null;
 
   return (
     <DashboardLayout>

@@ -1091,6 +1091,116 @@ class VotingService {
     }
 
     /**
+     * 🔒 CHIUSURA FORZATA DI UNA VOTAZIONE — astiene d'ufficio i pending e completa.
+     *
+     * È il "cervello" condiviso da:
+     *   - Cron node-cron (auto-close ogni 5 min su sessioni scadute)
+     *   - Endpoint admin POST /voting-sessions/:id/force-close (chiusura manuale)
+     *
+     * Comportamento:
+     *   1. Carica la sessione e fa updateSummary() per avere `pendingVoters` aggiornato.
+     *   2. Per ogni utente in `pendingVoters` lo marca come astenuto con
+     *      `reason='deadline_expired'` e `abstainedBy=null` (azione di sistema).
+     *      Idempotente: se l'utente è già astenuto, no-op.
+     *   3. Salva la sessione (così completeSession troverà gli astenuti aggiornati
+     *      quando la rilegge dal repository).
+     *   4. Edge case: se NESSUNO ha votato (zero submissions), non possiamo
+     *      generare un VoteResult sensato → marchiamo la sessione come 'cancelled'
+     *      con motivo "no_votes_at_deadline" e usciamo. Questo evita di lanciare
+     *      l'errore "Cannot complete session with no votes" di completeSession().
+     *   5. Altrimenti delega a completeSession(sessionId, completionType) che
+     *      esegue tutta l'aggregazione finale (medie, badges, statistiche, cache,
+     *      Match status). NON duplichiamo la logica di calcolo: una sola fonte di verità.
+     *
+     * Idempotente:
+     *   - Se la sessione è già 'completed' o 'cancelled' → return immediato senza side-effect.
+     *   - Se non ci sono pending da astenere → procede solo a completare.
+     *
+     * @param {string} sessionId       ObjectId della VotingSession da chiudere
+     * @param {string} completionType  'automatic_deadline' (default, cron)
+     *                                  oppure 'manual' (admin force-close)
+     * @returns {Promise<Object>}      { success, action, ...dettagli }
+     */
+    async closeWithAbstainedPending(sessionId, completionType = 'automatic_deadline') {
+        if (!sessionId) {
+            throw new Error('Session ID is required');
+        }
+
+        // 1. Carica sessione
+        const session = await this.votingSessionRepository.findById(sessionId);
+        if (!session) {
+            throw new Error('Voting session not found');
+        }
+
+        // Idempotenza: se già chiusa, niente da fare
+        if (session.status === 'completed' || session.status === 'cancelled') {
+            console.log(`ℹ️ [closeWithAbstainedPending] Sessione ${sessionId} già in stato '${session.status}', skip`);
+            return {
+                success: true,
+                action: 'noop_already_closed',
+                sessionId,
+                status: session.status
+            };
+        }
+
+        // 2. Aggiorna summary per avere pendingVoters fresco
+        //    (totalSubmissions, participationRate, pendingVoters ricalcolati
+        //    escludendo già gli astenuti correnti dal denominatore).
+        await session.updateSummary();
+
+        const pendingVoters = (session.summary?.pendingVoters || []).map(id => id.toString());
+        const abstainedAddedNow = [];
+
+        // 3. Astieni d'ufficio ogni pending con reason='deadline_expired'
+        //    abstainedBy=null perché è il sistema, non un user umano.
+        for (const userId of pendingVoters) {
+            // abstainUser è idempotente: skip silenzioso se già astenuto
+            session.abstainUser(userId, null, 'deadline_expired');
+            abstainedAddedNow.push(userId);
+        }
+
+        // Ricalcola summary dopo le nuove astensioni (cambia il denominatore)
+        await session.updateSummary();
+
+        // 4. Persisti le modifiche prima che completeSession() rilegga la sessione
+        await this.votingSessionRepository.save(session);
+
+        console.log(`🔒 [closeWithAbstainedPending] sessione=${sessionId} pending_astenuti=${abstainedAddedNow.length} reason=deadline_expired`);
+
+        // 5. Edge case: nessun voto raccolto → non si può aggregare nulla.
+        //    Cancelliamo la sessione invece di tentare la completion (che
+        //    fallirebbe con "Cannot complete session with no votes").
+        const submissionsCount = session.summary?.totalSubmissions || 0;
+        if (submissionsCount === 0) {
+            console.warn(`⚠️ [closeWithAbstainedPending] Sessione ${sessionId} senza voti alla scadenza → cancelled`);
+            await this.votingSessionRepository.updateById(session._id, {
+                status: 'cancelled',
+                completedAt: new Date(),
+                completionType: completionType
+            });
+            return {
+                success: true,
+                action: 'cancelled_no_votes',
+                sessionId,
+                pendingAbstained: abstainedAddedNow.length
+            };
+        }
+
+        // 6. Tutto ok: delega a completeSession (che fa tutta l'aggregazione finale,
+        //    salva VoteResult, aggiorna PlayerStats, invalida cache, aggiorna Match).
+        const completionResult = await this.completeSession(sessionId, completionType);
+
+        return {
+            success: true,
+            action: 'closed_with_abstained',
+            sessionId,
+            pendingAbstained: abstainedAddedNow.length,
+            completionType,
+            ...completionResult
+        };
+    }
+
+    /**
      * Aggiorna statistiche best/worst rating giocatori
      * @param {Object} results - Risultati finali per aggiornamento stats
      */

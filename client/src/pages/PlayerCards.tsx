@@ -26,6 +26,7 @@ import { Users, CheckCircle2, Clock, Star, X, Info } from "lucide-react";
 import { toast } from "sonner";
 import { apiCall } from "@/lib/api";
 import { calculateAge } from "@/utils/playerCardCalculations";
+import { isAdmin } from "@/utils/permissions";
 
 const PlayerCardsContentSkeleton = () => {
   return (
@@ -114,6 +115,15 @@ export default function PlayerCards() {
 
   // Crea una nuova sessione PlayerCard per un giocatore con AUTO-APERTURA
   const handleCreatePlayerCardSession = async (playerId: string) => {
+    // Guard admin: la creazione sessione PlayerCard è riservata agli admin
+    // globali. Il backend la blinda comunque (requireRole('admin')), qui
+    // evitiamo la chiamata 403 e mostriamo un messaggio chiaro.
+    // TODO: nascondere il bottone in PlayerCardNavigator quando refactoring UI.
+    if (!isAdmin(user)) {
+      toast.error('Solo gli amministratori possono avviare una nuova valutazione PlayerCard.');
+      return;
+    }
+
     const targetPlayer = allPlayers.find(p => p.id === playerId);
     if (!targetPlayer) return;
 

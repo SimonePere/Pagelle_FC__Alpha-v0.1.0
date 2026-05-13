@@ -31,6 +31,7 @@ import { apiCall } from '@/lib/api';
 import { toast } from 'sonner';
 import { useToast } from '@/hooks/use-toast';
 import { calculateAge } from '@/utils/playerCardCalculations';
+import { isAdmin } from '@/utils/permissions';
 
 // Semplifichiamo l'interface utilizzando i dati già disponibili
 interface UserStats {
@@ -44,7 +45,7 @@ interface UserStats {
 
 
 const Profile = () => {
-  const { user } = useSelector((state: RootState) => state.auth);
+  const { user, isGuest } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -133,6 +134,19 @@ const Profile = () => {
 
   // Funzioni handler esattamente come in PlayerCards
   const handleCreatePlayerCardSession = async (playerId: string) => {
+    // Guard admin: la creazione sessione PlayerCard è riservata agli admin
+    // globali. Il backend la blinda comunque (requireRole('admin')), qui
+    // evitiamo la chiamata 403 e mostriamo un messaggio chiaro.
+    // TODO: nascondere il bottone in PlayerCardNavigator quando refactoring UI.
+    if (!isAdmin(user)) {
+      toast({
+        title: 'Azione riservata',
+        description: 'Solo gli amministratori possono avviare una nuova valutazione PlayerCard.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     const targetPlayer = allPlayers.find(p => p.id === playerId);
     if (!targetPlayer) return;
 
@@ -394,23 +408,28 @@ const Profile = () => {
                     {/* TOT Badge se disponibile - layout orizzontale compatto */}
 
 
-                    {/* Mobile Action Buttons - sotto TOT badge */}
-                    <div className="flex items-center justify-center gap-4 mt-6">
-                      <button
-                        onClick={handleEditProfile}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-secondary/40 hover:bg-secondary/60 text-secondary-foreground hover:text-foreground transition-all duration-200 text-sm rounded-xl border border-border/40 hover:border-primary/30 shadow-sm"
-                      >
-                        <UserIcon className="w-4 h-4" />
-                        <span>modifica profilo</span>
-                      </button>
-                      <button
-                        onClick={handleChangePassword}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-secondary/40 hover:bg-secondary/60 text-secondary-foreground hover:text-foreground transition-all duration-200 text-sm rounded-xl border border-border/40 hover:border-primary/30 shadow-sm"
-                      >
-                        <KeyRound className="w-4 h-4" />
-                        <span>cambia password</span>
-                      </button>
-                    </div>
+                    {/* Mobile Action Buttons - sotto TOT badge.
+                        Nascosti ai guest: prima di registrarsi non possono
+                        modificare profilo né password (azioni che presuppongono
+                        un account user pieno). */}
+                    {!isGuest && (
+                      <div className="flex items-center justify-center gap-4 mt-6">
+                        <button
+                          onClick={handleEditProfile}
+                          className="flex items-center gap-2 px-4 py-2.5 bg-secondary/40 hover:bg-secondary/60 text-secondary-foreground hover:text-foreground transition-all duration-200 text-sm rounded-xl border border-border/40 hover:border-primary/30 shadow-sm"
+                        >
+                          <UserIcon className="w-4 h-4" />
+                          <span>modifica profilo</span>
+                        </button>
+                        <button
+                          onClick={handleChangePassword}
+                          className="flex items-center gap-2 px-4 py-2.5 bg-secondary/40 hover:bg-secondary/60 text-secondary-foreground hover:text-foreground transition-all duration-200 text-sm rounded-xl border border-border/40 hover:border-primary/30 shadow-sm"
+                        >
+                          <KeyRound className="w-4 h-4" />
+                          <span>cambia password</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Desktop Layout */}
@@ -475,27 +494,29 @@ const Profile = () => {
                         )}
                       </div>
 
-                      {/* Bottoni Edit */}
-                      <div className="flex gap-3 mt-4">
-                        <Button
-                          onClick={handleEditProfile}
-                          variant="outline"
-                          size="sm"
-                          className="bg-primary/10 hover:bg-primary/20 border-primary/30"
-                        >
-                          <UserIcon className="w-4 h-4 mr-2" />
-                          Modifica Profilo
-                        </Button>
-                        <Button
-                          onClick={handleChangePassword}
-                          variant="outline"
-                          size="sm"
-                          className="bg-accent/10 hover:bg-accent/20 border-accent/30"
-                        >
-                          <Lock className="w-4 h-4 mr-2" />
-                          Cambia Password
-                        </Button>
-                      </div>
+                      {/* Bottoni Edit - nascosti ai guest (vedi commento sopra) */}
+                      {!isGuest && (
+                        <div className="flex gap-3 mt-4">
+                          <Button
+                            onClick={handleEditProfile}
+                            variant="outline"
+                            size="sm"
+                            className="bg-primary/10 hover:bg-primary/20 border-primary/30"
+                          >
+                            <UserIcon className="w-4 h-4 mr-2" />
+                            Modifica Profilo
+                          </Button>
+                          <Button
+                            onClick={handleChangePassword}
+                            variant="outline"
+                            size="sm"
+                            className="bg-accent/10 hover:bg-accent/20 border-accent/30"
+                          >
+                            <Lock className="w-4 h-4 mr-2" />
+                            Cambia Password
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

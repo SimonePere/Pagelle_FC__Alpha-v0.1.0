@@ -675,9 +675,10 @@ class AuthService {
         const match = await this.matchRepository.findById(guestUser.inviteTokenMatchId);
         if (!match) throw new AppError('Partita non trovata', 404);
 
-        if (match.status === 'completed' || match.status === 'cancelled') {
-            throw new AppError('Partita chiusa', 410);
-        }
+        // 🟢 Non blocchiamo se il match è completed/cancelled: il link rimane
+        //    un punto di accesso valido per consultare i risultati in read-only
+        //    e per facilitare la registrazione (claim/merge).
+        //    Il flag matchStatus permette alla UI di mostrare messaggi diversi.
 
         const team = await this.teamRepository.findById(match.teamId);
 
@@ -714,6 +715,7 @@ class AuthService {
             matchDate: match.date,
             matchField: match.field,
             matchId: match._id,
+            matchStatus: match.status, // 🆕 La UI lo usa per decidere CTA (Vota vs Visualizza)
             playersCount: match.playersCount,
             participants,
         };
@@ -734,9 +736,9 @@ class AuthService {
         const match = await this.matchRepository.findById(guestUser.inviteTokenMatchId);
         if (!match) throw new AppError('Partita non trovata', 404);
 
-        if (match.status === 'completed' || match.status === 'cancelled') {
-            throw new AppError('Partita chiusa, registrati per continuare a usare l\'app', 410);
-        }
+        // 🟢 Match completed/cancelled → login guest comunque consentito.
+        //    Il guest atterra sull'app e può vedere i risultati o registrarsi.
+        //    Voto: bloccato naturalmente da VotingSession.canUserVote.
 
         const token = this.generateToken(guestUser._id, {
             scope: 'guest',

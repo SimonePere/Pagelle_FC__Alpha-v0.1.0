@@ -3,6 +3,7 @@ const router = express.Router();
 const votingSessionController = require('../controllers/VotingSessionController');
 const auth = require('../middleware/auth');
 const requireScope = require('../middleware/requireScope');
+const requireRole = require('../middleware/requireRole');
 const requireMatchAccess = require('../middleware/requireMatchAccess');
 
 // =============================================
@@ -56,6 +57,19 @@ router.patch('/:id/activate', auth, requireScope('full'), votingSessionControlle
 // @desc    Complete session and save official results
 // @access  Private (solo utenti registrati)
 router.post('/:id/complete', auth, requireScope('full'), votingSessionController.completeVotingSession);
+
+// @route   POST /api/v1/voting-sessions/:id/force-close
+// @desc    Forza la chiusura di una votazione: i pending vengono astenuti d'ufficio
+//          (reason='deadline_expired') e la sessione viene completata.
+//          Se nessuno ha votato → status diventa 'cancelled'.
+// @access  Private (solo admin globali Six/Dux/Gaga)
+router.post(
+    '/:id/force-close',
+    auth,
+    requireScope('full'),
+    requireRole('admin'),
+    votingSessionController.forceCloseVotingSession
+);
 
 // --- Catch-all :id route LAST ---
 

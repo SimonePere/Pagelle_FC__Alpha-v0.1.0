@@ -54,20 +54,41 @@ const VotingSessionSchema = new mongoose.Schema({
   }],
 
   // === ASTENSIONE PARTECIPANTI ===
+  // Lista degli utenti che NON parteciperanno al voto.
+  // Vengono esclusi sia dal denominatore della participationRate
+  // sia dal calcolo delle medie (vedi updateSummary + VotingService.aggregatePlayerStats).
   abstainedUsers: [{
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true
     },
+    // Chi ha marcato l'utente come astenuto.
+    // - Se astensione manuale (admin / user stesso): contiene l'ObjectId user.
+    // - Se astensione automatica via cron alla scadenza deadline: è `null`
+    //   (il sistema non è un user, e mettere un sentinel ObjectId fittizio
+    //    rompeva i populate). Il "chi" effettivo è distinguibile dal campo `reason`.
     abstainedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true
+      required: false,
+      default: null
     },
     abstainedAt: {
       type: Date,
       default: Date.now
+    },
+    // Motivo dell'astensione — utile per audit e UI:
+    //   'voluntary'         → l'utente stesso si è astenuto
+    //   'admin_marked'      → un admin ha astenuto l'utente manualmente
+    //   'deadline_expired'  → il sistema ha astenuto l'utente perché
+    //                         non aveva votato entro la deadline (cron / force-close)
+    // Default 'admin_marked' per retro-compatibilità con i record già esistenti
+    // (prima dell'introduzione del campo): erano tutti astensioni decise da un admin.
+    reason: {
+      type: String,
+      enum: ['voluntary', 'admin_marked', 'deadline_expired'],
+      default: 'admin_marked'
     }
   }],
 
@@ -119,9 +140,14 @@ const VotingSessionSchema = new mongoose.Schema({
   // Traccia COME la sessione è stata completata
   completionType: {
     type: String,
-    enum: ['manual', 'automatic'],
-    // manual: completata manualmente da utente
-    // automatic: completata automaticamente quando tutti hanno votato
+    enum: ['manual', 'automatic', 'automatic_deadline'],
+    // manual              → completata manualmente da un admin
+    //                       (endpoint POST /:id/complete oppure il nuovo force-close)
+    // automatic           → completata automaticamente quando TUTTI gli aventi diritto
+    //                       hanno votato (auto-completion in checkAutoCompletion)
+    // automatic_deadline  → completata automaticamente perché è scaduta la deadline:
+    //                       i pending sono stati astenuti d'ufficio (reason='deadline_expired')
+    //                       e poi la sessione è stata chiusa con i voti raccolti.
   },
 
   // === STATO E CONTROLLO ===
@@ -236,7 +262,16 @@ VotingSessionSchema.methods.reactivateUser = function (userId, reactivatedBy) {
 };
 
 // Astieni un utente
-VotingSessionSchema.methods.abstainUser = function (userId, abstainedBy) {
+//
+// Parametri:
+//   userId       → l'utente da astenere (rimosso da eligibleVoters, aggiunto ad abstainedUsers)
+//   abstainedBy  → ObjectId dell'utente che esegue l'azione, oppure `null`
+//                  quando l'astensione è generata dal sistema (cron deadline)
+//   reason       → motivo: 'voluntary' | 'admin_marked' | 'deadline_expired'
+//                  Default 'admin_marked' (comportamento storico).
+//
+// Idempotente: se l'utente è già astenuto, non duplica la voce.
+VotingSessionSchema.methods.abstainUser = function (userId, abstainedBy, reason = 'admin_marked') {
   // Rimuovi da eligible voters se presente
   this.eligibleVoters = this.eligibleVoters.filter(id => !id.equals(userId));
 
@@ -244,8 +279,9 @@ VotingSessionSchema.methods.abstainUser = function (userId, abstainedBy) {
   if (!this.isUserAbstained(userId)) {
     this.abstainedUsers.push({
       userId: userId,
-      abstainedBy: abstainedBy,
-      abstainedAt: new Date()
+      abstainedBy: abstainedBy || null,
+      abstainedAt: new Date(),
+      reason: reason
     });
   }
 };
@@ -278,7 +314,11 @@ VotingSessionSchema.methods.updateSummary = async function () {
     isActive: true
   });
 
-  const submittedVoters = submissions.map(s => s.voterId);
+  // ⚠️ IMPORTANTE: confronto SEMPRE via .toString() perché Array.includes()
+  //    su Mongoose ObjectId compara per identità di riferimento, NON per valore.
+  //    Senza toString(), pendingVoters conterrebbe TUTTI gli activeVoters anche
+  //    se hanno già votato → bug grave nel force-close che li marcherebbe astenuti.
+  const submittedVoterIds = submissions.map(s => s.voterId.toString());
 
   // Calcola gli utenti attivi (elegibili - astenuti)
   const abstainedUserIds = this.abstainedUsers.map(u => u.userId.toString());
@@ -287,7 +327,7 @@ VotingSessionSchema.methods.updateSummary = async function () {
   );
 
   const pendingVoters = activeVoters.filter(
-    voter => !submittedVoters.includes(voter)
+    voter => !submittedVoterIds.includes(voter.toString())
   );
 
   const avgTime = submissions.length > 0
@@ -295,16 +335,26 @@ VotingSessionSchema.methods.updateSummary = async function () {
     : 0;
 
   // UPDATE CON CONSIDERAZIONE DEGLI ASTENUTI:
+  // ⚠️ Edge case: activeVoters.length === 0 (tutti gli eligible sono stati astenuti,
+  // tipicamente dal cron close-expired). Evitiamo divisione per zero che produce NaN
+  // e fa fallire la validation Mongoose su summary.participationRate.
+  const participationRate = activeVoters.length > 0
+    ? Math.round((submissions.length / activeVoters.length) * 100)
+    : 0;
+
   this.summary = {
     totalSubmissions: submissions.length,
     pendingVoters,
-    participationRate: Math.round((submissions.length / activeVoters.length) * 100),
+    participationRate,
     averageTimeToVote: Math.round(avgTime),
     lastActivity: submissions.length > 0 ? submissions[submissions.length - 1].submittedAt : this.createdAt
   };
 
   // Auto-completion basata su votanti attivi (esclusi gli astenuti)
-  if (submissions.length >= activeVoters.length && this.status === 'active') {
+  // ⚠️ activeVoters.length > 0 evita di auto-completare con 0/0 quando tutti
+  // sono stati astenuti d'ufficio: in quel caso la chiusura la decide
+  // closeWithAbstainedPending (cancelled vs completed in base alle submissions).
+  if (activeVoters.length > 0 && submissions.length >= activeVoters.length && this.status === 'active') {
     this.status = 'completed';
     this.completedAt = new Date();
     this.completionType = 'automatic';

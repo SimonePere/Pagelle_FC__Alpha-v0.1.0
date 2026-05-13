@@ -21,6 +21,8 @@ import { useToast } from '@/hooks/use-toast';
 import EditModal from '@/components/EditModal';
 import MatchDetailsCard from '@/components/MatchDetailsCard';
 import useEnrichedMatches from '@/hooks/useEnrichedMatches';
+import { isAdmin } from '@/utils/permissions';
+import { api } from '@/lib/api';
 
 export default function MatchDetails() {
   const { matchId } = useParams();
@@ -77,6 +79,14 @@ export default function MatchDetails() {
   // Fallback: cerca nelle sessions Redux già caricate (utenti full)
   const matchVotingSessionId = currentMatch?.votingSession?.id
     || sessions.find((s: any) => s.targetId === matchId)?.id;
+
+  // 🔒 Status sessione voto STABILE: prendiamo da Redux sessions[] (più affidabile
+  //    perché aggiornato da fetchUserVotingSessions e non oscilla con l'enrichment).
+  //    Fallback su currentMatch.votingSession.status.
+  const matchVotingSessionStatus =
+    sessions.find((s: any) => s.targetId === matchId)?.status
+    || currentMatch?.votingSession?.status
+    || null;
 
   useEffect(() => {
     if (matchVotingSessionId) {
@@ -208,6 +218,52 @@ export default function MatchDetails() {
     setShowDeleteDialog(false);
   };
 
+  // 🔒 FORCE-CLOSE VOTAZIONE (solo admin)
+  //    Chiama POST /voting-sessions/:id/force-close.
+  //    Il backend astiene d'ufficio i pending (reason='deadline_expired')
+  //    e completa la sessione (completionType='manual'). Se nessuno ha votato
+  //    la sessione viene cancellata.
+  //    Throw in caso di errore: così EditModal sa che non deve resettare lo stato.
+  const handleForceCloseSession = async () => {
+    if (!matchVotingSessionId) throw new Error('Nessuna sessione di voto');
+    try {
+      const res: any = await api.post(`/voting-sessions/${matchVotingSessionId}/force-close`);
+
+      if (res?.action === 'cancelled_no_votes') {
+        toast({
+          title: 'Votazione annullata',
+          description: 'Nessuno aveva votato: la sessione è stata cancellata.'
+        });
+      } else if (res?.action === 'noop_already_closed') {
+        toast({
+          title: 'Già chiusa',
+          description: 'Questa votazione era già stata completata.'
+        });
+      } else {
+        const pending = res?.pendingAbstained ?? 0;
+        toast({
+          title: 'Votazione chiusa!',
+          description: pending > 0
+            ? `${pending} utente/i astenuti d'ufficio. Medie ufficiali calcolate.`
+            : 'Medie ufficiali calcolate e salvate.'
+        });
+      }
+
+      // Refresh dati app + match corrente + voting data
+      refreshData();
+      dispatch(fetchMatchById(currentMatch.id));
+      dispatch(fetchMatchVotingData(matchVotingSessionId));
+    } catch (error: any) {
+      console.error('Errore force-close votazione:', error);
+      toast({
+        title: 'Errore',
+        description: error?.response?.data?.error || 'Impossibile chiudere la votazione.',
+        variant: 'destructive'
+      });
+      throw error;
+    }
+  };
+
   // 🔄 RIATTIVAZIONE UTENTE ASTENUTO
   const handleReactivateUser = async (userId: string) => {
     if (window.confirm('Sei sicuro di voler riattivare questo utente per la votazione di questa partita?')) {
@@ -288,7 +344,7 @@ export default function MatchDetails() {
                 votingProgress: 65,
                 votingDeadline: '2025-12-20T23:59:59Z'
               }}
-              showActionButtons={!isGuest}
+              showActionButtons={isAdmin(user)}
               onEditMatch={handleEditMatch}
               onDeleteMatch={handleDeleteMatch}
               // 🆕 Voting data from Redux
@@ -361,6 +417,8 @@ export default function MatchDetails() {
         }}
         onSave={handleModalSave}
         onReactivateUser={handleReactivateUser} // 🆕 Handler riattivazione
+        onForceCloseSession={isAdmin(user) ? handleForceCloseSession : undefined}
+        canForceCloseSession={!!matchVotingSessionId && matchVotingSessionStatus === 'active'}
       />
     </DashboardLayout>
   );

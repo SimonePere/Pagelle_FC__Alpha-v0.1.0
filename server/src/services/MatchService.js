@@ -14,6 +14,52 @@ const AppError = require('../utils/AppError');
 const CacheService = require('./CacheService'); // Cache invalidation per match updates
 const { generateInviteToken } = require('../utils/tokenGenerator');
 
+// 🕛 Helper: dato un valore data del match (Date | ISO string), restituisce
+//    un Date che rappresenta le 23:59:59.999 della stessa giornata in fuso
+//    Europe/Rome. Funziona indipendentemente dal fuso del server (UTC su Render).
+//
+// Esempio: match.date = '2026-05-15T15:00:00.000Z' → deadline = 2026-05-15T21:59:59.999Z
+//          (che corrisponde alle 23:59:59 italiane in ora legale, +02:00).
+//
+// Implementazione: estraiamo year/month/day usando Intl con timezone Europe/Rome,
+//    poi costruiamo la stringa "YYYY-MM-DDT23:59:59" e la convertiamo a UTC
+//    sottraendo l'offset corretto del fuso italiano per quella data (gestisce CET/CEST).
+function computeMatchDayDeadline(rawDate) {
+    if (!rawDate) return null;
+    const d = new Date(rawDate);
+    if (isNaN(d.getTime())) return null;
+
+    // 1) Estrai Y/M/D nel fuso Europe/Rome
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Rome',
+        year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(d);
+    const get = (type) => parts.find(p => p.type === type)?.value;
+    const dateStr = `${get('year')}-${get('month')}-${get('day')}`; // YYYY-MM-DD
+
+    // 2) Calcola l'offset del fuso Europe/Rome per QUELLA giornata (gestisce CET/CEST)
+    //    Trick: prendi la mezzanotte UTC di quel giorno e chiedi che ora sarebbe a Roma.
+    const utcMidnight = new Date(`${dateStr}T00:00:00Z`);
+    const romeOffsetMinutes = getTimezoneOffsetMinutes('Europe/Rome', utcMidnight); // es. 60 (CET) o 120 (CEST)
+
+    // 3) Costruisci la deadline 23:59:59.999 ora italiana → converti a UTC
+    //    "23:59:59 a Roma" = (23:59:59 - offsetRoma) UTC
+    const deadlineUtcMs = Date.UTC(
+        Number(get('year')), Number(get('month')) - 1, Number(get('day')),
+        23, 59, 59, 999
+    ) - (romeOffsetMinutes * 60_000);
+
+    return new Date(deadlineUtcMs);
+}
+
+// Helper interno: minuti di offset di un timezone rispetto a UTC, per una data data.
+//    Ritorna ad es. 60 per CET, 120 per CEST.
+function getTimezoneOffsetMinutes(timeZone, date) {
+    const tzDate = new Date(date.toLocaleString('en-US', { timeZone }));
+    const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
+    return Math.round((tzDate.getTime() - utcDate.getTime()) / 60_000);
+}
+
 /**
  * MATCH SERVICE
  * 
@@ -419,6 +465,12 @@ class MatchService {
                 abstainedAt: new Date()
             }));
 
+            // 🕛 DEADLINE DEFAULT: 23:59:59 (Europe/Rome) della SERA STESSA del match.
+            //    Esempio: match il 15/05/2026 → deadline 15/05/2026 23:59:59 ora italiana.
+            //    Calcolo robusto al fuso: prendo la data del match nel fuso italiano,
+            //    poi imposto manualmente l'orario 23:59:59. Funziona anche su server UTC.
+            const deadline = computeMatchDayDeadline(match.date);
+
             const votingSession = await this.votingSessionRepository.create({
                 type: 'match_rating',
                 targetId: match._id,
@@ -429,7 +481,8 @@ class MatchService {
                 abstainedUsers: abstainedUsers,
                 requiredVotes: allMembers.length - abstainedMembers.length, // ✅ Numero di votanti richiesti (attivi)
                 createdBy: creatorId,
-                status: 'active'
+                status: 'active',
+                deadline // 🕛 Default 23:59 sera match (vedi sopra)
             });
 
             return votingSession;

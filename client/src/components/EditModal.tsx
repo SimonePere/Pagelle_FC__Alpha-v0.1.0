@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 import { useToast } from '@/hooks/use-toast';
-import { User, Lock, Calendar, Trophy, Check, X, Users } from 'lucide-react';
+import { User, Lock, Calendar, Trophy, Check, X, Users, ShieldAlert } from 'lucide-react';
 
 interface EditModalProps {
     isOpen: boolean;
@@ -14,11 +14,49 @@ interface EditModalProps {
     data?: any;
     onSave: (data: any) => Promise<{ success: boolean; error?: string } | void>;
     onReactivateUser?: (userId: string) => Promise<void>; // 🆕 Handler riattivazione
+    // 🔒 Handler force-close votazione (admin only). Mostrato solo se passato
+    //    e canForceCloseSession=true (sessione 'active').
+    onForceCloseSession?: () => Promise<void>;
+    canForceCloseSession?: boolean;
 }
 
-const EditModal = ({ isOpen, onClose, type, data, onSave, onReactivateUser }: EditModalProps) => {
+// 🗓️ Normalizza una data del backend nel formato YYYY-MM-DD usato dall'<input type="date">.
+//    Funzione condivisa tra valore iniziale del form e snapshot per isDirty,
+//    così non ci sono falsi positivi da formati diversi.
+function normalizeMatchDate(rawDate: any): string {
+    if (!rawDate) return '';
+    try {
+        // Già in formato YYYY-MM-DD
+        if (typeof rawDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
+            return rawDate;
+        }
+        // DD/MM/YYYY
+        if (typeof rawDate === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(rawDate)) {
+            const [day, month, year] = rawDate.split('/');
+            return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }
+        // Backend talvolta tronca "GMT" in "GM" → fix prima del parse
+        if (typeof rawDate === 'string' && rawDate.includes('GM') && !rawDate.includes('GMT')) {
+            const fixed = rawDate + 'T';
+            const d = new Date(fixed);
+            if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+        }
+        // Parsing standard
+        const d = new Date(rawDate);
+        if (isNaN(d.getTime())) return '';
+        return d.toISOString().split('T')[0];
+    } catch {
+        return '';
+    }
+}
+
+const EditModal = ({ isOpen, onClose, type, data, onSave, onReactivateUser, onForceCloseSession, canForceCloseSession }: EditModalProps) => {
     const [loading, setLoading] = useState(false);
     const { toast } = useToast();
+    // 🔒 Stato per la conferma inline del force-close (no Dialog annidato per
+    //    evitare flicker da unmount del parent durante refresh dati).
+    const [forceCloseConfirm, setForceCloseConfirm] = useState(false);
+    const [forceClosing, setForceClosing] = useState(false);
 
     // Form states - TODO: diversi per type
     const [formData, setFormData] = useState({});
@@ -38,45 +76,50 @@ const EditModal = ({ isOpen, onClose, type, data, onSave, onReactivateUser }: Ed
 
     const [matchForm, setMatchForm] = useState({
         field: data?.field || '',
-        date: (() => {
-            // 🛡️ Validazione robusta della data
-            if (!data?.date) return '';
-            try {
-                // Prova diversi formati comuni
-                let dateObj;
-
-                // Se è già in formato YYYY-MM-DD, usalo direttamente
-                if (typeof data.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.date)) {
-                    return data.date;
-                }
-
-                // Se è in formato DD/MM/YYYY, convertilo
-                if (typeof data.date === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(data.date)) {
-                    const [day, month, year] = data.date.split('/');
-                    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-                }
-
-                // 🔧 HANDLER per formato backend: "Fri Oct 17 2025 02:00:00 GM" (GM troncato)
-                if (typeof data.date === 'string' && data.date.includes('GM') && !data.date.includes('GMT')) {
-                    const fixedDateString = data.date + 'T'; // Completa GMT
-                    dateObj = new Date(fixedDateString);
-                    if (!isNaN(dateObj.getTime())) {
-                        return dateObj.toISOString().split('T')[0];
-                    }
-                }
-
-                // Prova parsing standard
-                dateObj = new Date(data.date);
-                if (isNaN(dateObj.getTime())) return '';
-                return dateObj.toISOString().split('T')[0];
-
-            } catch (error) {
-                return '';
-            }
-        })(),
+        date: normalizeMatchDate(data?.date),
         playersCount: data?.playersCount || 8,
         notes: data?.notes || ''
     });
+
+    // 📸 Snapshot dei valori iniziali (catturato al primo render).
+    //    Usato per calcolare se il form è "dirty" (cioè modificato dall'utente).
+    //    Se nulla cambia rispetto a questo snapshot, il bottone Salva resta disabilitato.
+    const [initialProfile] = useState({
+        name: data?.name || '',
+        email: data?.email || '',
+        birthdate: data?.birthdate || ''
+    });
+    const [initialMatch] = useState(() => ({
+        field: data?.field || '',
+        date: normalizeMatchDate(data?.date),
+        playersCount: data?.playersCount || 8,
+        notes: data?.notes || ''
+    }));
+
+    // ✍️ Restituisce true se almeno un campo è stato modificato rispetto allo
+    //    stato iniziale. Per password è sempre considerato dirty (la validazione
+    //    completa la fa isPasswordFormValid).
+    const isDirty = () => {
+        if (type === 'user-profile') {
+            return (
+                profileForm.name !== initialProfile.name ||
+                profileForm.email !== initialProfile.email ||
+                profileForm.birthdate !== initialProfile.birthdate
+            );
+        }
+        if (type === 'match') {
+            // Tutti i confronti usano la STESSA normalizzazione (vedi initialMatch),
+            //    quindi non ci sono falsi positivi da formati data diversi.
+            return (
+                matchForm.field !== initialMatch.field ||
+                matchForm.date !== initialMatch.date ||
+                Number(matchForm.playersCount) !== Number(initialMatch.playersCount) ||
+                (matchForm.notes || '') !== (initialMatch.notes || '')
+            );
+        }
+        // user-password: la validità è gestita altrove
+        return true;
+    };
 
     // Validazione real-time per form password
     const isPasswordFormValid = () => {
@@ -375,6 +418,78 @@ const EditModal = ({ isOpen, onClose, type, data, onSave, onReactivateUser }: Ed
                                 </div>
                             </div>
                         )}
+
+                        {/* 🔒 ZONA ADMIN — Chiudi votazione adesso (solo se admin + sessione active) */}
+                        {onForceCloseSession && canForceCloseSession && (
+                            <div className="space-y-2 pt-3 border-t border-border/50">
+                                <Label className="text-amber-700 dark:text-amber-400 font-medium flex items-center gap-2">
+                                    <ShieldAlert className="w-4 h-4" />
+                                    Zona admin
+                                </Label>
+                                {!forceCloseConfirm ? (
+                                    <div className="flex items-center justify-between gap-2 p-2 bg-amber-50/50 dark:bg-amber-950/20 rounded-md border border-amber-200/50 dark:border-amber-800/50">
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-medium text-amber-700 dark:text-amber-400 leading-tight">
+                                                Chiudi votazione adesso
+                                            </p>
+                                            <p className="text-xs text-muted-foreground leading-tight">
+                                                Astiene chi non ha votato e calcola le medie ufficiali.
+                                            </p>
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            className="shrink-0 h-7 px-3 text-xs border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/50"
+                                            onClick={() => setForceCloseConfirm(true)}
+                                        >
+                                            Chiudi
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div className="p-2 bg-amber-50/50 dark:bg-amber-950/20 rounded-md border border-amber-200/50 dark:border-amber-800/50 space-y-2">
+                                        <p className="text-xs text-amber-800 dark:text-amber-300">
+                                            Sei sicuro? Chi non ha ancora votato verrà <strong>astenuto d'ufficio</strong>
+                                            {' '}e le medie ufficiali saranno calcolate. L'operazione non è reversibile
+                                            senza riaprire manualmente la sessione.
+                                        </p>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="outline"
+                                                className="flex-1 h-8 text-xs"
+                                                disabled={forceClosing}
+                                                onClick={() => setForceCloseConfirm(false)}
+                                            >
+                                                Annulla
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                className="flex-1 h-8 text-xs bg-amber-600 hover:bg-amber-600/90 text-white"
+                                                disabled={forceClosing}
+                                                onClick={async () => {
+                                                    setForceClosing(true);
+                                                    try {
+                                                        await onForceCloseSession();
+                                                        // Reset stato + chiusura modale
+                                                        setForceCloseConfirm(false);
+                                                        onClose();
+                                                    } catch (e) {
+                                                        // Errori gestiti dal parent via toast
+                                                    } finally {
+                                                        setForceClosing(false);
+                                                    }
+                                                }}
+                                            >
+                                                {forceClosing ? 'Chiusura...' : 'Conferma'}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 );
 
@@ -422,7 +537,7 @@ const EditModal = ({ isOpen, onClose, type, data, onSave, onReactivateUser }: Ed
                             <Button
                                 type="button"
                                 size="sm"
-                                disabled={loading || !isPasswordFormValid()}
+                                disabled={loading || !isPasswordFormValid() || !isDirty()}
                                 onClick={handleSubmit}
                                 className="flex-1 h-9 text-sm"
                             >

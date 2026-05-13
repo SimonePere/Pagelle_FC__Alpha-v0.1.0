@@ -29,6 +29,7 @@ interface InviteInfo {
     matchDate: string;
     matchField: string;
     matchId: string;
+    matchStatus?: 'draft' | 'active' | 'completed' | 'cancelled';
     playersCount?: number;
     participants?: string[];
 }
@@ -54,10 +55,11 @@ const JoinByInvite = () => {
     const [regPassword, setRegPassword] = useState('');
     const [regConfirm, setRegConfirm] = useState('');
 
-    // Se già loggato come guest per questo match, manda alla pagina voto
+    // Se già loggato come guest per questo match, manda alla home
+    //    (la home mostra subito il bottone "Vota partita" più visibile della pagina /vote).
     useEffect(() => {
         if (isAuthenticated && isGuest && guestMatchId) {
-            navigate('/vote');
+            navigate('/');
         } else if (isAuthenticated && !isGuest) {
             navigate('/');
         }
@@ -98,7 +100,7 @@ const JoinByInvite = () => {
         const result = await dispatch(guestLogin({ inviteToken: token }));
         if (guestLogin.fulfilled.match(result)) {
             toast({ title: 'Bentornato!', description: 'Ora puoi votare la partita.' });
-            navigate('/vote');
+            navigate('/');
         } else {
             toast({
                 title: 'Errore',
@@ -131,7 +133,7 @@ const JoinByInvite = () => {
 
         if (claimGuest.fulfilled.match(result)) {
             toast({ title: 'Registrazione completata!', description: 'Account creato con la tua cronologia ospite.' });
-            navigate('/vote');
+            navigate('/');
         } else {
             toast({
                 title: 'Errore',
@@ -241,13 +243,18 @@ const JoinByInvite = () => {
 
                     {/* Azioni */}
                     <div className="space-y-3">
+                        {/* 🎯 CTA dinamico:
+                            - match active/draft → "Vota Subito" (entra come guest e vota)
+                            - match completed/cancelled → "Visualizza risultati" (entra read-only) */}
                         <Button
                             className="w-full h-12 text-base gap-2"
                             onClick={handleGuestLogin}
                             disabled={authLoading}
                         >
                             {authLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
-                            Vota Subito
+                            {inviteInfo.matchStatus === 'completed' || inviteInfo.matchStatus === 'cancelled'
+                                ? 'Visualizza risultati'
+                                : 'Vota Subito'}
                         </Button>
                         <Button
                             variant="outline"
@@ -256,10 +263,14 @@ const JoinByInvite = () => {
                             disabled={authLoading}
                         >
                             <UserPlus className="h-4 w-4" />
-                            Registrati e Vota
+                            {inviteInfo.matchStatus === 'completed' || inviteInfo.matchStatus === 'cancelled'
+                                ? 'Registrati per continuare'
+                                : 'Registrati e Vota'}
                         </Button>
                         <p className="text-center text-xs text-muted-foreground">
-                            "Registrati e Vota" crea il tuo account mantenendo la cronologia ospite
+                            {inviteInfo.matchStatus === 'completed' || inviteInfo.matchStatus === 'cancelled'
+                                ? 'La partita è chiusa: registrati per restare nell\'app e ritrovare la cronologia'
+                                : '"Registrati e Vota" crea il tuo account mantenendo la cronologia ospite'}
                         </p>
                     </div>
                 </div>
