@@ -16,6 +16,7 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user } = useSelector((state: RootState) => state.auth);
   const isGuest = useSelector((state: RootState) => state.auth.isGuest);
+  const canPromoteToPlayer = !!user?.canPromoteToPlayer;
   const navigate = useNavigate();
 
   const handleGuestRegister = () => {
@@ -100,12 +101,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {isGuest && (
             <div className="px-4 py-2 bg-orange-500/10 border-b border-orange-500/20 flex items-center justify-between gap-3 text-xs text-orange-700 dark:text-orange-300 sticky top-0 z-40">
               <span>🎭 Sei in modalità ospite — alcune funzioni non sono disponibili</span>
-              <button
-                className="underline font-medium shrink-0"
-                onClick={handleGuestRegister}
-              >
-                Registrati
-              </button>
+              {canPromoteToPlayer && (
+                <button
+                  className="underline font-medium shrink-0"
+                  onClick={handleGuestRegister}
+                >
+                  Registrati
+                </button>
+              )}
             </div>
           )}
 

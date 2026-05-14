@@ -206,7 +206,17 @@ export const fetchTeamMembers = createAsyncThunk(
     async (teamId: string, { rejectWithValue }) => {
         try {
             const response = await api.get(`/teams/${teamId}`);// Fix: usa memberIds invece di members e logga il contenuto
-            const memberIds = response.team.memberIds || []; return memberIds;
+            const memberIds = response.team.memberIds || [];
+            // Annota ogni membro con __isTeamAdmin in modo che i consumer (es. Profile)
+            // possano derivare il ruolo "Admin" anche per chi è solo team-admin
+            // (non solo per i global admin con role:'admin').
+            const adminIds: string[] = (response.team.adminIds || [])
+                .map((a: any) => (a?.id || a?._id || a)?.toString?.())
+                .filter(Boolean);
+            return memberIds.map((m: any) => ({
+                ...m,
+                __isTeamAdmin: adminIds.includes((m?.id || m?._id || '').toString()),
+            }));
         } catch (error: any) {
             return rejectWithValue(error.message);
         }

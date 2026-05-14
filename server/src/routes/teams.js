@@ -29,4 +29,8 @@ router.put('/:id', auth, requireScope('full'), requireTeamAdmin(), teamControlle
 router.delete('/:id/leave', auth, requireScope('full'), teamController.leaveTeam);
 router.delete('/:id/members/:userId', auth, requireScope('full'), requireTeamAdmin(), teamController.removeMember);
 
+// 🔒 Gestione guest del team (solo team-admin o admin globale)
+router.get('/:id/guests', auth, requireScope('full'), requireTeamAdmin(), teamController.listTeamGuests);
+router.patch('/:id/guests/:userId/promotion', auth, requireScope('full'), requireTeamAdmin(), teamController.setGuestPromotionAllowed);
+
 module.exports = router;

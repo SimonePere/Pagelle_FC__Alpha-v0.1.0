@@ -451,10 +451,10 @@ const CreateMatch: React.FC = () => {
                 {/* Chip ospiti — sempre selezionati, non de-selezionabili */}
                 {guestPlayers.map((guest, i) => (
                     <div key={`guest-${i}`} className="flex items-center gap-1">
-                        <span className="px-3 py-1.5 rounded-full text-sm font-medium border bg-orange-500/15 border-orange-500/40 text-orange-700 dark:text-orange-400">
+                        <span className="px-3 py-1.5 rounded-full text-sm font-medium border bg-violet-500/15 border-violet-500/40 text-violet-700 dark:text-violet-300">
                             {guest.name}
                         </span>
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 border-orange-400/50 text-orange-600">Ospite</Badge>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 border-violet-400/50 text-violet-600 dark:text-violet-300">Ospite</Badge>
                         <button
                             type="button"
                             onClick={() => handleRemoveGuest(i)}
@@ -548,7 +548,7 @@ const CreateMatch: React.FC = () => {
                                 onClick={() => setAbstainedGuests({ ...abstainedGuests, [i]: !isAbstained })}
                                 className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${isAbstained
                                     ? 'bg-orange-500/15 border-orange-500/40 text-orange-700 dark:text-orange-400'
-                                    : 'bg-blue-500/15 border-blue-500/40 text-blue-700 dark:text-blue-400'
+                                    : 'bg-violet-500/15 border-violet-500/40 text-violet-700 dark:text-violet-300'
                                     }`}
                                 title="Ospite"
                             >

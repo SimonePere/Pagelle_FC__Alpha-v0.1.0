@@ -46,6 +46,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const { user } = useSelector((state: RootState) => state.auth);
   const isGuest = useSelector((state: RootState) => state.auth.isGuest);
+  const canPromoteToPlayer = useSelector((state: RootState) => !!state.auth.user?.canPromoteToPlayer);
   const { activeTeam } = useActiveTeamId();
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -129,12 +130,14 @@ export function AppSidebar() {
           <div className="mx-4 mb-2 p-3 rounded-lg bg-orange-500/10 border border-orange-500/30 text-xs text-orange-700 dark:text-orange-300">
             <p className="font-semibold mb-1">Modalità Ospite</p>
             <p className="text-orange-600/80 dark:text-orange-400/80 mb-2">Alcune funzioni non sono disponibili.</p>
-            <button
-              onClick={() => { navigate('/claim-guest'); }}
-              className="underline font-medium hover:no-underline"
-            >
-              Registrati per l'accesso completo →
-            </button>
+            {canPromoteToPlayer && (
+              <button
+                onClick={() => { navigate('/claim-guest'); }}
+                className="underline font-medium hover:no-underline"
+              >
+                Registrati per l'accesso completo →
+              </button>
+            )}
           </div>
         )}
 

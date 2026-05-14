@@ -134,6 +134,37 @@ const removeMember = async (req, res, next) => {
   }
 };
 
+// @desc    List guests of a team (admin only)
+// @route   GET /api/v1/teams/:id/guests
+// @access  Private (team-admin or global admin)
+const listTeamGuests = async (req, res, next) => {
+  try {
+    const guests = await teamService.listTeamGuests(req.params.id);
+    res.json({ success: true, guests });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Toggle promotion (guest → player) availability for a guest
+// @route   PATCH /api/v1/teams/:id/guests/:userId/promotion
+// @body    { allowed: boolean }
+// @access  Private (team-admin or global admin)
+const setGuestPromotionAllowed = async (req, res, next) => {
+  try {
+    const { allowed } = req.body || {};
+    const result = await teamService.setGuestPromotionAllowed(
+      req.params.id,
+      req.params.userId,
+      allowed,
+      req.user.id
+    );
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAllTeams,
   createTeam,
@@ -142,5 +173,7 @@ module.exports = {
   getMyTeams,
   leaveTeam,
   updateTeam,
-  removeMember
+  removeMember,
+  listTeamGuests,
+  setGuestPromotionAllowed
 };

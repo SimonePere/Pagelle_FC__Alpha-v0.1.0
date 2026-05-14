@@ -342,7 +342,7 @@ export const MatchDetailsCard: React.FC<VoteCardProps> = ({
                         <span
                           key={playerId}
                           className={`px-3 py-2 rounded-lg text-xs text-foreground text-center ${isGuest
-                            ? 'bg-orange-500/10 border border-orange-500/40 text-orange-700 dark:text-orange-400'
+                            ? 'bg-violet-500/10 border border-violet-500/40 text-violet-700 dark:text-violet-300'
                             : 'bg-secondary/40 border border-border/30'
                             }`}
                         >
@@ -385,7 +385,7 @@ export const MatchDetailsCard: React.FC<VoteCardProps> = ({
                       <AccordionItem value="guest-links" className="border-none">
                         <AccordionTrigger className="py-1.5 text-xs text-muted-foreground hover:text-foreground hover:no-underline gap-1.5 [&>svg]:h-3 [&>svg]:w-3">
                           <span className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-orange-400 inline-block" />
+                            <span className="w-2 h-2 rounded-full bg-violet-500 inline-block" />
                             Link invito ospiti ({guests.length})
                           </span>
                         </AccordionTrigger>

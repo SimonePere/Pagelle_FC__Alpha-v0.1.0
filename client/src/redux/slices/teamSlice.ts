@@ -133,6 +133,46 @@ export const removeMember = createAsyncThunk(
   }
 );
 
+// 🔒 Lista dei guest del team (solo team-admin / global admin)
+export interface TeamGuest {
+  id: string;
+  name: string;
+  position: string | null;
+  canPromoteToPlayer: boolean;
+  canPromoteToPlayerSetAt: string | null;
+  inviteTokenMatchId: string | null;
+  guestCreatedBy: string | null;
+  createdAt: string;
+}
+
+export const fetchTeamGuests = createAsyncThunk<TeamGuest[], string>(
+  'teams/fetchGuests',
+  async (teamId, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/teams/${teamId}/guests`);
+      return response.guests || [];
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Errore nel recupero dei guest del team');
+    }
+  }
+);
+
+// 🔒 Toggle del flag canPromoteToPlayer per un guest
+export const setGuestPromotionAllowed = createAsyncThunk<
+  { guestId: string; allowed: boolean },
+  { teamId: string; guestId: string; allowed: boolean }
+>(
+  'teams/setGuestPromotionAllowed',
+  async ({ teamId, guestId, allowed }, { rejectWithValue }) => {
+    try {
+      await api.patch(`/teams/${teamId}/guests/${guestId}/promotion`, { allowed });
+      return { guestId, allowed };
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Errore nel salvataggio del permesso');
+    }
+  }
+);
+
 const initialState: TeamState = {
   teams: [],
   myTeams: [],
@@ -335,6 +375,21 @@ const teamSlice = createSlice({
       .addCase(removeMember.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
+      })
+      // 🔒 Aggiorna in-place il flag canPromoteToPlayer del guest dentro currentTeam.memberIds
+      // così la card del membro mostra subito lo stato corretto al riapertura del modale.
+      .addCase(setGuestPromotionAllowed.fulfilled, (state, action) => {
+        const { guestId, allowed } = action.payload;
+        const team: any = state.currentTeam;
+        if (team && Array.isArray(team.memberIds)) {
+          for (const m of team.memberIds) {
+            const id = (m && (m.id || m._id))?.toString?.() || '';
+            if (id === guestId) {
+              m.canPromoteToPlayer = allowed;
+              break;
+            }
+          }
+        }
       });
   },
 });

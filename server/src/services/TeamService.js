@@ -164,7 +164,7 @@ class TeamService {
         try {
             const team = await this.teamRepository.findById(teamId, {
                 populate: [
-                    { path: 'memberIds', select: 'name email birthdate profile.position stats teamName' },
+                    { path: 'memberIds', select: 'name email birthdate profile.position stats teamName isGuest canPromoteToPlayer role' },
                     { path: 'adminIds', select: 'name email birthdate teamName' },
                     { path: 'createdBy', select: 'name email birthdate teamName' }
                 ]
@@ -602,6 +602,88 @@ class TeamService {
             if (error instanceof AppError) throw error;
             throw new AppError(`Failed to remove member: ${error.message}`, 500);
         }
+    }
+
+    /**
+     * Lista i guest associati a un team (utenti con isGuest=true e teamIds includes teamId).
+     * Solo team-admin o admin globale possono ottenerla — il check di autorizzazione
+     * è già fatto dal middleware requireTeamAdmin a monte.
+     *
+     * @param {string} teamId - ID del team
+     * @returns {Promise<Array>} Lista guest con campi essenziali
+     */
+    async listTeamGuests(teamId) {
+        this.validateTeamId(teamId);
+
+        const guests = await this.userRepository.findAll(
+            { isGuest: true, teamIds: teamId },
+            { select: 'name profile.position canPromoteToPlayer canPromoteToPlayerSetAt inviteTokenMatchId guestCreatedBy createdAt' }
+        );
+
+        return (guests || []).map(g => ({
+            id: g._id,
+            name: g.name,
+            position: g.profile?.position || null,
+            canPromoteToPlayer: !!g.canPromoteToPlayer,
+            canPromoteToPlayerSetAt: g.canPromoteToPlayerSetAt || null,
+            inviteTokenMatchId: g.inviteTokenMatchId || null,
+            guestCreatedBy: g.guestCreatedBy || null,
+            createdAt: g.createdAt
+        }));
+    }
+
+    /**
+     * Abilita o disabilita la possibilità per un guest di auto-promuoversi
+     * a utente registrato (role: player).
+     *
+     * Quando `allowed=true`:
+     *   - il guest vedrà le CTA "Registrati" lato UI
+     *   - i flussi /auth/guest-merge-user e /auth/claim-guest-by-id risponderanno OK
+     *
+     * Quando `allowed=false`:
+     *   - le CTA spariscono
+     *   - il backend respinge i merge con 403
+     *
+     * @param {string} teamId - ID del team del guest (per audit/scope)
+     * @param {string} guestUserId - ID dell'utente guest
+     * @param {boolean} allowed - Nuovo valore del flag
+     * @param {string} requesterId - ID dell'admin che esegue l'azione
+     * @returns {Promise<Object>} Stato aggiornato
+     */
+    async setGuestPromotionAllowed(teamId, guestUserId, allowed, requesterId) {
+        this.validateTeamId(teamId);
+        this.validateUserId(guestUserId);
+        this.validateUserId(requesterId);
+
+        if (typeof allowed !== 'boolean') {
+            throw new AppError('Il campo "allowed" è richiesto e deve essere booleano', 400);
+        }
+
+        const guest = await this.userRepository.findById(guestUserId);
+        if (!guest) throw new AppError('Guest non trovato', 404);
+        if (!guest.isGuest) throw new AppError('L\'utente non è un ospite', 400);
+
+        // Verifica che il guest appartenga davvero al team indicato
+        const belongsToTeam = (guest.teamIds || []).some(id => id.toString() === teamId.toString());
+        if (!belongsToTeam) {
+            throw new AppError('Il guest non appartiene a questo team', 400);
+        }
+
+        const updated = await this.userRepository.updateById(guestUserId, {
+            canPromoteToPlayer: allowed,
+            canPromoteToPlayerSetBy: requesterId,
+            canPromoteToPlayerSetAt: new Date()
+        });
+
+        return {
+            success: true,
+            guest: {
+                id: updated._id,
+                name: updated.name,
+                canPromoteToPlayer: !!updated.canPromoteToPlayer,
+                canPromoteToPlayerSetAt: updated.canPromoteToPlayerSetAt
+            }
+        };
     }
 }
 

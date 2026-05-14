@@ -23,6 +23,12 @@ export interface User {
   teamName?: string;
   role?: string;
   isGuest?: boolean;
+  /**
+   * 🔒 Solo per i guest. Se true, l'admin del team ha autorizzato il guest
+   * ad auto-promuoversi a utente registrato (role: player) tramite i flussi
+   * /auth/guest-merge-user e /auth/claim-guest-by-id. Default false.
+   */
+  canPromoteToPlayer?: boolean;
   profile?: any;
   totalTeams?: number;
   createdAt?: string;

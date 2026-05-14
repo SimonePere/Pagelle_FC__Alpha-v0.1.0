@@ -643,6 +643,8 @@ class AuthService {
             profile: user.profile,
             isActive: user.isActive,
             displayName: user.displayName,
+            isGuest: !!user.isGuest,
+            canPromoteToPlayer: !!user.canPromoteToPlayer,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt,
 
@@ -718,6 +720,9 @@ class AuthService {
             matchStatus: match.status, // 🆕 La UI lo usa per decidere CTA (Vota vs Visualizza)
             playersCount: match.playersCount,
             participants,
+            // 🔒 Esposto per gating UI: la landing pubblica nasconde la CTA
+            //    "Registrati" se il guest non è abilitato dall'admin.
+            canPromoteToPlayer: !!guestUser.canPromoteToPlayer,
         };
     }
 
@@ -751,6 +756,7 @@ class AuthService {
                 id: guestUser._id,
                 name: guestUser.name,
                 isGuest: true,
+                canPromoteToPlayer: !!guestUser.canPromoteToPlayer,
                 teamIds: guestUser.teamIds,
                 teamName: guestUser.teamName,
                 matchId: guestUser.inviteTokenMatchId,
@@ -779,6 +785,12 @@ class AuthService {
         // 1. Trova il guest
         const guestUser = await this.userRepository.findOne({ inviteToken, isGuest: true });
         if (!guestUser) throw new AppError('Token non valido o già utilizzato', 404);
+
+        // 1.bis Gating amministrativo: se l'admin non ha abilitato la promozione
+        //       per questo guest, blocchiamo la conversione (coerenza UI/BE).
+        if (!guestUser.canPromoteToPlayer) {
+            throw new AppError('Conversione in utente registrato non abilitata dall\'amministratore del team', 403);
+        }
 
         // 2. Verifica che l'email non sia già usata da un altro utente
         const emailTaken = await this.userRepository.findOne({
@@ -837,6 +849,11 @@ class AuthService {
         const guestUser = await this.userRepository.findById(userId);
         if (!guestUser) throw new AppError('Utente non trovato', 404);
         if (!guestUser.isGuest) throw new AppError('Utente non è un ospite', 400);
+
+        // 1.bis Gating amministrativo: stessa regola di guestMergeUser.
+        if (!guestUser.canPromoteToPlayer) {
+            throw new AppError('Conversione in utente registrato non abilitata dall\'amministratore del team', 403);
+        }
 
         // 2. Verifica che l'email non sia già usata
         const emailTaken = await this.userRepository.findOne({

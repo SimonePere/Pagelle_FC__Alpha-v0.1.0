@@ -122,6 +122,22 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
+  // 🔒 Flag amministrativo: se TRUE consente al guest di auto-promuoversi a
+  // utente registrato (role: player) tramite i flussi /auth/guest-merge-user
+  // e /auth/claim-guest-by-id. Default FALSE → guest "bloccato": nessuna CTA
+  // di registrazione in UI e backend respinge i merge con 403.
+  // Solo team-admin del suo team o admin globale può modificarlo.
+  canPromoteToPlayer: {
+    type: Boolean,
+    default: false
+  },
+  canPromoteToPlayerSetBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  canPromoteToPlayerSetAt: {
+    type: Date
+  },
   profile: {
     position: {
       type: String,

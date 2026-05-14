@@ -32,6 +32,8 @@ interface InviteInfo {
     matchStatus?: 'draft' | 'active' | 'completed' | 'cancelled';
     playersCount?: number;
     participants?: string[];
+    /** Esposto dal backend: gating UI per la CTA "Registrati e Vota" */
+    canPromoteToPlayer?: boolean;
 }
 
 type View = 'loading' | 'error' | 'invite' | 'register';
@@ -256,22 +258,26 @@ const JoinByInvite = () => {
                                 ? 'Visualizza risultati'
                                 : 'Vota Subito'}
                         </Button>
-                        <Button
-                            variant="outline"
-                            className="w-full h-12 text-base gap-2"
-                            onClick={() => setView('register')}
-                            disabled={authLoading}
-                        >
-                            <UserPlus className="h-4 w-4" />
-                            {inviteInfo.matchStatus === 'completed' || inviteInfo.matchStatus === 'cancelled'
-                                ? 'Registrati per continuare'
-                                : 'Registrati e Vota'}
-                        </Button>
-                        <p className="text-center text-xs text-muted-foreground">
-                            {inviteInfo.matchStatus === 'completed' || inviteInfo.matchStatus === 'cancelled'
-                                ? 'La partita è chiusa: registrati per restare nell\'app e ritrovare la cronologia'
-                                : '"Registrati e Vota" crea il tuo account mantenendo la cronologia ospite'}
-                        </p>
+                        {inviteInfo.canPromoteToPlayer && (
+                            <>
+                                <Button
+                                    variant="outline"
+                                    className="w-full h-12 text-base gap-2"
+                                    onClick={() => setView('register')}
+                                    disabled={authLoading}
+                                >
+                                    <UserPlus className="h-4 w-4" />
+                                    {inviteInfo.matchStatus === 'completed' || inviteInfo.matchStatus === 'cancelled'
+                                        ? 'Registrati per continuare'
+                                        : 'Registrati e Vota'}
+                                </Button>
+                                <p className="text-center text-xs text-muted-foreground">
+                                    {inviteInfo.matchStatus === 'completed' || inviteInfo.matchStatus === 'cancelled'
+                                        ? 'La partita è chiusa: registrati per restare nell\'app e ritrovare la cronologia'
+                                        : '"Registrati e Vota" crea il tuo account mantenendo la cronologia ospite'}
+                                </p>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>

@@ -270,7 +270,10 @@ export default function ManagePlayersModal({
                                         <div className="flex items-center gap-2 min-w-0">
                                             <span className="text-sm truncate">{m.name || 'Senza nome'}</span>
                                             {m.isGuest && (
-                                                <Badge variant="outline" className="text-[10px] h-4 px-1">
+                                                <Badge
+                                                    variant="outline"
+                                                    className="text-[10px] h-4 px-1 bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/40"
+                                                >
                                                     Guest
                                                 </Badge>
                                             )}
@@ -360,7 +363,10 @@ export default function ManagePlayersModal({
                                         <div className="flex items-center gap-2 min-w-0">
                                             <span className="text-sm truncate">{m.name || 'Senza nome'}</span>
                                             {m.isGuest && (
-                                                <Badge variant="outline" className="text-[10px] h-4 px-1">
+                                                <Badge
+                                                    variant="outline"
+                                                    className="text-[10px] h-4 px-1 bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/40"
+                                                >
                                                     Guest
                                                 </Badge>
                                             )}
