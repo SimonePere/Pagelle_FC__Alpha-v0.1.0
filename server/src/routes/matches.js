@@ -4,14 +4,17 @@ const matchController = require('../controllers/MatchController');
 const auth = require('../middleware/auth');
 const requireScope = require('../middleware/requireScope');
 const requireRole = require('../middleware/requireRole');
+const requireMatchAdmin = require('../middleware/requireMatchAdmin');
 
 // =============================================
 // 🔒 ALL MATCH ROUTES ARE PRIVATE
 // (Authentication Required for All Endpoints)
 //
 // Lettura: full + guest
-// Mutazioni (create/update/delete/activate/complete/reactivate-voter):
+// Mutazioni create/update/delete/activate/complete/reactivate-voter:
 //   solo admin globali (Six/Dux/Gaga). Vedi requireRole.
+// Mutazioni roster (add/remove player su match già creato):
+//   admin globale OPPURE admin del Team del match. Vedi requireMatchAdmin.
 // =============================================
 
 router.post('/', auth, requireScope('full'), requireRole('admin'), matchController.createMatch);
@@ -23,7 +26,10 @@ router.patch('/:id/activate', auth, requireScope('full'), requireRole('admin'), 
 router.patch('/:id/complete', auth, requireScope('full'), requireRole('admin'), matchController.completeMatch);
 router.post('/:matchId/reactivate-voter/:userId', auth, requireScope('full'), requireRole('admin'), matchController.reactivateVoter);
 
-// Rotta guest-player commentata — gestita inline in createMatch (Percorso B)
-// router.post('/:matchId/guest-player', auth, requireScope('full'), matchController.addGuestPlayer);
+// === GESTIONE ROSTER POST-CREAZIONE ===
+router.get('/:id/roster-editable', auth, requireScope('full'), requireMatchAdmin, matchController.getRosterEditable);
+router.post('/:id/players', auth, requireScope('full'), requireMatchAdmin, matchController.addRegisteredPlayer);
+router.post('/:id/guest-players', auth, requireScope('full'), requireMatchAdmin, matchController.addGuestPlayerToMatch);
+router.delete('/:id/players/:playerId', auth, requireScope('full'), requireMatchAdmin, matchController.removePlayerFromMatch);
 
 module.exports = router;

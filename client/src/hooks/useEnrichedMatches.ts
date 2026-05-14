@@ -99,8 +99,34 @@ export const useEnrichedMatches = (): UseEnrichedMatchesReturn => {
 
 
 
+                // 🧹 FILTRA astenuti che NON sono più nel roster del match
+                //    (es. giocatore rimosso dal roster dopo essere stato astenuto;
+                //     succede anche su partite "legacy" pre-sync VotingSession).
+                //    Senza questo filtro la UI mostra "Utente sconosciuto astenuto".
+                //    NB: applichiamo il filtro solo se teamMembers è popolato,
+                //        altrimenti rischieremmo di nascondere astenuti reali
+                //        quando l'API restituisce un match minimale.
+                const hasRoster = Array.isArray(match.teamMembers) && match.teamMembers.length > 0;
+                const rosterIds = new Set(
+                    (match.teamMembers || []).map((m: any) => String(m.id))
+                );
+                const validAbstained = hasRoster
+                    ? votingSession.abstainedUsers.filter(
+                        (abs: any) => rosterIds.has(String(abs.userId))
+                    )
+                    : votingSession.abstainedUsers;
+
+                if (!validAbstained.length) {
+                    return {
+                        ...match,
+                        hasAbstained: false,
+                        abstainedNames: [],
+                        abstainedUsers: []
+                    };
+                }
+
                 // 🔍 RISOLVI NOMI: Usa match.teamMembers invece di users globali
-                const abstainedNames = votingSession.abstainedUsers.map(abstained => {
+                const abstainedNames = validAbstained.map(abstained => {
                     // Prima prova con teamMembers del match (più accurato)
                     const teamMember = match.teamMembers?.find(m => m.id === abstained.userId);
                     if (teamMember?.name) {
@@ -117,8 +143,8 @@ export const useEnrichedMatches = (): UseEnrichedMatchesReturn => {
                     ...match,
                     // Dati voting session completi
                     votingSession,
-                    // Array astenuti originale
-                    abstainedUsers: votingSession.abstainedUsers,
+                    // Array astenuti filtrato (solo quelli ancora nel roster)
+                    abstainedUsers: validAbstained,
                     // Nomi risolti per UI
                     abstainedNames,
                     // Flag boolean per controlli UI rapidi

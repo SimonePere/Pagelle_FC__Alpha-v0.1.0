@@ -20,15 +20,22 @@ import MatchCard from '@/components/MatchCard';
 import { OnboardingTutorial } from '@/components/OnboardingTutorial';
 import useHomeDashboard from '@/hooks/useHomeDashboard';
 import { WeatherWidget } from '@/components/WeatherWidget';
+import { isAdmin, isTeamAdmin } from '@/utils/permissions';
 
 // Types now handled by useHomeDashboard hook
 type LeaderboardType = 'rating' | 'goals' | 'assists' | 'playercard' | 'stats-per-match';
 
 const Home = () => {
   const { user, isGuest } = useSelector((state: RootState) => state.auth);
+  const { currentTeam } = useSelector((state: RootState) => state.teams);
   const pendingVoteSessions = useSelector(selectPendingVoteSessions);
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
+
+  // 🔐 Solo admin globale o team admin può creare partite (specchio del backend).
+  //    I player normali e i guest vedono il bottone in stato "disabled" (stesso
+  //    stile del "Vota Partita" quando non c'è nulla da votare).
+  const canCreateMatch = isAdmin(user) || isTeamAdmin(user, currentTeam as any);
 
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
@@ -203,13 +210,25 @@ const Home = () => {
               {!isGuest && (
                 <motion.div whileTap={{ scale: 0.95 }} className="flex items-center gap-2 w-full">
                   {user.teams?.length ? (
-                    <button
-                      onClick={() => navigate('/create-match')}
-                      className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 text-base font-semibold rounded-lg bg-primary text-primary-foreground shadow-glow"
-                    >
-                      <Target className="w-4 h-4" />
-                      Crea Partita
-                    </button>
+                    canCreateMatch ? (
+                      <button
+                        onClick={() => navigate('/create-match')}
+                        className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 text-base font-semibold rounded-lg bg-primary text-primary-foreground shadow-glow"
+                      >
+                        <Target className="w-4 h-4" />
+                        Crea Partita
+                      </button>
+                    ) : (
+                      // 🚫 Player non-admin: stesso stile "inattivo" di Vota Partita,
+                      //    così è chiaro che il bottone esiste ma non gli è abilitato.
+                      <span
+                        className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 text-base font-semibold rounded-lg border-2 border-border/30 text-muted-foreground/50 bg-transparent cursor-not-allowed select-none"
+                        title="Solo gli admin del team possono creare partite"
+                      >
+                        <Target className="w-4 h-4 opacity-40" />
+                        Crea Partita
+                      </span>
+                    )
                   ) : (
                     <button
                       onClick={() => setCreateTeamOpen(true)}
@@ -252,9 +271,18 @@ const Home = () => {
                 </motion.div>
               )}
 
-              {/* Guest: solo pulsante "Vota Partite" full-width (non può creare partita) */}
+              {/* Guest: stesso layout 2 colonne, ma "Crea Partita" sempre disabilitato
+                  (i guest non possono crearle) — coerente con i player non-admin. */}
               {isGuest && (
-                <motion.div whileTap={{ scale: 0.95 }} className="w-full">
+                <motion.div whileTap={{ scale: 0.95 }} className="flex items-center gap-2 w-full">
+                  <span
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 text-base font-semibold rounded-lg border-2 border-border/30 text-muted-foreground/50 bg-transparent cursor-not-allowed select-none"
+                    title="Solo gli admin del team possono creare partite"
+                  >
+                    <Target className="w-4 h-4 opacity-40" />
+                    Crea Partita
+                  </span>
+
                   {pendingVoteSessions.length > 0 ? (
                     <button
                       onClick={() => {
@@ -264,7 +292,7 @@ const Home = () => {
                           navigate('/vote');
                         }
                       }}
-                      className="w-full relative inline-flex items-center justify-center gap-2 px-5 py-3 text-base font-semibold rounded-lg text-primary bg-background/50 overflow-visible"
+                      className="flex-1 relative inline-flex items-center justify-center gap-2 px-5 py-3 text-base font-semibold rounded-lg text-primary bg-background/50 overflow-visible"
                     >
                       <span className="absolute inset-0 rounded-lg border-2 border-primary animate-pulse pointer-events-none" />
                       {pendingVoteSessions.length > 1 && (
@@ -276,7 +304,7 @@ const Home = () => {
                       <span className="relative z-10">Vota Partita</span>
                     </button>
                   ) : (
-                    <span className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-base font-semibold rounded-lg border-2 border-border/30 text-muted-foreground/50 bg-transparent cursor-default select-none">
+                    <span className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 text-base font-semibold rounded-lg border-2 border-border/30 text-muted-foreground/50 bg-transparent cursor-default select-none">
                       <VoteIcon className="w-4 h-4 opacity-40" />
                       Vota Partita
                     </span>

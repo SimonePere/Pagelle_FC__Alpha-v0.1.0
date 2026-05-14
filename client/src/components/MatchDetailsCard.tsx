@@ -26,7 +26,8 @@ import {
   Trash2,
   MapPin,
   FileText,
-  Copy
+  Copy,
+  UserCog
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -102,6 +103,7 @@ interface VoteCardProps {
   // 🆕 NUOVI PROPS PER AZIONI - AL LIVELLO PRINCIPALE!
   onEditMatch?: (match: any) => void;    // Handler per modifica
   onDeleteMatch?: (match: any) => void;  // Handler per elimina
+  onManagePlayers?: (match: any) => void; // Handler per gestione roster
   showActionButtons?: boolean;           // Mostra i pulsanti (default false)
 
   // 🎭 Future features (commentate)
@@ -125,6 +127,7 @@ export const MatchDetailsCard: React.FC<VoteCardProps> = ({
   // 🆕 NUOVI PROPS PER AZIONI
   onEditMatch,
   onDeleteMatch,
+  onManagePlayers,
   showActionButtons = false
 }) => {
 
@@ -272,29 +275,45 @@ export const MatchDetailsCard: React.FC<VoteCardProps> = ({
               </div>
               {/* 🔧 Pulsanti Azioni - Solo se showActionButtons è true */}
               {showActionButtons && (
-                <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEditMatch?.(match);
-                    }}
-                    className="h-8 px-3"
-                  >
-                    <Edit className="w-3 h-3" />
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteMatch?.(match);
-                    }}
-                    className="h-8 px-3"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditMatch?.(match);
+                      }}
+                      className="h-8 px-3"
+                    >
+                      <Edit className="w-3 h-3" />
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteMatch?.(match);
+                      }}
+                      className="h-8 px-3"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  {onManagePlayers && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onManagePlayers?.(match);
+                      }}
+                      className="h-8 px-3 w-full"
+                      aria-label="Gestisci giocatori"
+                    >
+                      <UserCog className="w-3 h-3" />
+                    </Button>
+                  )}
                 </div>
               )}
             </div>

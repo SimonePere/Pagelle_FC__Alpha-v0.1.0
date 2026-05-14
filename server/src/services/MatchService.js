@@ -817,6 +817,261 @@ class MatchService {
             throw error;
         }
     }
+
+    // ============================================================
+    // 👥 GESTIONE ROSTER POST-CREAZIONE (add/remove player + guest)
+    // ============================================================
+
+    /**
+     * 🔒 Guard: verifica che il roster del match sia ancora modificabile.
+     *    Modificabile se: status ∈ {draft, active} AND nessuna VoteSubmission attiva.
+     * @param {string} matchId
+     * @returns {Promise<{ match: Object, votingSessionId: string|null }>}
+     */
+    async assertMatchEditableRoster(matchId) {
+        const match = await this.matchRepository.findById(matchId);
+        if (!match) throw new AppError('Match non trovato', 404);
+
+        if (match.status === 'completed' || match.status === 'cancelled') {
+            throw new AppError(
+                `Roster non modificabile: il match è ${match.status}`,
+                403
+            );
+        }
+
+        // Trova la voting session collegata (se esiste)
+        const votingSession = await this.votingSessionRepository.findOne({
+            type: 'match_rating',
+            targetId: matchId
+        });
+
+        if (votingSession) {
+            const VoteSubmission = require('../models/VoteSubmission');
+            const submittedCount = await VoteSubmission.countDocuments({
+                votingSessionId: votingSession._id,
+                isActive: true
+            });
+            if (submittedCount > 0) {
+                throw new AppError(
+                    'Roster non modificabile: sono già stati inviati voti per questa partita',
+                    403
+                );
+            }
+        }
+
+        return { match, votingSessionId: votingSession?._id || null };
+    }
+
+    /**
+     * 🔄 Sincronizza la VotingSession del match dopo una mutazione del roster.
+     *    Garante invariante: eligibleVoters della session = teamMemberIds del match
+     *    MENO gli utenti astenuti (che restano in abstainedUsers).
+     *
+     *    Chiamato dopo add/remove player. Sicuro perché il guard
+     *    assertMatchEditableRoster ha già verificato che NESSUN voto è stato inviato:
+     *    quindi non esistono VoteSubmission orfane da gestire.
+     *
+     * @param {string} matchId
+     */
+    async _syncVotingSessionWithRoster(matchId) {
+        const match = await this.matchRepository.findById(matchId);
+        if (!match) return;
+
+        const session = await this.votingSessionRepository.findOne({
+            type: 'match_rating',
+            targetId: matchId
+        });
+        if (!session) return;
+
+        const teamMemberIds = (match.teamMemberIds || []).map((id) => String(id));
+        const teamMembersSet = new Set(teamMemberIds);
+
+        // Astenuti: tieni solo quelli ancora nel roster
+        session.abstainedUsers = (session.abstainedUsers || []).filter((abs) =>
+            teamMembersSet.has(String(abs.userId))
+        );
+        const abstainedSet = new Set(
+            session.abstainedUsers.map((abs) => String(abs.userId))
+        );
+
+        // Eligible voters = roster - astenuti
+        session.eligibleVoters = teamMemberIds.filter((id) => !abstainedSet.has(id));
+
+        // requiredVotes = numero di votanti attivi (almeno 1, schema impone min:1)
+        session.requiredVotes = Math.max(1, session.eligibleVoters.length);
+
+        await this.votingSessionRepository.save(session);
+    }
+
+    /**
+     * 📊 Stato di editabilità del roster (per la UI: bottoni abilitati/disabilitati).
+     * @param {string} matchId
+     * @returns {Promise<{ editable: boolean, reason: string|null }>}
+     */
+    async getRosterEditableStatus(matchId) {
+        try {
+            await this.assertMatchEditableRoster(matchId);
+            return { editable: true, reason: null };
+        } catch (err) {
+            if (err instanceof AppError) {
+                return { editable: false, reason: err.message };
+            }
+            throw err;
+        }
+    }
+
+    /**
+     * ➕ Aggiunge un utente registrato (o guest già esistente) al roster del match.
+     *    Non crea nessun nuovo User: si limita a $addToSet su teamMemberIds.
+     * @param {string} matchId
+     * @param {string} userIdToAdd
+     * @returns {Promise<Object>} match aggiornato
+     */
+    async addRegisteredPlayerToMatch(matchId, userIdToAdd) {
+        const { match } = await this.assertMatchEditableRoster(matchId);
+
+        // Verifica che l'utente esista
+        const user = await this.userRepository.findById(userIdToAdd);
+        if (!user) throw new AppError('Utente da aggiungere non trovato', 404);
+
+        // L'utente deve appartenere al team della partita
+        const belongsToTeam = (user.teamIds || []).some(
+            (tid) => String(tid) === String(match.teamId)
+        );
+        if (!belongsToTeam) {
+            throw new AppError(
+                'L\'utente non appartiene al team di questa partita',
+                400
+            );
+        }
+
+        // Già nel roster?
+        const alreadyIn = (match.teamMemberIds || []).some(
+            (id) => String(id) === String(userIdToAdd)
+        );
+        if (alreadyIn) {
+            throw new AppError('Il giocatore è già nel roster della partita', 409);
+        }
+
+        const updatedMatch = await this.matchRepository.findOneAndUpdate(
+            { _id: matchId },
+            { $addToSet: { teamMemberIds: userIdToAdd } },
+            { new: true }
+        );
+
+        // 🔄 Allinea la VotingSession (eligibleVoters / requiredVotes)
+        await this._syncVotingSessionWithRoster(matchId);
+
+        // Cache invalidation coerente con updateMatch
+        try {
+            await CacheService.invalidateMatchCacheAfterVote(updatedMatch.teamId);
+        } catch (cacheError) {
+            console.warn('⚠️ Cache invalidation roster add (non critico):', cacheError.message);
+        }
+
+        return {
+            success: true,
+            message: 'Giocatore aggiunto al roster',
+            match: updatedMatch
+        };
+    }
+
+    /**
+     * ➕👤 Crea un nuovo guest player e lo aggiunge al roster del match
+     *    + lo aggiunge anche a Team.memberIds (così è riusabile in futuro).
+     *    Riusa _createGuestPlayersForMatch per coerenza con CreateMatch.
+     * @param {string} matchId
+     * @param {{ name: string, position?: string }} guestData
+     * @param {string} requesterId - chi sta creando il guest (admin)
+     * @returns {Promise<Object>} match aggiornato + dati invito
+     */
+    async addGuestPlayerToMatch(matchId, guestData, requesterId) {
+        if (!guestData || !guestData.name || !guestData.name.trim()) {
+            throw new AppError('Il nome del guest è obbligatorio', 400);
+        }
+
+        const { match } = await this.assertMatchEditableRoster(matchId);
+
+        // Riusa il metodo già esistente — crea User guest + lo aggiunge a Team.memberIds
+        const created = await this._createGuestPlayersForMatch(
+            matchId,
+            match.teamId,
+            [{ name: guestData.name, position: guestData.position }],
+            requesterId
+        );
+        const guest = created[0];
+
+        // Aggiungi al roster del match
+        const updatedMatch = await this.matchRepository.findOneAndUpdate(
+            { _id: matchId },
+            { $addToSet: { teamMemberIds: guest.userId } },
+            { new: true }
+        );
+
+        // 🔄 Allinea la VotingSession (eligibleVoters / requiredVotes)
+        await this._syncVotingSessionWithRoster(matchId);
+
+        try {
+            await CacheService.invalidateMatchCacheAfterVote(updatedMatch.teamId);
+        } catch (cacheError) {
+            console.warn('⚠️ Cache invalidation guest add (non critico):', cacheError.message);
+        }
+
+        return {
+            success: true,
+            message: 'Guest player creato e aggiunto al roster',
+            match: updatedMatch,
+            guest
+        };
+    }
+
+    /**
+     * ➖ Rimuove un giocatore (registrato o guest) dal roster del match.
+     *    NON tocca l'entità User: fa solo $pull da match.teamMemberIds.
+     * @param {string} matchId
+     * @param {string} playerIdToRemove
+     * @returns {Promise<Object>} match aggiornato
+     */
+    async removePlayerFromMatch(matchId, playerIdToRemove) {
+        const { match } = await this.assertMatchEditableRoster(matchId);
+
+        const isInRoster = (match.teamMemberIds || []).some(
+            (id) => String(id) === String(playerIdToRemove)
+        );
+        if (!isInRoster) {
+            throw new AppError('Il giocatore non è nel roster di questa partita', 404);
+        }
+
+        // Mantieni almeno 2 partecipanti (coerente con validateMatchCreationInput)
+        if ((match.teamMemberIds || []).length <= 2) {
+            throw new AppError(
+                'Impossibile rimuovere: la partita deve avere almeno 2 partecipanti',
+                400
+            );
+        }
+
+        const updatedMatch = await this.matchRepository.findOneAndUpdate(
+            { _id: matchId },
+            { $pull: { teamMemberIds: playerIdToRemove } },
+            { new: true }
+        );
+
+        // 🔄 Allinea la VotingSession: rimuove il player da eligibleVoters/abstainedUsers
+        //    e ricalcola requiredVotes. Sicuro perché il guard impone zero voti inviati.
+        await this._syncVotingSessionWithRoster(matchId);
+
+        try {
+            await CacheService.invalidateMatchCacheAfterVote(updatedMatch.teamId);
+        } catch (cacheError) {
+            console.warn('⚠️ Cache invalidation roster remove (non critico):', cacheError.message);
+        }
+
+        return {
+            success: true,
+            message: 'Giocatore rimosso dal roster',
+            match: updatedMatch
+        };
+    }
 }
 
 module.exports = MatchService;

@@ -20,14 +20,18 @@ import { Match, User } from '@/types/match';
 import { useToast } from '@/hooks/use-toast';
 import EditModal from '@/components/EditModal';
 import MatchDetailsCard from '@/components/MatchDetailsCard';
+import ManagePlayersModal from '@/components/ManagePlayersModal';
 import useEnrichedMatches from '@/hooks/useEnrichedMatches';
-import { isAdmin } from '@/utils/permissions';
+import { isAdmin, isTeamAdmin } from '@/utils/permissions';
 import { api } from '@/lib/api';
 
 export default function MatchDetails() {
   const { matchId } = useParams();
   const { user, isGuest } = useSelector((state: RootState) => state.auth);
-  const { isLoading, error, matches } = useSelector((state: RootState) => state.matches);
+  const { isLoading, error, matches, currentMatch: authoritativeMatch } = useSelector(
+    (state: RootState) => state.matches
+  );
+  const { currentTeam } = useSelector((state: RootState) => state.teams);
 
   // 🗳️ Voting data selector 
   const { matchVoting, sessions } = useSelector((state: RootState) => state.voting);
@@ -59,6 +63,7 @@ export default function MatchDetails() {
 
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showManagePlayersDialog, setShowManagePlayersDialog] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -320,8 +325,6 @@ export default function MatchDetails() {
       <div className="pb-24 lg:pb-8">
         <div className="p-6 lg:p-8 space-y-8 max-w-6xl mx-auto">
 
-
-
           {/* Match Details Card */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -347,6 +350,9 @@ export default function MatchDetails() {
               showActionButtons={isAdmin(user)}
               onEditMatch={handleEditMatch}
               onDeleteMatch={handleDeleteMatch}
+              onManagePlayers={(isAdmin(user) || isTeamAdmin(user, currentTeam as any))
+                ? () => setShowManagePlayersDialog(true)
+                : undefined}
               // 🆕 Voting data from Redux
               calculation={matchVoting.calculation}
               submissions={matchVoting.submissions}
@@ -420,6 +426,26 @@ export default function MatchDetails() {
         onForceCloseSession={isAdmin(user) ? handleForceCloseSession : undefined}
         canForceCloseSession={!!matchVotingSessionId && matchVotingSessionStatus === 'active'}
       />
+
+      {/* 👥 Modal Gestisci giocatori */}
+      {currentMatch && (isAdmin(user) || isTeamAdmin(user, currentTeam as any)) && (
+        <ManagePlayersModal
+          isOpen={showManagePlayersDialog}
+          onClose={() => setShowManagePlayersDialog(false)}
+          matchId={currentMatch.id}
+          teamId={currentMatch.teamId}
+          // 🛡️ Usa il roster AUTORITATIVO da state.matches.currentMatch (aggiornato da
+          //    refreshCurrentMatchSilent dopo ogni mutazione). Fallback su currentMatch
+          //    enriched se non disponibile. Questo evita race conditions con
+          //    fetchTeamMatches polling che potrebbe sovrascrivere matches[idx]
+          //    con dati pre-mutazione.
+          rosterMembers={
+            (authoritativeMatch as any)?.id === currentMatch.id
+              ? ((authoritativeMatch as any).teamMembers || [])
+              : ((currentMatch as any).teamMembers || [])
+          }
+        />
+      )}
     </DashboardLayout>
   );
 }

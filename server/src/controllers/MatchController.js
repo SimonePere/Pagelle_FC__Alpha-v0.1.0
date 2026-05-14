@@ -289,18 +289,73 @@ const reactivateVoter = async (req, res, next) => {
 };
 
 /**
-// @desc Aggiunge un giocatore ospite a un match
-// @route POST /api/v1/matches/:matchId/guest-player
-// @access Public (no auth required)
+// @desc Aggiunge un utente registrato (o guest esistente del team) al roster di un match già creato
+// @route POST /api/v1/matches/:id/players
+// @body  { userId }
+// @access Private (admin globale o admin del team)
 */
-
-const addGuestPlayer = async (req, res, next) => {
+const addRegisteredPlayer = async (req, res, next) => {
   try {
-    const { matchId } = req.params;
-    const { name, teamId } = req.body;
+    const matchId = req.params.id;
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({ error: 'userId è obbligatorio' });
+    }
 
-    const result = await matchService.addGuestPlayer(matchId, { name, teamId });
+    const result = await matchService.addRegisteredPlayerToMatch(matchId, userId);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
 
+/**
+// @desc Crea un nuovo guest player e lo aggiunge al roster del match (e al Team)
+// @route POST /api/v1/matches/:id/guest-players
+// @body  { name, position? }
+// @access Private (admin globale o admin del team)
+*/
+const addGuestPlayerToMatch = async (req, res, next) => {
+  try {
+    const matchId = req.params.id;
+    const { name, position } = req.body;
+    const requesterId = req.user.id;
+
+    const result = await matchService.addGuestPlayerToMatch(
+      matchId,
+      { name, position },
+      requesterId
+    );
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+// @desc Rimuove un giocatore dal roster di un match (NON cancella l'utente)
+// @route DELETE /api/v1/matches/:id/players/:playerId
+// @access Private (admin globale o admin del team)
+*/
+const removePlayerFromMatch = async (req, res, next) => {
+  try {
+    const { id: matchId, playerId } = req.params;
+    const result = await matchService.removePlayerFromMatch(matchId, playerId);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+// @desc Stato editabilità roster (per la UI)
+// @route GET /api/v1/matches/:id/roster-editable
+// @access Private (admin globale o admin del team)
+*/
+const getRosterEditable = async (req, res, next) => {
+  try {
+    const matchId = req.params.id;
+    const result = await matchService.getRosterEditableStatus(matchId);
     res.json(result);
   } catch (error) {
     next(error);
@@ -316,5 +371,8 @@ module.exports = {
   updateMatch,
   deleteMatch,
   reactivateVoter,
-  addGuestPlayer
+  addRegisteredPlayer,
+  addGuestPlayerToMatch,
+  removePlayerFromMatch,
+  getRosterEditable
 };
