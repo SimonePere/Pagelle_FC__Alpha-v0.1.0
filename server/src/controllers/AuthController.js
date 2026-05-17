@@ -181,18 +181,9 @@ const login = async (req, res) => {
 // @access  Private
 */
 const getMe = async (req, res) => {
-  console.log('\n🟡 === GET USER INFO ===');
-  console.log('📥 User ID dal token:', req.user?.id);
-
   try {
     // Delega tutta la business logic all'AuthService
     const userProfile = await authService.getUserProfile(req.user.id);
-
-    console.log('✅ Utente trovato:', userProfile.email);
-    console.log('📊 Stats trovate:', userProfile.personalStats.totalMatches > 0 ? 'PlayerLeaderboardStats' : 'Default (0)');
-    console.log('🏆 Team stats calcolate dinamicamente per', userProfile.teams?.length || 0, 'team');
-    console.log('📊 Player Card status:', userProfile.playerCard.hasPlayerCard ? 'Presente' : 'Non presente');
-    console.log('🟡 === FINE GET USER INFO ===\n');
 
     res.json({
       success: true,
@@ -201,7 +192,6 @@ const getMe = async (req, res) => {
 
   } catch (error) {
     console.log('❌ ERRORE GET USER INFO:', error.message);
-    console.log('🟡 === FINE GET USER INFO (ERRORE) ===\n');
 
     if (error.message === 'User not found') {
       return res.status(404).json({ error: 'User not found' });

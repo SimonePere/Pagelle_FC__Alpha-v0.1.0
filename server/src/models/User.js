@@ -113,8 +113,10 @@ const userSchema = new mongoose.Schema({
   },
   inviteToken: {
     type: String,
-    unique: true,
-    sparse: true  // permette null multipli
+    index: {
+      unique: true,
+      partialFilterExpression: { inviteToken: { $type: 'string' } }
+    }
   },
   inviteTokenMatchId: {
     type: mongoose.Schema.Types.ObjectId,

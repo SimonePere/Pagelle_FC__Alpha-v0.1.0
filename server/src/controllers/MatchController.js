@@ -94,12 +94,9 @@ const getTeamMatches = async (req, res, next) => {
 
     // 🎯 CACHE STRATEGY: Solo per history match (completed), non per match attivi
     const cacheKey = `matches:team:${teamId}:page${options.page}:limit${options.limit}:completed:history`;
-    console.log('🔍 Controllo cache per match team completed...');
     const cached = await CacheService.get(cacheKey);
 
     if (cached) {
-      console.log(`⚡ CACHE HIT: Getting fresh data to check for new completed matches...`);
-
       // Get fresh data per avere match aggiornati post-completion
       const freshResult = await matchService.getTeamMatches(teamId, userId, options);
 

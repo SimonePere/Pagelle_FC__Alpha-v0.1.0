@@ -98,17 +98,12 @@ class NewsGenerator {
 
         // 4. Sostituisce placeholder {playerName}, {rating}, etc.
         let processedText = template.text;
-        console.log('🔍 Template originale:', processedText);
-        console.log('🔍 Placeholders ricevuti:', placeholders);
 
         Object.keys(placeholders).forEach(key => {
             const placeholder = '{' + key + '}';
             const value = placeholders[key] || '';
-            console.log('🔄 Sostituendo ' + placeholder + ' con "' + value + '"');
             processedText = processedText.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), value);
         });
-
-        console.log('✅ Template processato:', processedText);
 
         // 5. Aggiungi a cache (con TTL)
         this.newsCache.set(cacheKey, Date.now());

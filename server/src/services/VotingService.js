@@ -1522,9 +1522,6 @@ class VotingService {
      * @returns {Array} Lista sessioni con stats
      */
     async getUserSessionsWithStats(userId) {
-        console.log('\n🟢 === GET USER SESSIONS WITH STATS (SERVICE) ===');
-        console.log('👤 User ID:', userId);
-
         if (!userId) {
             throw new Error('User ID is required');
         }
@@ -1532,7 +1529,6 @@ class VotingService {
         // 1. Trova i team di cui l'utente è membro
         const userTeams = await this.teamRepository.findAll({ memberIds: { $in: [userId] } });
         const teamIds = userTeams.map(t => t._id);
-        console.log('👥 Team trovati per user:', teamIds.length);
 
         // 2. Trova TUTTE le sessioni match_rating dei suoi team (anche partite a cui non ha partecipato)
         const votingSessions = await this.votingSessionRepository.findAll(
@@ -1547,12 +1543,9 @@ class VotingService {
             }
         );
 
-        console.log('📊 Match rating sessions trovate:', votingSessions.length);
-
-        // 🔍 DEBUG: Log degli status delle sessioni e match
-        votingSessions.forEach((session, index) => {
-            console.log(`   [${index}] Session: ${session.status}, Match: ${session.targetId?.status || 'N/A'}, Opponent: ${session.targetId?.opponent || 'N/A'}`);
-        });
+        const activeCount = votingSessions.filter(s => s.status === 'active').length;
+        const completedCount = votingSessions.filter(s => s.status === 'completed').length;
+        console.log(`🟢 [getUserSessionsWithStats] user=${userId} teams=${teamIds.length} sessions=${votingSessions.length} (active=${activeCount}, completed=${completedCount})`);
 
         // 2. Per ogni sessione, calcola statistiche business logic
         const sessionsWithStats = await Promise.all(votingSessions.map(async session => {
@@ -1622,9 +1615,6 @@ class VotingService {
                 }
             };
         }));
-
-        console.log('✅ Sessions with stats calcolate per', sessionsWithStats.length, 'sessioni');
-        console.log('🟢 === FINE GET USER SESSIONS WITH STATS (SERVICE) ===\n');
 
         return sessionsWithStats;
     }

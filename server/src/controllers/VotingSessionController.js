@@ -6,12 +6,6 @@ const Team = require('../models/Team');
 const PlayerLeaderboardStats = require('../models/PlayerLeaderboardStats');
 const VotingService = require('../services/VotingService');
 
-// ✨ DEBUG INFO per VoteSubmission
-console.log('🔍 DEBUG - VoteSubmission type:', typeof VoteSubmission);
-console.log('🔍 DEBUG - VoteSubmission:', VoteSubmission);
-console.log('🔍 DEBUG - VoteSubmission.name:', VoteSubmission?.name);
-console.log('🔍 DEBUG - Is function:', typeof VoteSubmission === 'function');
-
 // @desc    Create new voting session for match rating
 // @route   POST /api/v1/voting-sessions
 // @access  Private
@@ -71,15 +65,9 @@ const createVotingSession = async (req, res, next) => {
 // @access  Private
 const getUserVotingSessions = async (req, res) => {
   try {
-    console.log('\n🟢 === GET USER VOTING SESSIONS ===');
-    console.log('👤 User ID:', req.user.id);
-
     // Delega tutta la business logic al service
     const votingService = new VotingService();
     const sessionsWithStats = await votingService.getUserSessionsWithStats(req.user.id);
-
-    console.log('✅ Sessions recuperate via service:', sessionsWithStats.length);
-    console.log('🟢 === FINE GET USER VOTING SESSIONS ===\n');
 
     // Disabilita cache per dati real-time
     res.set({
@@ -96,8 +84,6 @@ const getUserVotingSessions = async (req, res) => {
 
   } catch (error) {
     console.log('❌ ERRORE GET USER VOTING SESSIONS:', error.message);
-    console.log('📋 Stack:', error.stack);
-    console.log('🟢 === FINE GET USER VOTING SESSIONS (ERRORE) ===\n');
 
     if (error.message.includes('required')) {
       return res.status(400).json({ error: error.message });
@@ -224,6 +210,12 @@ const getVotingCalculation = async (req, res) => {
     });
 
   } catch (error) {
+    // "No votes found" è caso atteso quando nessuno ha ancora votato: 404 senza stack
+    if (error.message === 'No votes found for this session') {
+      console.warn(`⚠️ getVotingCalculation: ${error.message} (session=${req.params.id})`);
+      return res.status(404).json({ error: error.message });
+    }
+
     console.error('❌ ERRORE GET MATCH RATING CALCULATION:', error);
 
     if (error.message.includes('not found')) {

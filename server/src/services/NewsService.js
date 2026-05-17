@@ -52,8 +52,6 @@ class NewsService {
             // ✅ Genera news multiple per creazione match
             const newsItems = [];
 
-            console.log("DEBUG - createNewsOnCreateMatch === Tutto il newsData ricevuto:", newsData);
-
             // Helper per formattare la data in italiano
             const formatDateItalian = (dateString) => {
                 const months = [
@@ -90,8 +88,6 @@ class NewsService {
                 ...commonPlaceholders,
                 type: ['general', 'date_soon', 'field'][Math.floor(Math.random() * 3)]
             });
-
-            console.log('xxxxxx   ==>>>  DEBUG CREATEnewsOnCreateMatch COMMON PLACEHOLDERS :', commonPlaceholders);
 
 
             if (mainNews) {
@@ -227,16 +223,14 @@ class NewsService {
 
             // Sostituisco prima le news di match creation se presenti
             if (matchCreationNews.length > 0) {
-                console.log(`📰 [REPLACE-SYSTEM] 🎯 CREAZIONE MATCH - Avvio sostituzione categoria 'match_creation'`);
-                console.log(`📰 [REPLACE-SYSTEM] 📊 Team: ${teamId} | News match creation: ${matchCreationNews.length}`);
+                console.log(`📰 [REPLACE] match_creation team=${teamId} news=${matchCreationNews.length}`);
                 const matchResults = await this.deleteReplaceNewsByCategory(teamId, 'match_creation', matchCreationNews);
                 results = results.concat(matchResults);
             }
 
             // Sostituisco le news di voting session se presenti
             if (votingSessionNews.length > 0) {
-                console.log(`📰 [REPLACE-SYSTEM] 🗳️ VOTING SESSION - Avvio sostituzione categoria 'votingSession_creation'`);
-                console.log(`📰 [REPLACE-SYSTEM] 📊 Team: ${teamId} | News voting session: ${votingSessionNews.length}`);
+                console.log(`📰 [REPLACE] votingSession_creation team=${teamId} news=${votingSessionNews.length}`);
                 const votingResults = await this.deleteReplaceNewsByCategory(teamId, 'votingSession_creation', votingSessionNews);
                 results = results.concat(votingResults);
             }
@@ -264,8 +258,6 @@ class NewsService {
 
         try {
             const { matchId, teamId, teamName, teamMemberIds, playersCount, field, date, totalGoals, totalAssists, playerCards } = completitionData;
-
-            console.log("DEBUG - createNewsOnCompleteMatch === Tutto il completitionData ricevuto:", completitionData);
 
             // Calcola totalPlayers contando i teamMemberIds effettivi
             const totalPlayers = teamMemberIds?.length || 0;
@@ -344,7 +336,6 @@ class NewsService {
                 playersWithAssists: playerArray.filter(p => p.assists > 0).length
             };
 
-            console.log('🔍 DEBUG commonPlaceholders:', commonPlaceholders);
             console.log('🔍 DEBUG specificPlaceholders:', specificPlaceholders);
 
             // ✅ GENERIAMO DIVERSI TIPI DI NEWS PER IL COMPLETAMENTO MATCH
@@ -370,8 +361,6 @@ class NewsService {
 
 
             // 2. News miglior giocatore (se esiste)
-            console.log('🔍 DEBUG bestPlayer:', bestPlayer);
-            console.log('🔍 DEBUG bestPlayer.averageRating:', bestPlayer ? bestPlayer.averageRating : 'Non arriva il bestplayer average rating');
             if (bestPlayer && bestPlayer.averageRating >= 7.5) {
                 const bestPlayerNews = this.newsGenerator.generateMatchCompletedNews({
                     ...specificPlaceholders,
@@ -380,7 +369,6 @@ class NewsService {
                     rating: bestPlayer.averageRating ? bestPlayer.averageRating.toFixed(1) : '0.0'
                 });
 
-                console.log('🔍 DEBUG bestPlayerNews:', bestPlayerNews);
                 if (bestPlayerNews) {
                     newsItems.push({
                         teamId,
@@ -453,9 +441,7 @@ class NewsService {
             // Questo sistema sostituisce SOLO le notizie della categoria "match_completed"
             // Le notizie di match_creation, leaderboard, ecc. rimangono intatte
             // È il sistema "a giornale": ogni completamento match sostituisce le news precedenti
-            console.log(`📰 [REPLACE-SYSTEM] ⚽ MATCH COMPLETATO - Avvio sostituzione categoria 'match_completed'`);
-            console.log(`📰 [REPLACE-SYSTEM] 📊 Team: ${teamId} | Match: ${matchId} | Notizie generate: ${newsItems.length}`);
-            console.log(`📰 [REPLACE-SYSTEM] 🎯 Tipi generati: ${newsItems.map(n => n.type).join(', ')}`);
+            console.log(`📰 [REPLACE] match_completed team=${teamId} match=${matchId} news=${newsItems.length} (${newsItems.map(n => n.type).join(',')})`);
 
             return await this.deleteReplaceNewsByCategory(teamId, 'match_completed', newsItems);
 
@@ -499,7 +485,6 @@ class NewsService {
                 topPerformersCount: topPerformers.length,
                 triggeredByPlayer: playerName
             });
-
             // 🏗️ STEP 3: Costruisci placeholder per template
             const specificPlaceholders = {
                 teamId,
@@ -522,8 +507,6 @@ class NewsService {
                 ...specificPlaceholders,
                 type: 'new_leader'
             });
-
-            console.log('🔍 DEBUG mainNews from generator:', mainNews);
 
             // 🔍 STEP 5: Verifica output template
             if (!mainNews) {
@@ -552,9 +535,7 @@ class NewsService {
                 // ========================================
                 // Sostituisce SOLO le notizie della categoria "leaderboard"
                 // Le news di match_creation e match_completed rimangono intatte
-                console.log(`📰 [REPLACE-SYSTEM] 🏆 CLASSIFICA CAMBIATA - Avvio sostituzione categoria 'leaderboard'`);
-                console.log(`📰 [REPLACE-SYSTEM] 📊 Team: ${teamId} | Giocatore: ${playerName} | Nuovo rating: ${newRating?.toFixed(1)}`);
-                console.log(`📰 [REPLACE-SYSTEM] 🎯 Tipo news: ${mainNews.type}`);
+                console.log(`📰 [REPLACE] leaderboard team=${teamId} player=${playerName} newRating=${newRating?.toFixed(1)} type=${mainNews.type}`);
 
                 const result = await this.deleteReplaceNewsByCategory(teamId, 'leaderboard', newsItems);
                 return result.length > 0 ? result[0] : null; // Mantieni compatibilità
@@ -666,57 +647,27 @@ class NewsService {
      */
     async deleteReplaceNewsByCategory(teamId, category, newsDataArray) {
         try {
-            console.log(`📰 [REPLACE-SYSTEM] ====================================`);
-            console.log(`📰 [REPLACE-SYSTEM] 🚀 INIZIO SOSTITUZIONE CATEGORIA`);
-            console.log(`📰 [REPLACE-SYSTEM] ====================================`);
-            console.log(`📰 [REPLACE-SYSTEM] 🎯 Team: ${teamId}`);
-            console.log(`📰 [REPLACE-SYSTEM] 📂 Categoria: "${category.toUpperCase()}"`);
-            console.log(`📰 [REPLACE-SYSTEM] ➕ Nuove notizie da inserire: ${newsDataArray.length}`);
-
             // Validazione business
             if (!teamId || !category || !Array.isArray(newsDataArray)) {
-                const errorMsg = 'Parametri mancanti per sostituzione categoria notizie';
-                console.log(`📰 [REPLACE-SYSTEM] ❌ ERRORE VALIDAZIONE: ${errorMsg}`);
-                throw new Error(errorMsg);
+                throw new Error('Parametri mancanti per sostituzione categoria notizie');
             }
 
             if (newsDataArray.length === 0) {
-                console.log(`📰 [REPLACE-SYSTEM] ⚠️ NESSUNA NOTIZIA DA CREARE per categoria "${category}"`);
-                console.log(`📰 [REPLACE-SYSTEM] 🏁 FINE OPERAZIONE (nessuna modifica)`);
                 return [];
             }
 
             // Delega al repository l'operazione database
-            console.log(`📰 [REPLACE-SYSTEM] 🔄 Delego al Repository l'operazione database...`);
             const result = await this.newsRepository.deleteReplaceNewsByCategory(teamId, category, newsDataArray);
 
-            // Business logic: logging dettagliato del risultato
-            console.log(`📰 [REPLACE-SYSTEM] ====================================`);
-            console.log(`📰 [REPLACE-SYSTEM] ✅ OPERAZIONE COMPLETATA CON SUCCESSO`);
-            console.log(`📰 [REPLACE-SYSTEM] ====================================`);
-            console.log(`📰 [REPLACE-SYSTEM] 🗑️ Notizie vecchie eliminate: ${result.deletedCount}`);
-            console.log(`📰 [REPLACE-SYSTEM] ➕ Notizie nuove inserite: ${result.createdCount}`);
-            console.log(`📰 [REPLACE-SYSTEM] 📊 Saldo operazione: ${result.createdCount - result.deletedCount} (positivo = più notizie, negativo = meno notizie)`);
-            console.log(`📰 [REPLACE-SYSTEM] 📂 Categoria interessata: "${category.toUpperCase()}"`);
-            console.log(`📰 [REPLACE-SYSTEM] 🎯 Team: ${teamId}`);
-
             // Invalidazione cache per aggiornamenti news team
-            console.log(`📰 [REPLACE-SYSTEM] 🧹 Invalidazione cache in corso...`);
             await this.cacheService.delete(`news:${teamId}:recent`);
             await this.cacheService.delete(`news:${teamId}:category:${category}`);
-            console.log(`📰 [REPLACE-SYSTEM] ✅ Cache invalidata per team ${teamId}`);
 
-            console.log(`📰 [REPLACE-SYSTEM] 🏁 FINE OPERAZIONE - Sistema pronto per prossima sostituzione`);
+            console.log(`📰 [REPLACE] ✓ team=${teamId} cat=${category} deleted=${result.deletedCount} created=${result.createdCount}`);
             return result.createdNews;
 
         } catch (error) {
-            console.log(`📰 [REPLACE-SYSTEM] ====================================`);
-            console.log(`📰 [REPLACE-SYSTEM] ❌ ERRORE DURANTE SOSTITUZIONE`);
-            console.log(`📰 [REPLACE-SYSTEM] ====================================`);
-            console.log(`📰 [REPLACE-SYSTEM] 🎯 Team: ${teamId}`);
-            console.log(`📰 [REPLACE-SYSTEM] 📂 Categoria: "${category}"`);
-            console.log(`📰 [REPLACE-SYSTEM] ⚠️ Errore: ${error.message}`);
-            console.log(`📰 [REPLACE-SYSTEM] 🏁 OPERAZIONE FALLITA`);
+            console.error(`❌ [REPLACE] team=${teamId} cat=${category} error=${error.message}`);
             throw error;
         }
     }

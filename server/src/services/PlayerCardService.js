@@ -151,9 +151,6 @@ class PlayerCardService {
         this.validateUserId(userId);
 
         try {
-            console.log('\n🃏 === GET USER PLAYER CARD SESSIONS (SERVICE) ===');
-            console.log('👤 User ID:', userId);
-
             // Trova tutte le sessioni player_card_rating dove l'utente è eligible voter
             const votingSessions = await this.votingSessionRepository.findAll(
                 {
@@ -166,42 +163,25 @@ class PlayerCardService {
                 }
             );
 
-            console.log('📊 Player card sessions trovate:', votingSessions.length);
-
             // 🔧 Converte in plain objects e populate manuale
-            console.log('🔧 Convertendo in plain objects e popolando...');
             const plainSessions = votingSessions.map(s => s.toObject ? s.toObject() : s);
 
             try {
                 for (let i = 0; i < plainSessions.length; i++) {
                     const session = plainSessions[i];
-                    console.log(`   Popolando sessione ${i}: targetId = ${session.targetId}`);
-
                     if (session.targetId) {
                         const targetUser = await this.userRepository.findById(session.targetId, { select: 'name email' });
-                        console.log(`   User trovato:`, targetUser);
                         if (targetUser) {
                             // Converte anche il target user in plain object se necessario
                             session.targetId = targetUser.toObject ? targetUser.toObject() : targetUser;
-                            console.log(`   ✅ Sostituito targetId per sessione ${i}`);
-                        } else {
-                            console.log(`   ⚠️ User non trovato per targetId ${session.targetId}`);
                         }
                     }
                 }
-                console.log('✅ Populate manuale completato');
             } catch (error) {
                 console.log('❌ Errore durante populate manuale:', error.message);
             }
 
-            // 🔍 DEBUG: Log degli status delle sessioni (ora su plain objects)
-            plainSessions.forEach((session, index) => {
-                console.log(`       targetId type:`, typeof session.targetId);
-                if (session.targetId && typeof session.targetId === 'object') {
-                    console.log(`       targetId._id:`, session.targetId._id);
-                    console.log(`       targetId keys:`, Object.keys(session.targetId));
-                }
-            });
+            console.log(`🃏 [getUserPlayerCardSessions] user=${userId} sessions=${plainSessions.length}`);
 
             // Adatta le sessioni per il frontend (usa plainSessions popolate)
             const adaptedSessions = await Promise.all(plainSessions.map(async session => {
@@ -257,7 +237,6 @@ class PlayerCardService {
 
         } catch (error) {
             console.log('❌ ERRORE GET USER PLAYER CARD SESSIONS:', error.message);
-            console.log('🃏 === FINE GET USER PLAYER CARD SESSIONS (ERRORE) ===\n');
             throw new AppError(`Failed to fetch user player card sessions: ${error.message}`, 500);
         }
     }

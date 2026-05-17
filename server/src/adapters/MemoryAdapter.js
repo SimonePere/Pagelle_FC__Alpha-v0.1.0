@@ -79,13 +79,11 @@ class MemoryAdapter {
 
             if (cached) {
                 this.stats.hits++;
-                const age = Math.round((Date.now() - cached.createdAt) / 1000);
-                console.log(`🎯 CACHE TROVATO: ${key} (età: ${age}s, creato ${Math.floor(age / 60)}m fa)`);
                 return cached.data;
             }
 
             this.stats.misses++;
-            console.log(`❌ CACHE MANCANTE: ${key} - Necessario recupero dati dal database`);
+            console.log(`❌ CACHE MISS: ${key}`);
             return null;
         } catch (error) {
             console.error('❌ Memory cache GET error:', error.message);
