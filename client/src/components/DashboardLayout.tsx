@@ -20,7 +20,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
 
   const handleGuestRegister = () => {
-    navigate('/claim-guest');
+    navigate('/promote-guest');
   };
 
   return (

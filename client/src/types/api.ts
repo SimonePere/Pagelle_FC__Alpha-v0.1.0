@@ -26,7 +26,7 @@ export interface User {
   /**
    * 🔒 Solo per i guest. Se true, l'admin del team ha autorizzato il guest
    * ad auto-promuoversi a utente registrato (role: player) tramite i flussi
-   * /auth/guest-merge-user e /auth/claim-guest-by-id. Default false.
+   * /auth/promote-guest-by-invite-token e /auth/promote-guest-by-id. Default false.
    */
   canPromoteToPlayer?: boolean;
   profile?: any;

@@ -4,8 +4,8 @@
  * Scope attuale (v1):
  *  - Lista dei guest associati al team con toggle del flag `canPromoteToPlayer`,
  *    che abilita/disabilita la possibilità per il guest di auto-promuoversi a
- *    utente registrato (role: player) tramite i flussi /auth/guest-merge-user
- *    e /auth/claim-guest-by-id. Default lato BE: false.
+ *    utente registrato (role: player) tramite i flussi /auth/promote-guest-by-invite-token
+ *    e /auth/promote-guest-by-id. Default lato BE: false.
  *
  * Roadmap:
  *  - eliminazione utente (registrato o guest) dall'app.

@@ -4,7 +4,7 @@
  * Scope attuale (v1):
  *  - Per i GUEST: toggle del flag `canPromoteToPlayer`. Quando è OFF (default),
  *    il guest non vede mai le CTA "Registrati" e i flussi backend di
- *    auto-promozione (/auth/guest-merge-user, /auth/claim-guest-by-id)
+ *    auto-promozione (/auth/promote-guest-by-invite-token, /auth/promote-guest-by-id)
  *    rispondono 403. Quando è ON, il guest può completare la registrazione
  *    e diventare utente registrato (role: player). L'operazione di
  *    registrazione è IRREVERSIBILE.

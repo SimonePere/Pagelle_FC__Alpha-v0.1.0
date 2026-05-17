@@ -132,7 +132,7 @@ export function AppSidebar() {
             <p className="text-orange-600/80 dark:text-orange-400/80 mb-2">Alcune funzioni non sono disponibili.</p>
             {canPromoteToPlayer && (
               <button
-                onClick={() => { navigate('/claim-guest'); }}
+                onClick={() => { navigate('/promote-guest'); }}
                 className="underline font-medium hover:no-underline"
               >
                 Registrati per l'accesso completo →

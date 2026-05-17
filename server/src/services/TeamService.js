@@ -638,7 +638,7 @@ class TeamService {
      *
      * Quando `allowed=true`:
      *   - il guest vedrà le CTA "Registrati" lato UI
-     *   - i flussi /auth/guest-merge-user e /auth/claim-guest-by-id risponderanno OK
+     *   - i flussi /auth/promote-guest-by-invite-token e /auth/promote-guest-by-id risponderanno OK
      *
      * Quando `allowed=false`:
      *   - le CTA spariscono

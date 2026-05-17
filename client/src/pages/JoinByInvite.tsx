@@ -6,14 +6,14 @@
  *   1. Legge ?token= dalla URL
  *   2. GET /invite/:token → mostra dati partita
  *   3a. "Vota Subito"        → POST /auth/guest-login  (JWT guest)
- *   3b. "Registrati e Vota" → form registrazione + POST /auth/guest-merge-user
+ *   3b. "Registrati e Vota" → form registrazione + POST /auth/promote-guest-by-invite-token
  */
 
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/redux/store/store';
-import { guestLogin, claimGuest } from '@/redux/slices/authSlice';
+import { guestLogin, promoteGuestByInviteToken } from '@/redux/slices/authSlice';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -126,14 +126,14 @@ const JoinByInvite = () => {
             return;
         }
 
-        const result = await dispatch(claimGuest({
+        const result = await dispatch(promoteGuestByInviteToken({
             name: regName.trim(),
             email: regEmail.trim(),
             password: regPassword,
             inviteToken: token,
         }));
 
-        if (claimGuest.fulfilled.match(result)) {
+        if (promoteGuestByInviteToken.fulfilled.match(result)) {
             toast({ title: 'Registrazione completata!', description: 'Account creato con la tua cronologia ospite.' });
             navigate('/');
         } else {

@@ -22,7 +22,7 @@ const TestVote = lazy(() => import("./pages/TestPage.tsx")); // Pagina di test c
 const Profile = lazy(() => import("./pages/Profile"));
 const Stats = lazy(() => import("./pages/Stats"));
 const CreateMatch = lazy(() => import("./pages/CreateMatch"));
-const ClaimGuest = lazy(() => import("./pages/ClaimGuest"));
+const PromoteGuest = lazy(() => import("./pages/PromoteGuest"));
 
 // 🚀 STEP 3: Code splitting per pagine principali
 const History = lazy(() => import("./pages/History"));
@@ -192,7 +192,7 @@ const App = () => (
           <Route path="/cookie-policy" element={<Suspense fallback={<PageSkeleton />}><CookiePolicy /></Suspense>} />
 
           {/* Route pubblica per registrazione guest (accessibile anche da loggati-guest) */}
-          <Route path="/claim-guest" element={<Suspense fallback={<PageSkeleton />}><ClaimGuest /></Suspense>} />
+          <Route path="/promote-guest" element={<Suspense fallback={<PageSkeleton />}><PromoteGuest /></Suspense>} />
 
           {/* Route protette con Redux */}
           <Route path="/" element={<ProtectedRouteRedux><Home /></ProtectedRouteRedux>} />

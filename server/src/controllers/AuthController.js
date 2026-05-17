@@ -253,23 +253,23 @@ const guestLogin = async (req, res) => {
 
 /**
 // @desc    Merge guest → utente reale (registrazione con storico intatto)
-// @route   POST /api/v1/auth/guest-merge-user
+// @route   POST /api/v1/auth/promote-guest-by-invite-token
 // @access  Public
 */
-const guestMergeUser = async (req, res) => {
-  console.log('\n🔀 === GUEST MERGE USER ===');
+const promoteGuestByInviteToken = async (req, res) => {
+  console.log('\n🔀 === PROMOTE GUEST BY INVITE TOKEN ===');
   console.log('📥 Token ricevuto:', req.body.inviteToken ? `${req.body.inviteToken.slice(0, 4)}...` : 'assente');
 
   try {
     const { email, password, name, inviteToken } = req.body;
-    const result = await authService.guestMergeUser({ email, password, name, inviteToken });
+    const result = await authService.promoteGuestByInviteToken({ email, password, name, inviteToken });
 
     console.log('✅ Guest convertito in utente reale:', result.user.email);
-    console.log('🔀 === FINE GUEST MERGE USER ===\n');
+    console.log('🔀 === FINE PROMOTE GUEST BY INVITE TOKEN ===\n');
 
     res.status(200).json({ success: true, token: result.token, user: result.user });
   } catch (error) {
-    console.log('❌ ERRORE GUEST MERGE USER:', error.message);
+    console.log('❌ ERRORE PROMOTE GUEST BY INVITE TOKEN:', error.message);
     const status = error.statusCode || 500;
     res.status(status).json({ error: error.message });
   }
@@ -277,19 +277,19 @@ const guestMergeUser = async (req, res) => {
 
 /**
 // @desc    Converte il guest autenticato in utente reale (via JWT, no inviteToken)
-// @route   POST /api/v1/auth/claim-guest-by-id
+// @route   POST /api/v1/auth/promote-guest-by-id
 // @access  Private (solo scope guest)
 */
-const claimGuestById = async (req, res) => {
-  console.log('\n🔀 === CLAIM GUEST BY ID ===');
+const promoteGuestById = async (req, res) => {
+  console.log('\n🔀 === PROMOTE GUEST BY ID ===');
   try {
     const { email, password, name } = req.body;
     const userId = req.user.id;
-    const result = await authService.claimGuestById({ userId, email, password, name });
+    const result = await authService.promoteGuestById({ userId, email, password, name });
     console.log('✅ Guest convertito:', result.user.email);
     res.status(200).json({ success: true, token: result.token, user: result.user });
   } catch (error) {
-    console.log('❌ ERRORE CLAIM GUEST BY ID:', error.message);
+    console.log('❌ ERRORE PROMOTE GUEST BY ID:', error.message);
     const status = error.statusCode || 500;
     res.status(status).json({ error: error.message });
   }
@@ -303,6 +303,6 @@ module.exports = {
   changePassword,
   validateInvite,
   guestLogin,
-  guestMergeUser,
-  claimGuestById
+  promoteGuestByInviteToken,
+  promoteGuestById
 };

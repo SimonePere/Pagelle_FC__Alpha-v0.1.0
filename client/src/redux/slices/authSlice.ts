@@ -191,11 +191,11 @@ export const guestLogin = createAsyncThunk(
   }
 );
 
-export const claimGuest = createAsyncThunk(
-  'auth/claimGuest',
+export const promoteGuestByInviteToken = createAsyncThunk(
+  'auth/promoteGuestByInviteToken',
   async (data: { email: string; password: string; name: string; inviteToken: string }, { rejectWithValue }) => {
     try {
-      const response = await api.post('/auth/guest-merge-user', data);
+      const response = await api.post('/auth/promote-guest-by-invite-token', data);
       authHelpers.saveAuth(response.user, response.token);
       return response.user;
     } catch (error: any) {
@@ -205,11 +205,11 @@ export const claimGuest = createAsyncThunk(
 );
 
 // Converte guest autenticato (JWT) in utente reale — senza inviteToken
-export const claimGuestById = createAsyncThunk(
-  'auth/claimGuestById',
+export const promoteGuestById = createAsyncThunk(
+  'auth/promoteGuestById',
   async (data: { email: string; password: string; name: string }, { rejectWithValue }) => {
     try {
-      const response = await api.post('/auth/claim-guest-by-id', data);
+      const response = await api.post('/auth/promote-guest-by-id', data);
       authHelpers.saveAuth(response.user, response.token);
       return response.user;
     } catch (error: any) {
@@ -394,13 +394,13 @@ const authSlice = createSlice({
         state.error = action.payload as string;
       });
 
-    // Claim guest (converti in full user)
+    // Promote guest by invite token (converti in full user dal link di invito)
     builder
-      .addCase(claimGuest.pending, (state) => {
+      .addCase(promoteGuestByInviteToken.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(claimGuest.fulfilled, (state, action) => {
+      .addCase(promoteGuestByInviteToken.fulfilled, (state, action) => {
         state.user = action.payload;
         state.isAuthenticated = true;
         state.isGuest = false;
@@ -408,18 +408,18 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.error = null;
       })
-      .addCase(claimGuest.rejected, (state, action) => {
+      .addCase(promoteGuestByInviteToken.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       });
 
-    // Claim guest by ID (via JWT, no inviteToken)
+    // Promote guest by ID (via JWT, no inviteToken)
     builder
-      .addCase(claimGuestById.pending, (state) => {
+      .addCase(promoteGuestById.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(claimGuestById.fulfilled, (state, action) => {
+      .addCase(promoteGuestById.fulfilled, (state, action) => {
         state.user = action.payload;
         state.isAuthenticated = true;
         state.isGuest = false;
@@ -427,7 +427,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.error = null;
       })
-      .addCase(claimGuestById.rejected, (state, action) => {
+      .addCase(promoteGuestById.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       });

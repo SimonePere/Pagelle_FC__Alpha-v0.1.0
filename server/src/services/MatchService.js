@@ -824,7 +824,7 @@ class MatchService {
 
     /**
      * 🔒 Guard: verifica che il roster del match sia ancora modificabile.
-     *    Modificabile se: status ∈ {draft, active} AND nessuna VoteSubmission attiva.
+     *    Modificabile se: status == 'draft' || 'active' AND nessuna VoteSubmission attiva (nessuno ha gia fatto un voto).
      * @param {string} matchId
      * @returns {Promise<{ match: Object, votingSessionId: string|null }>}
      */

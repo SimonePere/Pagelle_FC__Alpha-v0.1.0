@@ -34,14 +34,14 @@ router.put('/password', auth, authController.changePassword);
 // @access  Public
 router.post('/guest-login', authController.guestLogin);
 
-// @route   POST /api/v1/auth/guest-merge-user
+// @route   POST /api/v1/auth/promote-guest-by-invite-token
 // @desc    Converte guest in utente reale (storico intatto, stesso _id)
 // @access  Public
-router.post('/guest-merge-user', authController.guestMergeUser);
+router.post('/promote-guest-by-invite-token', authController.promoteGuestByInviteToken);
 
-// @route   POST /api/v1/auth/claim-guest-by-id
+// @route   POST /api/v1/auth/promote-guest-by-id
 // @desc    Converte il guest autenticato in utente reale (usa JWT, senza inviteToken)
 // @access  Private (scope guest)
-router.post('/claim-guest-by-id', auth, requireScope('guest'), authController.claimGuestById);
+router.post('/promote-guest-by-id', auth, requireScope('guest'), authController.promoteGuestById);
 
 module.exports = router;

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/redux/store/store';
-import { claimGuestById } from '@/redux/slices/authSlice';
+import { promoteGuestById } from '@/redux/slices/authSlice';
 import { refreshUserData } from '@/redux/slices/authSlice';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Mail, Lock, User, Check, X, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-const ClaimGuest = () => {
+const PromoteGuest = () => {
     const { user, isLoading, error } = useSelector((state: RootState) => state.auth);
     const dispatch = useDispatch<AppDispatch>();
     const navigate = useNavigate();
@@ -64,8 +64,8 @@ const ClaimGuest = () => {
             return;
         }
 
-        const result = await dispatch(claimGuestById({ name: name.trim(), email: email.trim(), password }));
-        if (claimGuestById.fulfilled.match(result)) {
+        const result = await dispatch(promoteGuestById({ name: name.trim(), email: email.trim(), password }));
+        if (promoteGuestById.fulfilled.match(result)) {
             await dispatch(refreshUserData());
             toast({ title: 'Benvenuto!', description: 'Account creato con successo. Il tuo storico è intatto.' });
             navigate('/');
@@ -216,4 +216,4 @@ const ClaimGuest = () => {
     );
 };
 
-export default ClaimGuest;
+export default PromoteGuest;

@@ -101,10 +101,12 @@ const userSchema = new mongoose.Schema({
     enum: ['player', 'admin', 'moderator'],
     default: 'player'
   },
-  // Nuovi Campi per utenti guest: possibilità da parte di un utente registrato,
-  // di creare un utente Guest per aggiungerlo ad una partita a cui partecipa, fargli votare la stessa e vedere classifche, risultati ecc
-  // CON SCOPE RIDOTTO (READ ONLY) 
-  // Guest senza email/password, con un token di invito
+  // Nuovi Campi per utenti guest: possibilità da parte di un utente registrato ADMIN di Team,
+  // di creare un utente Guest per aggiungerlo alla partita a cui partecipa, fargli votare quella stessa partita e vedere le classifche, risultati ecc
+  // CON SCOPE RIDOTTO (READ ONLY)
+  // Può vedere: Home, pag. Vota, pag. Storico
+
+  // Guest (senza email/password) con un token di invito
   isGuest: {
     type: Boolean,
     default: false
@@ -123,8 +125,8 @@ const userSchema = new mongoose.Schema({
     ref: 'User'
   },
   // 🔒 Flag amministrativo: se TRUE consente al guest di auto-promuoversi a
-  // utente registrato (role: player) tramite i flussi /auth/guest-merge-user
-  // e /auth/claim-guest-by-id. Default FALSE → guest "bloccato": nessuna CTA
+  // utente registrato (role: player) tramite i flussi /auth/promote-guest-by-invite-token
+  // e /auth/promote-guest-by-id. Default FALSE → guest "bloccato": nessuna CTA
   // di registrazione in UI e backend respinge i merge con 403.
   // Solo team-admin del suo team o admin globale può modificarlo.
   canPromoteToPlayer: {
