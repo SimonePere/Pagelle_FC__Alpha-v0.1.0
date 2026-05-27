@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { PlayerAttributes } from "@/types/playerCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronLeft, ChevronRight, Users, CheckCircle2, Clock, Star } from "lucide-react";
+import { Users, CheckCircle2, Clock, Star } from "lucide-react";
 import { usePlayerSpecialties } from "@/hooks/usePlayerSpecialties";
 import { SpecialtiesBadgeList } from "@/components/SpecialtyBadge";
+import PaginatedSwiper from "@/components/PaginatedSwiper";
 
 // Types per il nuovo componente
 interface PlayerInfo {
@@ -70,29 +71,9 @@ interface PlayerCardNavigatorProps {
   onVote: (sessionId: string) => void;
   onLoadResults?: (playerId: string) => Promise<PlayerCardResult | null>;
   initialPlayerId?: string;
-  showNavigation?: boolean;
-  showCounter?: boolean;
 }
 
 type CardMode = 'empty' | 'voting' | 'completed';
-
-// Animation variants per slide
-const slideVariants = {
-  enter: (direction: number) => ({
-    x: direction > 0 ? 300 : -300,
-    opacity: 0
-  }),
-  center: {
-    zIndex: 1,
-    x: 0,
-    opacity: 1
-  },
-  exit: (direction: number) => ({
-    zIndex: 0,
-    x: direction < 0 ? 300 : -300,
-    opacity: 0
-  })
-};
 
 export function PlayerCardNavigator({
   players,
@@ -101,8 +82,6 @@ export function PlayerCardNavigator({
   onVote,
   onLoadResults,
   initialPlayerId,
-  showNavigation = true,
-  showCounter = true
 }: PlayerCardNavigatorProps) {
   const [currentIndex, setCurrentIndex] = useState(() => {
     if (initialPlayerId) {
@@ -112,83 +91,32 @@ export function PlayerCardNavigator({
     return 0;
   });
 
-
-  const [direction, setDirection] = useState(0);
   const [cardResults, setCardResults] = useState<Record<string, PlayerCardResult>>({});
   const [loadingResults, setLoadingResults] = useState<Record<string, boolean>>({});
 
   const currentPlayer = players[currentIndex];
 
-  // Trova la sessione per il player corrente
-  const currentSession = sessions.find(session =>
-    session.targetId === currentPlayer?.id
-  );
-
-  // Determina la modalità della card
-  const getCardMode = (): CardMode => {
-    if (!currentSession) return 'empty';
-    if (currentSession.status === 'completed') return 'completed';
-    return 'voting';
-  };
-
-  // Navigation functions
-  const navigateToPlayer = (newIndex: number) => {
-    if (newIndex === currentIndex) return;
-
-    setDirection(newIndex > currentIndex ? 1 : -1);
-    setCurrentIndex(newIndex);
-  };
-
-  const navigatePrev = () => {
-    const newIndex = currentIndex > 0 ? currentIndex - 1 : players.length - 1;
-    navigateToPlayer(newIndex);
-  };
-
-  const navigateNext = () => {
-    const newIndex = currentIndex < players.length - 1 ? currentIndex + 1 : 0;
-    navigateToPlayer(newIndex);
-  };
-
-  // Keyboard navigation
+  // Lazy-load risultati quando la card corrente è in modalità 'completed'.
   useEffect(() => {
-    if (!showNavigation) return;
+    if (!currentPlayer || !onLoadResults) return;
+    const session = sessions.find(s => s.targetId === currentPlayer.id);
+    if (!session || session.status !== 'completed') return;
+    if (cardResults[currentPlayer.id] || loadingResults[currentPlayer.id]) return;
 
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') navigatePrev();
-      if (e.key === 'ArrowRight') navigateNext();
-    };
-
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [currentIndex, showNavigation]);
-
-  // Load results quando necessario
-  useEffect(() => {
-    if (getCardMode() === 'completed' && onLoadResults && currentPlayer) {
-      if (!cardResults[currentPlayer.id] && !loadingResults[currentPlayer.id]) {
-        setLoadingResults(prev => ({
-          ...prev,
-          [currentPlayer.id]: true
-        }));
-
-        onLoadResults(currentPlayer.id).then(result => {
-          if (result) {
-            setCardResults(prev => ({
-              ...prev,
-              [currentPlayer.id]: result
-            }));
-          }
-        }).catch(error => {
-          console.error('Error loading results:', error);
-        }).finally(() => {
-          setLoadingResults(prev => ({
-            ...prev,
-            [currentPlayer.id]: false
-          }));
-        });
-      }
-    }
-  }, [currentIndex, currentPlayer, onLoadResults, cardResults, loadingResults]);
+    setLoadingResults(prev => ({ ...prev, [currentPlayer.id]: true }));
+    onLoadResults(currentPlayer.id)
+      .then(result => {
+        if (result) {
+          setCardResults(prev => ({ ...prev, [currentPlayer.id]: result }));
+        }
+      })
+      .catch(error => {
+        console.error('Error loading results:', error);
+      })
+      .finally(() => {
+        setLoadingResults(prev => ({ ...prev, [currentPlayer.id]: false }));
+      });
+  }, [currentIndex, currentPlayer, sessions, onLoadResults, cardResults, loadingResults]);
 
   if (!currentPlayer) {
     return (
@@ -198,87 +126,38 @@ export function PlayerCardNavigator({
     );
   }
 
-  const cardMode = getCardMode();
-  const currentResult = cardResults[currentPlayer.id];
-  const isResultLoading = !!loadingResults[currentPlayer.id];
-
   return (
     <div className="w-full space-y-3 sm:space-y-6">
-      {/* Main Card Area */}
-      <div className="relative h-[520px] sm:h-[610px] overflow-hidden">
-        <AnimatePresence initial={false} custom={direction} mode="wait">
-          <motion.div
-            key={currentIndex}
-            custom={direction}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{
-              x: { type: "spring", stiffness: 300, damping: 30 },
-              opacity: { duration: 0.2 }
-            }}
-            className="absolute inset-0"
-          >
-            <PlayerCard
-              player={currentPlayer}
-              mode={cardMode}
-              session={currentSession}
-              result={currentResult}
-              isResultLoading={isResultLoading}
-              onCreateSession={() => onCreateSession(currentPlayer.id)}
-              onVote={() => currentSession && onVote(currentSession.id)}
-            />
-          </motion.div>
-        </AnimatePresence>
+      {/* Main Card Area — swipe orizzontale + pallini sotto via PaginatedSwiper */}
+      <div className="relative min-h-[520px] sm:min-h-[610px]">
+        <PaginatedSwiper
+          items={players}
+          pageSize={1}
+          initialPage={currentIndex}
+          onPageChange={setCurrentIndex}
+          renderPage={([player]) => {
+            const session = sessions.find(s => s.targetId === player?.id);
+            const mode: CardMode = !session
+              ? 'empty'
+              : session.status === 'completed'
+                ? 'completed'
+                : 'voting';
+            const result = cardResults[player.id];
+            const loading = !!loadingResults[player.id];
+            return (
+              <PlayerCard
+                player={player}
+                mode={mode}
+                session={session}
+                result={result}
+                isResultLoading={loading}
+                onCreateSession={() => onCreateSession(player.id)}
+                onVote={() => session && onVote(session.id)}
+              />
+            );
+          }}
+        />
       </div>
-
-      {/* Navigation */}
-      {showNavigation && players.length > 1 && (
-        <>
-          <div className="flex items-center justify-center space-x-4">
-            {/* Previous Button */}
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={navigatePrev}
-              disabled={players.length <= 1}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-
-            {/* Dots Indicator */}
-            <div className="flex space-x-2">
-              {players.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => navigateToPlayer(index)}
-                  className={`w-3 h-3 rounded-full transition-all duration-200 ${index === currentIndex
-                    ? 'bg-primary'
-                    : 'bg-muted hover:bg-muted-foreground/50'
-                    }`}
-                />
-              ))}
-            </div>
-
-            {/* Next Button */}
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={navigateNext}
-              disabled={players.length <= 1}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
-
-          {showCounter && (
-            <div className="text-center text-sm text-muted-foreground">
-              {currentIndex + 1} / {players.length}
-            </div>
-          )}
-        </>
-      )}
     </div>
   );
 }

@@ -28,6 +28,7 @@ import { Match, User } from '@/types/match';
 // import { PlayerCardDisplay } from '@/components/PlayerCardDisplay';
 import { StatsTooltip } from '@/components/StatsTooltip';
 import EditModal from '@/components/EditModal';
+import PaginatedSwiper from '@/components/PaginatedSwiper';
 import { apiCall } from '@/lib/api';
 import { toast } from 'sonner';
 import { useToast } from '@/hooks/use-toast';
@@ -654,7 +655,6 @@ const Profile = () => {
                 onVote={handleOpenVoteForm}
                 onLoadResults={handleLoadResults}
                 initialPlayerId={user.id}
-                showNavigation={false}
               />
 
 
@@ -733,50 +733,54 @@ const Profile = () => {
                 </p>
               </CardHeader>
               <CardContent className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {teamMembers
-                    .filter((teammate) => teammate.id !== user.id || true) // Mostriamo tutti
-                    .map((teammate, index: number) => {
-                      const role = deriveMemberRole(teammate as any, []);
-                      return (
-                        <motion.div
-                          key={teammate.id}
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: index * 0.05 }}
-                          whileHover={{ scale: 1.03 }}
-                          className={`p-4 rounded-xl border transition-all ${teammate.id === user.id
-                            ? 'bg-primary/10 border-primary/30 shadow-glow'
-                            : 'bg-secondary/40 border-border/50 hover:bg-secondary/60'
-                            }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center font-display font-bold shadow-elevation">
-                              <span className="text-primary-foreground">
-                                {teammate.name.split(' ').map((n: string) => n[0]).join('')}
-                              </span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <p className="font-semibold text-foreground truncate">
-                                  {teammate.name}
-                                </p>
-                                {teammate.id === user.id && (
-                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5">Tu</Badge>
-                                )}
-                                <RoleBadge role={role} />
+                <PaginatedSwiper
+                  items={teamMembers.filter((teammate) => teammate.id !== user.id || true)}
+                  pageSize={6}
+                  renderPage={(pageMembers) => (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {pageMembers.map((teammate, index: number) => {
+                        const role = deriveMemberRole(teammate as any, []);
+                        return (
+                          <motion.div
+                            key={teammate.id}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: index * 0.05 }}
+                            whileHover={{ scale: 1.03 }}
+                            className={`p-4 rounded-xl border transition-all ${teammate.id === user.id
+                              ? 'bg-primary/10 border-primary/30 shadow-glow'
+                              : 'bg-secondary/40 border-border/50 hover:bg-secondary/60'
+                              }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center font-display font-bold shadow-elevation">
+                                <span className="text-primary-foreground">
+                                  {teammate.name.split(' ').map((n: string) => n[0]).join('')}
+                                </span>
                               </div>
-                              {teammate.email && (
-                                <p className="text-xs text-muted-foreground truncate">
-                                  {teammate.email}
-                                </p>
-                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="font-semibold text-foreground truncate">
+                                    {teammate.name}
+                                  </p>
+                                  {teammate.id === user.id && (
+                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5">Tu</Badge>
+                                  )}
+                                  <RoleBadge role={role} />
+                                </div>
+                                {teammate.email && (
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {teammate.email}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  )}
+                />
               </CardContent>
             </Card>
           </motion.div>

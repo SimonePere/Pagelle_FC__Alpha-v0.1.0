@@ -20,6 +20,8 @@ import { useActiveTeamId } from '@/hooks/useActiveTeamId';
 import { isTeamAdmin } from '@/utils/permissions';
 import EditTeamMemberModal, { type EditableMember } from '@/components/EditTeamMemberModal';
 import { RoleBadge, deriveMemberRole } from '@/components/RoleBadge';
+import BachecaAwards, { MOCK_BACHECA_AWARDS } from '@/components/BachecaAwards';
+import PaginatedSwiper from '@/components/PaginatedSwiper';
 
 export default function TeamPage() {
   const navigate = useNavigate();
@@ -379,6 +381,23 @@ export default function TeamPage() {
             </CardContent>
           </Card>
 
+          {/* Bacheca Trofei — ⚠️ MOCK DATA, da collegare al backend awards */}
+          <Card className="bg-card/80 backdrop-blur-sm border-border shadow-card">
+            <CardContent className="pt-6">
+              <BachecaAwards
+                awards={MOCK_BACHECA_AWARDS}
+                size="small"
+                pageSize={4}
+                onMarkSeen={(id) => console.log('[mock] mark seen:', id)}
+                onShareWhatsApp={(a) => window.open(`https://wa.me/?text=${encodeURIComponent(a.shareUrl)}`, '_blank')}
+                onShareInstagram={(a) => console.log('[mock] share IG:', a.cardTitle)}
+                onShareTelegram={(a) => window.open(`https://t.me/share/url?url=${encodeURIComponent(a.shareUrl)}`, '_blank')}
+                onCopyLink={(a) => navigator.clipboard?.writeText(a.shareUrl)}
+                onDownloadImage={(a) => console.log('[mock] download:', a.cardTitle)}
+              />
+            </CardContent>
+          </Card>
+
           {/* Codice invito */}
           <Card className="bg-card/80 backdrop-blur-sm border-border shadow-card">
             <CardHeader>
@@ -407,68 +426,74 @@ export default function TeamPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {members.map((m: any) => {
-                  const memberId = m.id || m._id || '';
-                  const isSelf = memberId === userId;
-                  // Ruolo derivato: 'admin' (global o team) | 'guest' | 'player'
-                  const role = deriveMemberRole(m, adminIds);
-                  return (
-                    <div key={memberId} className="flex items-center justify-between p-3 bg-secondary/40 rounded-lg border border-border/50">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <Avatar className="w-10 h-10">
-                          <AvatarImage src={m.avatarUrl} alt={m.name} />
-                          <AvatarFallback className="bg-gradient-primary text-primary-foreground">
-                            {m.name?.split(' ').map((n: string) => n[0]).join('') || '?'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <div className="font-semibold text-foreground flex items-center gap-2 flex-wrap">
-                            <span className="truncate">{m.name}</span>
-                            {isSelf && <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5">Tu</Badge>}
-                            <RoleBadge role={role} />
+              <PaginatedSwiper
+                items={members}
+                pageSize={5}
+                renderPage={(pageMembers) => (
+                  <div className="space-y-3">
+                    {pageMembers.map((m: any) => {
+                      const memberId = m.id || m._id || '';
+                      const isSelf = memberId === userId;
+                      // Ruolo derivato: 'admin' (global o team) | 'guest' | 'player'
+                      const role = deriveMemberRole(m, adminIds);
+                      return (
+                        <div key={memberId} className="flex items-center justify-between p-3 bg-secondary/40 rounded-lg border border-border/50">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <Avatar className="w-10 h-10">
+                              <AvatarImage src={m.avatarUrl} alt={m.name} />
+                              <AvatarFallback className="bg-gradient-primary text-primary-foreground">
+                                {m.name?.split(' ').map((n: string) => n[0]).join('') || '?'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0">
+                              <div className="font-semibold text-foreground flex items-center gap-2 flex-wrap">
+                                <span className="truncate">{m.name}</span>
+                                {isSelf && <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5">Tu</Badge>}
+                                <RoleBadge role={role} />
+                              </div>
+                              {m.email && <div className="text-xs text-muted-foreground truncate">{m.email}</div>}
+                            </div>
                           </div>
-                          {m.email && <div className="text-xs text-muted-foreground truncate">{m.email}</div>}
+                          {/* ✏️ Bottone modifica membro (solo admin di team / globali). Stile coerente con MatchDetailsCard. */}
+                          {isUserAdmin && (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              className="h-8 px-3 shrink-0"
+                              onClick={() => setEditingMember({
+                                id: memberId,
+                                name: m.name,
+                                email: m.email,
+                                avatarUrl: m.avatarUrl,
+                                isGuest: !!m.isGuest,
+                                canPromoteToPlayer: !!m.canPromoteToPlayer,
+                                role,
+                              })}
+                              aria-label={`Modifica ${m.name}`}
+                            >
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                          )}
+                          {/* TODO: Riabilitare quando la gestione membri sarà attiva
+                          {(isSelf || isUserAdmin) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={!memberId || teamLoading}
+                              onClick={() => memberId && handleRemoveMember(memberId)}
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            >
+                              {isSelf ? <><LogOut className="w-4 h-4" /> Lascia</> : <><Trash2 className="w-4 h-4" /> Rimuovi</>}
+                            </Button>
+                          )}
+                          */}
                         </div>
-                      </div>
-                      {/* ✏️ Bottone modifica membro (solo admin di team / globali). Stile coerente con MatchDetailsCard. */}
-                      {isUserAdmin && (
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          className="h-8 px-3 shrink-0"
-                          onClick={() => setEditingMember({
-                            id: memberId,
-                            name: m.name,
-                            email: m.email,
-                            avatarUrl: m.avatarUrl,
-                            isGuest: !!m.isGuest,
-                            canPromoteToPlayer: !!m.canPromoteToPlayer,
-                            role,
-                          })}
-                          aria-label={`Modifica ${m.name}`}
-                        >
-                          <Edit className="w-3 h-3" />
-                        </Button>
-                      )}
-                      {/* TODO: Riabilitare quando la gestione membri sarà attiva
-                      {(isSelf || isUserAdmin) && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={!memberId || teamLoading}
-                          onClick={() => memberId && handleRemoveMember(memberId)}
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        >
-                          {isSelf ? <><LogOut className="w-4 h-4" /> Lascia</> : <><Trash2 className="w-4 h-4" /> Rimuovi</>}
-                        </Button>
-                      )}
-                      */}
-                    </div>
-                  );
-                })}
-              </div>
+                      );
+                    })}
+                  </div>
+                )}
+              />
             </CardContent>
           </Card>
 

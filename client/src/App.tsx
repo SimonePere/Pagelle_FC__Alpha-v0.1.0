@@ -17,6 +17,7 @@ import JoinByInvite from "./pages/JoinByInvite";
 
 // 🚀 STEP 1: Code splitting per pagine meno critiche
 const TestVote = lazy(() => import("./pages/TestPage.tsx")); // Pagina di test con mock, non critica per il primo accesso
+const TestAwards = lazy(() => import("./pages/TestAwards.tsx")); // Anteprima componenti Pagelle FC Awards (TEMP)
 
 // 🚀 STEP 2: Code splitting per pagine medie
 const Profile = lazy(() => import("./pages/Profile"));
@@ -193,6 +194,9 @@ const App = () => (
 
           {/* Route pubblica per registrazione guest (accessibile anche da loggati-guest) */}
           <Route path="/promote-guest" element={<Suspense fallback={<PageSkeleton />}><PromoteGuest /></Suspense>} />
+
+          {/* Anteprima Pagelle FC Awards — TEMP, pubblica per validazione design */}
+          <Route path="/test-awards" element={<Suspense fallback={<PageSkeleton />}><TestAwards /></Suspense>} />
 
           {/* Route protette con Redux */}
           <Route path="/" element={<ProtectedRouteRedux><Home /></ProtectedRouteRedux>} />

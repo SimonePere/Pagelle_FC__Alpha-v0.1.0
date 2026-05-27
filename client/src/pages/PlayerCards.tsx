@@ -363,7 +363,6 @@ export default function PlayerCards() {
                       onVote={handleOpenVoteForm}
                       onLoadResults={handleLoadResults}
                       initialPlayerId={user.id}
-                      showCounter={false}
                     />
                   </div>
                 )}
