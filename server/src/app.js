@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const path = require('path');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -13,6 +14,7 @@ const playerCardRoutes = require('./routes/playerCards');
 const votingSessionRoutes = require('./routes/votingSessions');
 const leaderboardRoutes = require('./routes/leaderboards');
 const newsRoutes = require('./routes/news');
+const awardRoutes = require('./routes/awards');
 const inviteRoutes = require('./routes/invite');
 
 const app = express();
@@ -70,6 +72,16 @@ if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('📱 :method :url :status :res[content-length] - :response-time ms'));
 }
 
+// Static: immagini award generate localmente (fallback dev senza Cloudinary).
+// In produzione le card vivono su Cloudinary, ma teniamo lo static safe anche lì.
+app.use(
+  '/awards-static',
+  express.static(path.join(__dirname, '..', 'public', 'awards'), {
+    maxAge: process.env.NODE_ENV === 'production' ? '7d' : 0,
+    fallthrough: true,
+  })
+);
+
 // API Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
@@ -79,6 +91,7 @@ app.use('/api/v1/voting-sessions', votingSessionRoutes);
 app.use('/api/v1/player-cards', playerCardRoutes);
 app.use('/api/v1/leaderboards', leaderboardRoutes);
 app.use('/api/v1/news', newsRoutes);
+app.use('/api/v1/awards', awardRoutes);
 app.use('/api/v1/invite', inviteRoutes);
 
 // Health check endpoint

@@ -47,7 +47,10 @@ export default defineConfig(({ mode }) => ({
         skipWaiting: true,
         clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        maximumFileSizeToCacheInBytes: 3000000
+        maximumFileSizeToCacheInBytes: 3000000,
+        // Escludi /render-card dal fallback SPA del SW: deve sempre prendere la versione fresh
+        // (usata da Puppeteer + preview, non vogliamo cache stale)
+        navigateFallbackDenylist: [/^\/render-card/]
       }
     })
   ].filter(Boolean),

@@ -52,15 +52,10 @@ class MemoryAdapter {
             const timer = setTimeout(() => {
                 this.cache.delete(key);
                 this.timers.delete(key);
-                console.log(`⏰ CACHE SCADUTO: ${key} - Dati automaticamente rimossi (TTL raggiunto)`);
             }, ttlSeconds * 1000);
 
             this.timers.set(key, timer);
             this.stats.sets++;
-
-            const ttlMinutes = Math.floor(ttlSeconds / 60);
-            console.log(`✅ DATI SALVATI IN CACHE: ${key}`);
-            console.log(`   ⏰ Scadenza: ${ttlSeconds}s (${ttlMinutes} minuti) - Valido fino alle ${new Date(Date.now() + ttlSeconds * 1000).toLocaleTimeString('it-IT')}`);
             return true;
         } catch (error) {
             console.error('❌ Memory cache SET error:', error.message);
@@ -83,7 +78,6 @@ class MemoryAdapter {
             }
 
             this.stats.misses++;
-            console.log(`❌ CACHE MISS: ${key}`);
             return null;
         } catch (error) {
             console.error('❌ Memory cache GET error:', error.message);
@@ -111,7 +105,6 @@ class MemoryAdapter {
 
             if (existed) {
                 this.stats.deletes++;
-                console.log(`🗑️ CACHE ELIMINATO: ${key} - Dati rimossi dalla memoria`);
             }
 
             return true;
@@ -137,13 +130,10 @@ class MemoryAdapter {
                 .replace(/\\\*/g, '.*'); // Converti \* in .*
             const regex = new RegExp(`^${escapedPattern}$`);
 
-            console.log(`🔍 PATTERN SEARCH: "${pattern}" → RegExp: ${regex}`);
-
             // Trova tutte le chiavi che matchano il pattern
             for (const key of this.cache.keys()) {
                 if (regex.test(key)) {
                     keysToDelete.push(key);
-                    console.log(`   ✅ MATCH TROVATO: "${key}"`);
                 }
             }
 
@@ -152,11 +142,6 @@ class MemoryAdapter {
                 await this.delete(key);
             }
 
-            const message = keysToDelete.length > 0
-                ? `🧹 PATTERN INVALIDATO: ${pattern} → ${keysToDelete.length} cache eliminati`
-                : `💭 PATTERN VUOTO: ${pattern} → nessun cache da eliminare`;
-
-            console.log(message);
             return keysToDelete.length;
         } catch (error) {
             console.error('❌ Memory cache INVALIDATE error:', error.message);

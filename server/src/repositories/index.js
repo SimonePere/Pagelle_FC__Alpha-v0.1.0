@@ -24,6 +24,7 @@ const PlayerCardSubmissionRepository = require('./PlayerCardSubmissionRepository
 const PlayerCardResultRepository = require('./PlayerCardResultRepository');
 const PlayerLeaderboardStatsRepository = require('./PlayerLeaderboardStatsRepository');
 const NewsRepository = require('./NewsRepository');
+const AwardRepository = require('./AwardRepository');
 
 // 📦 Export di tutti i repository
 module.exports = {
@@ -40,5 +41,6 @@ module.exports = {
     PlayerCardSubmissionRepository,
     PlayerCardResultRepository,
     PlayerLeaderboardStatsRepository,
-    NewsRepository
+    NewsRepository,
+    AwardRepository
 };

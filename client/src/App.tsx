@@ -18,6 +18,7 @@ import JoinByInvite from "./pages/JoinByInvite";
 // 🚀 STEP 1: Code splitting per pagine meno critiche
 const TestVote = lazy(() => import("./pages/TestPage.tsx")); // Pagina di test con mock, non critica per il primo accesso
 const TestAwards = lazy(() => import("./pages/TestAwards.tsx")); // Anteprima componenti Pagelle FC Awards (TEMP)
+const RenderCard = lazy(() => import("./pages/RenderCard.tsx")); // Pagina render-only per Puppeteer (server screenshot)
 
 // 🚀 STEP 2: Code splitting per pagine medie
 const Profile = lazy(() => import("./pages/Profile"));
@@ -197,6 +198,9 @@ const App = () => (
 
           {/* Anteprima Pagelle FC Awards — TEMP, pubblica per validazione design */}
           <Route path="/test-awards" element={<Suspense fallback={<PageSkeleton />}><TestAwards /></Suspense>} />
+
+          {/* Render-only per Puppeteer screenshot (NO chrome, NO auth) — consumata dal backend */}
+          <Route path="/render-card" element={<Suspense fallback={null}><RenderCard /></Suspense>} />
 
           {/* Route protette con Redux */}
           <Route path="/" element={<ProtectedRouteRedux><Home /></ProtectedRouteRedux>} />

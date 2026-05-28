@@ -42,7 +42,7 @@ class VoteSubmissionRepository extends BaseRepository {
             { votingSessionId: sessionId },
             {
                 sort: { submittedAt: 1 },
-                populate: 'userId'
+                populate: 'voterId'
             }
         );
     }

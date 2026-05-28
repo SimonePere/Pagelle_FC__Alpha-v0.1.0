@@ -336,8 +336,6 @@ class NewsService {
                 playersWithAssists: playerArray.filter(p => p.assists > 0).length
             };
 
-            console.log('🔍 DEBUG specificPlaceholders:', specificPlaceholders);
-
             // ✅ GENERIAMO DIVERSI TIPI DI NEWS PER IL COMPLETAMENTO MATCH
             const newsItems = [];
 
@@ -464,7 +462,6 @@ class NewsService {
     async createNewsOnLeaderboardChanges(leaderboardData) {
         try {
             const { teamId, playerId, playerName, newRating } = leaderboardData;
-            console.log('📈 Generating news for leaderboard changes:', teamId);
 
             // 🔍 STEP 1: Recupera dati classifica tramite repository
             const [leaderboard, teamStats, topPerformers, underPerformers] = await Promise.all([
@@ -478,13 +475,6 @@ class NewsService {
             const newLeader = leaderboard[0]; // Il primo della classifica
             const biggestGainer = leaderboard.find(p => p.playerId._id.toString() === playerId) || null;
 
-            console.log('🔍 DEBUG - Leaderboard data retrieved:', {
-                totalPlayers: teamStats.totalPlayers,
-                averageRating: teamStats.averageTeamRating,
-                newLeader: newLeader?.playerId?.name || 'None',
-                topPerformersCount: topPerformers.length,
-                triggeredByPlayer: playerName
-            });
             // 🏗️ STEP 3: Costruisci placeholder per template
             const specificPlaceholders = {
                 teamId,

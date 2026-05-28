@@ -1,4 +1,3 @@
-// 🎯 REPOSITORY PATTERN - Accesso dati tramite Repository
 const {
     VotingSessionRepository,
     VoteSubmissionRepository,
@@ -14,11 +13,10 @@ const NewsService = require('./NewsService');
 /**
  * VotingService - Business Logic Layer per Gestione Votazioni
  * 
- * 🔄 AGGIORNATO CON REPOSITORY PATTERN:
- * - Non accede più direttamente ai Model Mongoose
+ * Funzionamento:
+ * - Non accede direttamente ai Model Mongoose
  * - Usa Repository per separare data access da business logic
- * - Più testabile e modulare
- * 
+ *  
  * Responsabilità:
  * - Validation business rules votazioni
  * - Processing voti e badge mapping
@@ -29,7 +27,7 @@ const NewsService = require('./NewsService');
 class VotingService {
 
     /**
-     * 🏗️ Costruttore - Inizializza i repository
+     * Costruttore - Inizializza i repository
      */
     constructor() {
         // Inizializza i repository per accesso dati
@@ -112,10 +110,6 @@ class VotingService {
      * @returns {Object} Sessione creata
      */
     async createVotingSession(userData, sessionData) {
-        console.log('\n📝 === CREATE VOTING SESSION (SERVICE) ===');
-        console.log('👤 User ID:', userData.id);
-        console.log('📋 Session Data:', sessionData);
-
         const { targetId, title, description, deadline } = sessionData;
 
         // 1. Validation campi obbligatori
@@ -165,7 +159,6 @@ class VotingService {
         });
 
         console.log('✅ Voting Session creata:', votingSession._id);
-        console.log('📝 === FINE CREATE VOTING SESSION (SERVICE) ===\n');
 
         // 4.1. Recupera i nomi degli utenti partecipanti e astenuti per la sessione (se ci sono)
         const userNames = await this.votingSessionRepository.findByIdWithUsernames(votingSession._id);
@@ -252,30 +245,16 @@ class VotingService {
      * @returns {Object} Risultato submission con auto-completion info
      */
     async submitVote(sessionId, userId, voteData) {
-        console.log('\n🟣 === SUBMIT VOTE (SERVICE) ===');
-        console.log('📋 Session ID:', sessionId);
-        console.log('👤 User ID:', userId);
-
         try {
 
             // 0.5. Recupera nome del votante per miglior logging
             const voter = await this.userRepository.findById(userId);
-            if (voter) {
-                console.log('👤 Voter Name:', voter.name);
-            }
 
             // 1. Verifica autorizzazione (include tutte le validazioni di sessione)
             const session = await this.checkSessionAuthorization(sessionId, userId);
 
             // 2. Trasforma dati dal frontend al formato database  
-            console.log('🔄 Trasformando dati voto...');
             const transformedVoteData = this.transformVoteData(voteData);
-
-            console.log('📤 Dati trasformati:', {
-                playerRatingsCount: transformedVoteData.playerRatings.length,
-                badgesCount: transformedVoteData.badges.length,
-                hasComment: !!transformedVoteData.overallComment
-            });
 
             // 3. Crea e salva il voto
             const newVote = await this.voteSubmissionRepository.create({
@@ -289,16 +268,11 @@ class VotingService {
                 validated: false
             });
 
-            console.log('✅ Voto salvato nel database');
-
             // 4. Controlla auto-completion DOPO aver salvato il voto
-            console.log('🎯 Verificando auto-completion...');
             const autoCompletionResult = await this.checkAutoCompletion(session._id);
 
             // 5. Aggiorna statistiche sessione DOPO auto-complete
             await session.updateSummary();
-
-            console.log('🟣 === FINE SUBMIT VOTE (SERVICE) ===\n');
 
 
             // 6. Restituisce risultato completo per il controller
@@ -322,8 +296,7 @@ class VotingService {
             };
 
         } catch (error) {
-            console.log('❌ ERRORE SUBMIT VOTE (SERVICE):', error.message);
-            console.log('🟣 === FINE SUBMIT VOTE (SERVICE - ERRORE) ===\n');
+            console.error('❌ ERRORE SUBMIT VOTE (SERVICE):', error.message);
 
             // Re-throw l'errore per il controller
             throw error;
@@ -337,9 +310,6 @@ class VotingService {
      * @returns {Object} Voto attivo dell'utente con dati formattati
     */
     async getMyVote(sessionId, userId) {
-        console.log('\n🔵 === GET MY VOTE (SERVICE) ===');
-        console.log('📋 Session ID:', sessionId);
-        console.log('👤 User ID:', userId);
 
         if (!sessionId) throw new Error('Session ID is required');
         if (!userId) throw new Error('User ID is required');
@@ -365,9 +335,6 @@ class VotingService {
             throw new Error('No active vote found for this user');
         }
 
-        console.log('✅ Voto trovato, version:', submission.version);
-        console.log('🔵 === FINE GET MY VOTE (SERVICE) ===\n');
-
         return {
             id: submission._id,
             votingSessionId: submission.votingSessionId,
@@ -389,10 +356,6 @@ class VotingService {
      * @returns {Object} Risultato aggiornamento
      */
     async updateVote(sessionId, userId, voteData) {
-        console.log('\n🟠 === UPDATE VOTE (SERVICE) ===');
-        console.log('📋 Session ID:', sessionId);
-        console.log('👤 User ID:', userId);
-
         if (!sessionId) throw new Error('Session ID is required');
         if (!userId) throw new Error('User ID is required');
 
@@ -425,24 +388,14 @@ class VotingService {
             // 4. Trasforma dati dal frontend
             const transformedVoteData = this.transformVoteData(voteData);
 
-            console.log('📤 Dati aggiornati:', {
-                playerRatingsCount: transformedVoteData.playerRatings.length,
-                badgesCount: transformedVoteData.badges.length,
-                previousVersion: existingVote.version
-            });
-
             // 5. Aggiorna IN-PLACE il documento esistente (no versioning)
             existingVote.voteData = transformedVoteData;
             existingVote.version = existingVote.version + 1;
             existingVote.modificationReason = 'User edited vote';
             await existingVote.save();
 
-            console.log('✅ Voto aggiornato, nuova version:', existingVote.version);
-
             // 6. Recupera nome votante per response
             const voter = await this.userRepository.findById(userId);
-
-            console.log('🟠 === FINE UPDATE VOTE (SERVICE) ===\n');
 
             return {
                 success: true,
@@ -459,8 +412,7 @@ class VotingService {
             };
 
         } catch (error) {
-            console.log('❌ ERRORE UPDATE VOTE (SERVICE):', error.message);
-            console.log('🟠 === FINE UPDATE VOTE (SERVICE - ERRORE) ===\n');
+            console.error('❌ ERRORE UPDATE VOTE (SERVICE):', error.message);
             throw error;
         }
     }
@@ -472,8 +424,8 @@ class VotingService {
      */
     async checkAutoCompletion(sessionId) {
         try {
-            console.log('🔍 === CHECK AUTO-COMPLETION ===');
-            console.log('📊 Session ID:', sessionId);
+            // console.log('🔍 === CHECK AUTO-COMPLETION ===');
+            // console.log('📊 Session ID:', sessionId);
 
             if (!sessionId) {
                 console.log('⚠️ SessionId mancante, skip auto-complete');
@@ -486,9 +438,9 @@ class VotingService {
             });
 
             // 🔍 DEBUG POPULATE
-            console.log('🔍 DEBUG session.targetId dopo populate:', session.targetId);
-            console.log('🔍 DEBUG tipo di session.targetId:', typeof session.targetId);
-            console.log('🔍 DEBUG session.targetId è ObjectId?', session.targetId instanceof require('mongoose').Types.ObjectId);
+            // console.log('🔍 DEBUG session.targetId dopo populate:', session.targetId);
+            // console.log('🔍 DEBUG tipo di session.targetId:', typeof session.targetId);
+            // console.log('🔍 DEBUG session.targetId è ObjectId?', session.targetId instanceof require('mongoose').Types.ObjectId);
 
             // 🔧 STEP 2: POPULATE MANUALE SE FALLISCE
             if (session && session.targetId instanceof require('mongoose').Types.ObjectId && session.type === 'match_rating') {
@@ -516,19 +468,18 @@ class VotingService {
 
             // Calcola utenti attivi per il log
             const activeVotersCount = session.eligibleVoters.length - session.abstainedUsers.length;
-            console.log(`📊 Voti raccolti: ${session.summary.totalSubmissions}/${activeVotersCount}`);
+            // console.log(`📊 Voti raccolti: ${session.summary.totalSubmissions}/${activeVotersCount}`);
 
             // 3. Verifica se la sessione è stata completata automaticamente dal updateSummary()
             if (session.status === 'completed') {
-                console.log('🎉 SESSIONE COMPLETATA AUTOMATICAMENTE!');
-
+                // console.log('🎉 SESSIONE COMPLETATA AUTOMATICAMENTE!');
                 try {
                     // 4. Procedi con elaborazione risultati
                     const completionResult = await this.completeSession(sessionId, 'automatic');
 
-                    console.log('✅ Auto-complete completato con successo!');
-                    console.log('📊 Tipo di campo da gioco:', completionResult.playersCount);
-                    console.log('🗳️ Votanti totali:', completionResult.votersCount);
+                    // console.log('✅ Auto-complete completato con successo!');
+                    // console.log('📊 Tipo di campo da gioco:', completionResult.playersCount);
+                    // console.log('🗳️ Votanti totali:', completionResult.votersCount);
 
                     const team = await this.teamRepository.findById(session.teamId);
                     const teamName = team?.name || 'La squadra';
@@ -540,14 +491,13 @@ class VotingService {
                         return { success: false, error: 'Match not found for news generation' };
                     }
 
-                    console.log('📍 Dati Match per news:', {
-                        field: match.field,
-                        playersCount: match.playersCount,
-                        teamMemberIds: match.teamMemberIds?.length || 'undefined'
-                    });
+                    // console.log('📍 Dati Match per news:', {
+                    //     field: match.field,
+                    //     playersCount: match.playersCount,
+                    //     teamMemberIds: match.teamMemberIds?.length || 'undefined'
+                    // });
 
-                    // 6. CREA NOTIZIA DI MATCH COMPLETED 
-
+                    // 6. CREA NOTIZIA DI MATCH COMPLETED
                     await this.newsService.createNewsOnCompleteMatch({
                         matchId: session.targetId,
                         teamId: session.teamId,
@@ -684,9 +634,6 @@ class VotingService {
  * @returns {Object} Risultati calcolati
  */
     async calculateVotingResults(sessionId) {
-        console.log('\n🧮 === CALCULATE VOTING RESULTS (SERVICE) ===');
-        console.log('📊 Session ID:', sessionId);
-
         if (!sessionId) {
             throw new Error('Session ID is required');
         }
@@ -709,7 +656,6 @@ class VotingService {
             );
 
             if (officialResult) {
-                console.log('📊 Restituendo risultati match rating ufficiali salvati');
                 const savedResults = officialResult.getMatchRatingResults();
                 if (savedResults) {
                     return {
@@ -722,8 +668,6 @@ class VotingService {
         }
 
         // 3. Calcola risultati live
-        console.log('🔄 Calcolando risultati match rating al volo per sessione', session.status);
-
         const submissions = await this.voteSubmissionRepository.findAll({
             filter: {
                 votingSessionId: sessionId,
@@ -744,9 +688,6 @@ class VotingService {
 
         // 4. Usa il metodo esistente per aggregazione
         const playerResults = await this.aggregatePlayerStats(submissions, abstainedUserIds);
-
-        console.log('✅ Calcoli match rating live completati per', Object.keys(playerResults).length, 'giocatori');
-        console.log('🧮 === FINE CALCULATE VOTING RESULTS (SERVICE) ===\n');
 
         return {
             calculation: {
@@ -899,15 +840,6 @@ class VotingService {
         return finalResults;
     }
 
-    /**
-     * Salva risultati ufficiali in VoteResult
-     * @param {string} sessionId - ID sessione  
-     * @param {Object} results - Risultati da salvare
-     * @returns {Object} VoteResult salvato
-     */
-    async saveOfficialResults(sessionId, results) {
-        // TODO: Implementare salvataggio risultati
-    }
 
     // ======================
     // 5. COMPLETION & STATS
@@ -930,7 +862,6 @@ class VotingService {
         if (!session) {
             throw new Error('Voting session not found');
         }
-
         if (session.type !== 'match_rating') {
             throw new Error('Invalid session type');
         }
@@ -1071,12 +1002,36 @@ class VotingService {
             // Non blocchiamo il flusso principale
         }
 
-        console.log('✅ Session completata e risultati salvati');
-        console.log('📊 Giocatori elaborati:', Object.keys(finalResults).length);
-        console.log('🗳️ Votanti totali:', submissions.length);
+        // console.log('✅ Session completata e risultati salvati');
+        // console.log('📊 Giocatori elaborati:', Object.keys(finalResults).length);
+        // console.log('🗳️ Votanti totali:', submissions.length);
 
         // 9. Leggi risultati salvati per il return
         const savedResults = finalResults; // Ora abbiamo già i risultati aggregati
+
+        // 🏆 AWARD HOOK (fire-and-forget): genera MATCH_RECAP in background.
+        //    - require dentro il metodo per evitare possibili dipendenze circolari
+        //      (AwardService dipende da repositories, non da VotingService, ma cautela)
+        //    - NON facciamo await: il completamento della sessione non deve dipendere
+        //      dal successo dell'award. Se fallisce, log + il cron retryFailedAwards
+        //      lo riprenderà in seguito.
+        //    - Errori catturati per non propagare unhandled rejection a Node.
+        try {
+            const AwardService = require('./AwardService');
+            const awardService = new AwardService();
+            awardService.createMatchRecapAward(session.targetId)
+                .then(award => {
+                    if (award) {
+                        console.log(`🏆 [Award] MATCH_RECAP creato id=${award._id} match=${session.targetId}`);
+                    }
+                    // award === null → sotto soglia / duplicato → comportamento normale
+                })
+                .catch(err => {
+                    console.error('⚠️ [Award] Errore creazione MATCH_RECAP:', err.message);
+                });
+        } catch (hookError) {
+            console.error('⚠️ [Award] Errore inizializzazione hook:', hookError.message);
+        }
 
         return {
             success: true,
@@ -1090,6 +1045,7 @@ class VotingService {
         };
     }
 
+    // 🔒 CHIUSURA FORZATA DI UNA VOTAZIONE — astiene d'ufficio i pending e completa.
     /**
      * 🔒 CHIUSURA FORZATA DI UNA VOTAZIONE — astiene d'ufficio i pending e completa.
      *
@@ -1336,12 +1292,8 @@ class VotingService {
         // Business Rule: Qualsiasi membro del team può vedere la sessione (anche se non ha partecipato)
         const team = await this.teamRepository.findById(votingSession.teamId);
         if (!team || !team.isMember(userId)) {
-            console.log('⚠️ Accesso negato: utente non è membro del team di questa sessione');
             throw new Error('Not authorized to access this voting session');
         }
-
-        console.log('✅ Match session trovata e autorizzata:', votingSession.title);
-        console.log('🟡 === FINE GET SESSION WITH AUTH (SERVICE) ===\n');
 
         return {
             id: votingSession._id,
@@ -1374,10 +1326,6 @@ class VotingService {
      * @returns {Object} Sessione attivata
      */
     async activateSession(sessionId, userId) {
-        console.log('\n🟠 === ACTIVATE SESSION (SERVICE) ===');
-        console.log('📋 Session ID:', sessionId);
-        console.log('👤 User ID:', userId);
-
         if (!sessionId) {
             throw new Error('Session ID is required');
         }
@@ -1412,9 +1360,6 @@ class VotingService {
         votingSession.startedAt = new Date();
         await this.votingSessionRepository.save(votingSession);
 
-        console.log('✅ Match rating session attivata:', votingSession.title);
-        console.log('🟠 === FINE ACTIVATE SESSION (SERVICE) ===\n');
-
         return {
             id: votingSession._id,
             type: votingSession.type,
@@ -1432,11 +1377,6 @@ class VotingService {
      * @returns {Object} Dettagli submission voter
      */
     async getVoterSubmissionDetails(sessionId, voterId, userId) {
-        console.log('\n🔍 === GET VOTER SUBMISSION DETAILS (SERVICE) ===');
-        console.log('📊 Session ID:', sessionId);
-        console.log('🗳️ Voter ID:', voterId);
-        console.log('👤 User ID:', userId);
-
         if (!sessionId) {
             throw new Error('Session ID is required');
         }
@@ -1545,7 +1485,6 @@ class VotingService {
 
         const activeCount = votingSessions.filter(s => s.status === 'active').length;
         const completedCount = votingSessions.filter(s => s.status === 'completed').length;
-        console.log(`🟢 [getUserSessionsWithStats] user=${userId} teams=${teamIds.length} sessions=${votingSessions.length} (active=${activeCount}, completed=${completedCount})`);
 
         // 2. Per ogni sessione, calcola statistiche business logic
         const sessionsWithStats = await Promise.all(votingSessions.map(async session => {
@@ -1626,10 +1565,6 @@ class VotingService {
      * @returns {Array} Submissions formattate
      */
     async getSessionSubmissionsFormatted(sessionId, userId) {
-        console.log('\n📋 === GET SESSION SUBMISSIONS FORMATTED (SERVICE) ===');
-        console.log('📊 Session ID:', sessionId);
-        console.log('👤 User ID:', userId);
-
         if (!sessionId) {
             throw new Error('Session ID is required');
         }
@@ -1699,10 +1634,6 @@ class VotingService {
                 badgeType: badge.badgeType
             })) || []
         }));
-
-        console.log('✅ Trovati', completeSubmissions.length, 'voti completi');
-        console.log('📊 Totale giocatori votati:', completeSubmissions.reduce((sum, sub) => sum + sub.playerVotes.length, 0));
-        console.log('📋 === FINE GET SESSION SUBMISSIONS FORMATTED (SERVICE) ===\n');
 
         return {
             submissions: completeSubmissions,

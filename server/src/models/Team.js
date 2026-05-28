@@ -54,87 +54,102 @@ const teamStatsSchema = new mongoose.Schema({
 }, { _id: false });
 
 // Main Team Schema
-const teamSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: [true, 'Team name is required'],
-    trim: true,
-    unique: true,
-    maxlength: [50, 'Team name cannot exceed 50 characters'],
-    minlength: [2, 'Team name must be at least 2 characters']
-  },
-  description: {
-    type: String,
-    trim: true,
-    maxlength: [500, 'Description cannot exceed 500 characters']
-  },
-  city: {
-    type: String,
-    trim: true,
-    maxlength: [100, 'City name cannot exceed 100 characters']
-  },
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: [true, 'Team creator is required']
-  },
-  adminIds: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  }],
-  memberIds: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  }],
-  inviteCode: {
-    type: String,
-    required: true,
-    unique: true,
-    uppercase: true,
-    minlength: [6, 'Invite code must be at least 6 characters'],
-    maxlength: [8, 'Invite code cannot exceed 8 characters']
-  },
-  settings: {
-    type: teamSettingsSchema,
-    default: () => ({})
-  },
-  stats: {
-    type: teamStatsSchema,
-    default: () => ({})
-  },
-  avatar: {
-    type: String,
-    trim: true,
-    match: [/^https?:\/\/.+/, 'Avatar must be a valid URL']
-  },
-  colors: {
-    primary: {
+const teamSchema = new mongoose.Schema(
+  {
+    name: {
       type: String,
-      default: '#007bff',
-      match: [/^#[0-9A-F]{6}$/i, 'Primary color must be a valid hex color']
+      required: [true, 'Team name is required'],
+      trim: true,
+      unique: true,
+      maxlength: [50, 'Team name cannot exceed 50 characters'],
+      minlength: [2, 'Team name must be at least 2 characters']
     },
-    secondary: {
+    description: {
       type: String,
-      default: '#6c757d',
-      match: [/^#[0-9A-F]{6}$/i, 'Secondary color must be a valid hex color']
+      trim: true,
+      maxlength: [500, 'Description cannot exceed 500 characters']
+    },
+    city: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'City name cannot exceed 100 characters']
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'Team creator is required']
+    },
+    adminIds: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }],
+    memberIds: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }],
+    inviteCode: {
+      type: String,
+      required: true,
+      unique: true,
+      uppercase: true,
+      minlength: [6, 'Invite code must be at least 6 characters'],
+      maxlength: [8, 'Invite code cannot exceed 8 characters']
+    },
+    settings: {
+      type: teamSettingsSchema,
+      default: () => ({})
+    },
+    stats: {
+      type: teamStatsSchema,
+      default: () => ({})
+    },
+    avatar: {
+      type: String,
+      trim: true,
+      match: [/^https?:\/\/.+/, 'Avatar must be a valid URL']
+    },
+    colors: {
+      primary: {
+        type: String,
+        default: '#007bff',
+        match: [/^#[0-9A-F]{6}$/i, 'Primary color must be a valid hex color']
+      },
+      secondary: {
+        type: String,
+        default: '#6c757d',
+        match: [/^#[0-9A-F]{6}$/i, 'Secondary color must be a valid hex color']
+      }
+    },
+    isActive: {
+      type: Boolean,
+      default: true
+    },
+
+    // === AWARDS ===
+    seasonEndDate: {
+      type: Date,
+      default: () => {
+        const now = new Date();
+        return new Date(now.getFullYear(), 5, 30); // default: 30 giugno dell'anno corrente
+      }
+    },
+    awardsEnabled: {
+      type: Boolean,
+      default: true // default: true; admin può disabilitare la feature per il team
     }
   },
-  isActive: {
-    type: Boolean,
-    default: true
-  }
-}, {
-  timestamps: true,
-  toJSON: {
-    virtuals: true,
-    transform: function (doc, ret) {
-      ret.id = ret._id;
-      delete ret._id;
-      delete ret.__v;
-      return ret;
+  {
+    timestamps: true,
+    toJSON: {
+      virtuals: true,
+      transform: function (doc, ret) {
+        ret.id = ret._id;
+        delete ret._id;
+        delete ret.__v;
+        return ret;
+      }
     }
-  }
-});
+  });
 
 // Metodo per generare codice invito
 teamSchema.methods.generateInviteCode = function () {

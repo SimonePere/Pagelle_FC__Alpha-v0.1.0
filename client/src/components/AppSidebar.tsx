@@ -40,6 +40,7 @@ const allNavItems: NavItem[] = [
   { title: "Player Cards", url: "/player-cards", icon: Star, showCardsBadge: true, guestAllowed: false },
   { title: "Crea Partita", url: "/create-match", icon: PlusCircle, guestAllowed: false },
   { title: "Team", url: "/team", icon: Shield, guestAllowed: false },
+  { title: "Awards", url: "/test-awards", icon: Trophy, guestAllowed: false },
 ];
 
 export function AppSidebar() {

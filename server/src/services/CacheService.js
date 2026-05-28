@@ -95,7 +95,7 @@ class CacheService {
 
             // Log per importante cache keys
             if (this._isImportantKey(key)) {
-                console.log(`🎯 Important cache SET: ${key}`);
+
             }
 
             return result;
@@ -124,7 +124,7 @@ class CacheService {
                     const age = cached.metadata ?
                         Math.round((Date.now() - new Date(cached.metadata.cachedAt).getTime()) / 1000) :
                         'unknown';
-                    console.log(`🎯 Important cache HIT: ${key} (age: ${age}s)`);
+
                 }
 
                 return cached.originalData;
@@ -150,7 +150,7 @@ class CacheService {
             const result = await this.adapter.delete(key);
 
             if (this._isImportantKey(key)) {
-                console.log(`🎯 Important cache DELETE: ${key}`);
+
             }
 
             return result;
@@ -177,10 +177,6 @@ class CacheService {
             }
 
             const deletedCount = await this.adapter.invalidatePattern(pattern);
-
-            if (deletedCount > 0) {
-                console.log(`🧹 Cache invalidation completed: ${pattern} (${deletedCount} keys)`);
-            }
 
             return deletedCount;
         } catch (error) {
@@ -353,8 +349,6 @@ class CacheService {
      */
     async invalidateLeaderboardsAfterVote(teamId) {
         try {
-            console.log(`🔄 INVALIDAZIONE POST-VOTO: Pulizia cache leaderboard team ${teamId}`);
-
             let totalInvalidated = 0;
 
             // Invalida tutte le leaderboard per questo team
@@ -367,18 +361,7 @@ class CacheService {
             ];
 
             for (const pattern of patterns) {
-                const invalidated = await this.invalidatePattern(pattern);
-                totalInvalidated += invalidated;
-                if (invalidated > 0) {
-                    console.log(`   🗑️ ${pattern} → ${invalidated} cache eliminati`);
-                }
-            }
-
-            if (totalInvalidated > 0) {
-                console.log(`✅ INVALIDAZIONE COMPLETATA: ${totalInvalidated} cache leaderboard rimossi`);
-                console.log(`   🎯 Prossime richieste leaderboard saranno fresche dal database`);
-            } else {
-                console.log(`💭 Nessun cache leaderboard da invalidare per team ${teamId}`);
+                totalInvalidated += await this.invalidatePattern(pattern);
             }
 
             return totalInvalidated;
@@ -396,29 +379,20 @@ class CacheService {
     async invalidatePlayerCardsAfterVote(playerIds = []) {
         try {
             if (!Array.isArray(playerIds) || playerIds.length === 0) {
-                console.log(`💭 Nessun PlayerCard da invalidare (nessun giocatore specificato)`);
                 return 0;
             }
-
-            console.log(`🔄 INVALIDAZIONE PLAYERCARD: Pulizia cache per ${playerIds.length} giocatori`);
 
             let totalInvalidated = 0;
 
             for (const playerId of playerIds) {
-                // Invalida risultati e calcoli PlayerCard per questo giocatore
                 const patterns = [
                     `playercard:results:${playerId}:*`,
-                    `playercard:calculation:*${playerId}*`  // Pattern più flessibile per calculation
+                    `playercard:calculation:*${playerId}*`
                 ];
 
                 for (const pattern of patterns) {
-                    const invalidated = await this.invalidatePattern(pattern);
-                    totalInvalidated += invalidated;
+                    totalInvalidated += await this.invalidatePattern(pattern);
                 }
-            }
-
-            if (totalInvalidated > 0) {
-                console.log(`✅ PLAYERCARD INVALIDATI: ${totalInvalidated} cache rimossi per giocatori aggiornati`);
             }
 
             return totalInvalidated;
@@ -435,29 +409,15 @@ class CacheService {
      */
     async invalidateMatchCacheAfterVote(teamId) {
         try {
-            console.log(`🔄 INVALIDAZIONE MATCH: Pulizia cache match completed team ${teamId}`);
-
             let totalInvalidated = 0;
 
-            // Invalida cache match per questo team (solo completed)
             const patterns = [
                 `matches:team:${teamId}:*:completed:*`,
                 `match:*:details:completed`
             ];
 
             for (const pattern of patterns) {
-                const invalidated = await this.invalidatePattern(pattern);
-                totalInvalidated += invalidated;
-                if (invalidated > 0) {
-                    console.log(`   🗑️ ${pattern} → ${invalidated} cache eliminati`);
-                }
-            }
-
-            if (totalInvalidated > 0) {
-                console.log(`✅ MATCH CACHE CLEANED: ${totalInvalidated} cache match rimossi`);
-                console.log(`   🎯 Prossime richieste match saranno fresche dal database`);
-            } else {
-                console.log(`💭 Nessun cache match da invalidare per team ${teamId}`);
+                totalInvalidated += await this.invalidatePattern(pattern);
             }
 
             return totalInvalidated;
@@ -475,20 +435,15 @@ class CacheService {
      */
     async invalidateAllAfterVote(teamId, playerIds = []) {
         try {
-            console.log(`\n🚨 === INVALIDAZIONE COMPLETA POST-VOTO ===`);
-            console.log(`📊 Team: ${teamId} | Giocatori votati: ${playerIds.length}`);
-
             const leaderboardInvalidated = await this.invalidateLeaderboardsAfterVote(teamId);
             const playerCardInvalidated = await this.invalidatePlayerCardsAfterVote(playerIds);
             const matchInvalidated = await this.invalidateMatchCacheAfterVote(teamId);
 
             const total = leaderboardInvalidated + playerCardInvalidated + matchInvalidated;
 
-            console.log(`🎯 TOTALE INVALIDAZIONI: ${total}`);
-            console.log(`   📋 Leaderboard: ${leaderboardInvalidated}`);
-            console.log(`   🃏 PlayerCard: ${playerCardInvalidated}`);
-            console.log(`   ⚽ Match: ${matchInvalidated}`);
-            console.log(`✅ === CACHE REFRESHED - DATI AGGIORNATI ===\n`);
+            if (total > 0) {
+                console.log(`🧹 Cache invalidata post-voto team=${teamId} | lb=${leaderboardInvalidated} pc=${playerCardInvalidated} match=${matchInvalidated}`);
+            }
 
             return {
                 total,
