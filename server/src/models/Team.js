@@ -126,6 +126,8 @@ const teamSchema = new mongoose.Schema(
     },
 
     // === AWARDS ===
+    // Data dell'evento "Pallone d'Oro" (= fine stagione).
+    // Il "Scarpa d'Oro" viene generato automaticamente +7 giorni dopo questa data.
     seasonEndDate: {
       type: Date,
       default: () => {

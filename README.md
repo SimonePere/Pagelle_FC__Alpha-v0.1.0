@@ -61,6 +61,14 @@ Il tutto con un'interfaccia moderna, responsive e pensata per essere utilizzata 
 - **Badge "Ospite"** visibile nella lista giocatori e nei dettagli partita
 - **Zero refactoring**: l'ospite è un `User` reale nel DB con flag `isGuest: true`, compatibile con tutte le query esistenti
 
+### 🏆 **Pagelle FC Awards — Card celebrative pixel-perfect**
+- **4 tipi di trofeo**: `MATCH_RECAP` (a fine voti partita), `MONTHLY_MVP` (cron 1° del mese), `BALLON_DOR` e `GOLDEN_BOOT` (cron a fine stagione)
+- **Card 1080×1920 PNG** renderizzate server-side con Puppeteer + Sharp, con 3 varianti (story, square, thumb)
+- **Cerimoniale di reveal** con countdown, confetti e audio "Stadium Roar" per tutti i membri del team
+- **Pagina pubblica `/c/:cardId`** condivisibile senza login (per QR e link WhatsApp/Telegram/Instagram)
+- **Tracking integrato** di view, share per canale, visite pagina pubblica e signup attribuiti
+- **Idempotenza nativa** via indice unique `{teamId, refId, type}` su MongoDB
+
 ### �👥 **Team Management**
 - **Gestione membri**: Inviti, ruoli e permessi granulari
 - **Profili personalizzabili**: Informazioni dettagliate e foto profilo
@@ -196,6 +204,8 @@ Il progetto include documentazione dettagliata per sviluppatori e utenti:
 - 🗺️ **[Roadmap Priorità](ROADMAP_PRIORITA_DEFINITIVA.md)** - Piano di sviluppo
 - 💡 **[Archivio Idee](ARCHIVIO_IDEE_COMPLETE.md)** - Features future
 - 🔧 **[Guida Implementazione](GUIDA_IMPLEMENTAZIONE_FEATURE_COMPLETA.md)** - Guide tecniche
+- 🏆 **[Awards — Guida Tecnica Completa](analysis/backend/technical/AWARDS_FEATURE_TECHNICAL_GUIDE.md)** - Architettura, pipeline render, reveal e sharing
+- 📅 **[Stagionalità — Requisiti & Roadmap](analysis/backend/roadmap/SEASONALITY_REQUIREMENTS.md)** - Gap analysis e processo per introdurre stagioni first-class
 
 ### API Documentation
 
@@ -208,6 +218,7 @@ Il backend espone API RESTful complete:
 - **Voting**: `/api/v1/voting-sessions/*` - Sistema votazioni
 - **Player Cards**: `/api/v1/player-card-sessions/*` - Carte giocatori
 - **Invite**: `/api/v1/invite/*` - Link invito ospiti, claim account guest
+- **Awards**: `/api/v1/awards/*` - Bacheca team, pending reveal, pagina pubblica `/c/:cardId`, download PNG, tracking share
 
 ## 🗺️ Roadmap
 

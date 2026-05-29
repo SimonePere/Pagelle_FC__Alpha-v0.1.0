@@ -142,6 +142,8 @@ analysis/
 # Architecture documentation (temporary)
 RIEPILOGO COMPLETO ARCHITETTURA BACKEND - PAGELLE FC.md
 SYSTEM_ARCHITECTURE_GUIDE.md
+AWARDS_FEATURE_TECHNICAL_GUIDE.md
+SEASONALITY_REQUIREMENTS.md
 
 # =========================== guide per spostare backend su railway ===========================
 # Railway deployment files (local only)

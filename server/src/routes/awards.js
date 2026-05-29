@@ -28,6 +28,12 @@ const auth = require('../middleware/auth');
 // @access  Public
 router.get('/public/:awardId', awardController.getPublicAward);
 
+// @route   GET /api/v1/awards/public/:awardId/download
+// @desc    Download PNG della card (Content-Disposition attachment).
+//          ?variant=square|story|thumb (default: square)
+// @access  Public (card già pubblicamente esposta via /c/:id)
+router.get('/public/:awardId/download', awardController.downloadAwardImage);
+
 // =============================================
 // 🔒 PRIVATE ROUTES (authentication required)
 // =============================================

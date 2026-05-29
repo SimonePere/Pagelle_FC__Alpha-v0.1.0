@@ -6,6 +6,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@/redux/store/store';
 import { logout } from '@/redux/slices/authSlice';
 import { useActiveTeamId } from '@/hooks/useActiveTeamId';
+import { fetchPendingAwards } from '@/redux/slices/awardsSlice';
 import { useEffect, useState } from "react";
 import {
   Sidebar,
@@ -29,6 +30,7 @@ type NavItem = {
   guestAllowed: boolean;
   showVoteBadge?: boolean;
   showCardsBadge?: boolean;
+  showAwardsBadge?: boolean;
   inDevelopment?: boolean;
 };
 
@@ -40,7 +42,7 @@ const allNavItems: NavItem[] = [
   { title: "Player Cards", url: "/player-cards", icon: Star, showCardsBadge: true, guestAllowed: false },
   { title: "Crea Partita", url: "/create-match", icon: PlusCircle, guestAllowed: false },
   { title: "Team", url: "/team", icon: Shield, guestAllowed: false },
-  { title: "Awards", url: "/test-awards", icon: Trophy, guestAllowed: false },
+  { title: "Awards", url: "/awards", icon: Trophy, showAwardsBadge: true, guestAllowed: false },
 ];
 
 export function AppSidebar() {
@@ -54,6 +56,8 @@ export function AppSidebar() {
   const isCollapsed = state === "collapsed";
   const [pendingVotesCount, setPendingVotesCount] = useState(0);
   const [pendingCardsCount, setPendingCardsCount] = useState(0);
+  // Conteggio dei trofei non visti dall'utente (popolato da fetchPendingAwards)
+  const pendingAwardsCount = useSelector((s: RootState) => s.awards.pendingAwards.length);
 
   const navItems = isGuest ? allNavItems.filter(i => i.guestAllowed) : allNavItems;
 
@@ -62,6 +66,37 @@ export function AppSidebar() {
     setPendingVotesCount(0);
     setPendingCardsCount(0);
   }, [user]);
+
+  // Poll dei pending awards: al login, ad ogni cambio team attivo, ogni 60s,
+  // e ad ogni window focus / visibility change → garantisce che TUTTI i membri
+  // del team vedano il reveal cerimoniale alla prossima apertura/tab focus,
+  // non solo chi era in app al momento della generazione.
+  // Il count alimenta il badge sulla voce "Awards" e i pending sono consumati
+  // da AwardRevealManager (overlay con confetti) montato in App.tsx.
+  useEffect(() => {
+    if (isGuest || !user) return;
+
+    const refetch = () => {
+      // @ts-expect-error redux-thunk typing
+      dispatch(fetchPendingAwards());
+    };
+
+    refetch(); // immediato al mount / cambio team
+
+    const intervalId = window.setInterval(refetch, 60_000);
+    const onFocus = () => refetch();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') refetch();
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [user, activeTeam?.id, isGuest, dispatch]);
 
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [supportModalOpen, setSupportModalOpen] = useState(false);
@@ -199,6 +234,14 @@ export function AppSidebar() {
                                 className="ml-auto text-xs px-2 py-1 bg-accent text-accent-foreground animate-pulse"
                               >
                                 {pendingCardsCount}
+                              </Badge>
+                            )}
+                            {item.showAwardsBadge && pendingAwardsCount > 0 && (
+                              <Badge
+                                variant="secondary"
+                                className="ml-auto text-xs px-2 py-1 bg-yellow-500 text-yellow-950 animate-pulse"
+                              >
+                                {pendingAwardsCount}
                               </Badge>
                             )}
                           </>

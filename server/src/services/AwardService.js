@@ -206,7 +206,11 @@ class AwardService {
         // 10. Costruisci il PAYLOAD snapshot immutabile dell'award.
         //     Nota: la card userà SOLO questo payload, mai i dati live → se domani
         //     il giocatore cambia nome o lascia il team, la card resta storica.
-        const matchDate = votingSession.createdAt || new Date();
+        //     IMPORTANTE: la data del period deve riflettere la data EFFETTIVA della
+        //     partita (Match.date), non il momento di generazione dell'award.
+        //     Fallback: votingSession.createdAt → new Date() (ultima spiaggia).
+        const matchDoc = await this.MatchRepository.findById(matchId);
+        const matchDate = matchDoc?.date || votingSession.createdAt || new Date();
         const payload = {
             period: {
                 label: this._formatItalianDate(matchDate),     // "16 Maggio 2026"

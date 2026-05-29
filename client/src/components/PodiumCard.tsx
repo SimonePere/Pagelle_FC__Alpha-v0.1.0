@@ -5,7 +5,6 @@
  * @example
  * <PodiumCard {...MOCK_PODIUM_DATA} scale={0.3} />
  */
-import { Trophy } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 export interface PodiumEntry {
@@ -18,6 +17,8 @@ export interface HighlightItem {
   icon: string;
   titleLine: string;
   subtitleLine: string;
+  /** Nome del giocatore citato dall'highlight (es. "MARCO" per BOMBER). Mostrato in evidenza. */
+  playerName?: string;
   accentColor: 'gold' | 'orange' | 'green' | 'purple' | 'blue';
 }
 
@@ -132,22 +133,30 @@ export function PodiumCard({ matchDate, podium, highlights = [], qrCodeUrl, scal
           overflow: 'hidden',
         }}
       >
-        {/* HEADER */}
+        {/* HEADER — LOGO PAGELLE FC + badge "AWARDS" */}
         <div style={{ position: 'absolute', left: 60, top: 80, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <img
+            src="/FLAT_BG_TRAS.png"
+            alt="Pagelle FC"
+            crossOrigin="anonymous"
+            style={{ width: 96, height: 96, objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,.4))' }}
+          />
           <div
             style={{
-              width: 80,
-              height: 80,
-              borderRadius: '50%',
-              background: 'hsl(45,90%,60%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              fontFamily: "'Bebas Neue', sans-serif",
+              fontSize: 22,
+              letterSpacing: 3,
+              padding: '6px 14px',
+              border: '2px solid hsl(45,90%,60%)',
+              color: 'hsl(45,90%,75%)',
+              borderRadius: 6,
+              display: 'inline-block',
+              alignSelf: 'flex-start',
+              background: 'hsl(45,90%,60% / 0.08)',
             }}
           >
-            <Trophy size={44} color="hsl(220,50%,12%)" strokeWidth={2.5} />
+            PAGELLE FC · AWARDS
           </div>
-          <div style={{ fontSize: 24, fontWeight: 500, opacity: 0.7 }}>pagellefc.app</div>
         </div>
 
         <div
@@ -199,62 +208,64 @@ export function PodiumCard({ matchDate, podium, highlights = [], qrCodeUrl, scal
           }}
         />
 
-        {/* PODIO — 2° (left) */}
+        {/* PODIO — 2° (left) — desaturato / più piccolo per far spiccare il 1° */}
         <PodiumSlot
           entry={second}
           place={2}
-          avatarSize={180}
-          avatarTop={700}
-          centerX={240}
-          voteTop={900}
-          voteSize={72}
-          nameTop={990}
-          nameSize={36}
-          pedestalTop={1060}
-          pedestalW={280}
+          avatarSize={150}
+          avatarTop={740}
+          centerX={220}
+          voteTop={910}
+          voteSize={56}
+          nameTop={985}
+          nameSize={30}
+          pedestalTop={1050}
+          pedestalW={260}
           pedestalH={180}
-          pedestalGradient="linear-gradient(180deg, hsl(220,5%,75%), hsl(220,8%,55%))"
-          borderColor="hsl(220, 8%, 68%)"
-          avatarBorderWidth={5}
+          pedestalGradient="linear-gradient(180deg, hsl(220,5%,55%), hsl(220,8%,35%))"
+          borderColor="hsl(220, 8%, 55%)"
+          avatarBorderWidth={4}
+          dim
         />
 
-        {/* PODIO — 1° (center) */}
+        {/* PODIO — 1° (center) — DOMINANTE con glow oro */}
         <PodiumSlot
           entry={first}
           place={1}
-          avatarSize={220}
-          avatarTop={500}
+          avatarSize={260}
+          avatarTop={460}
           centerX={540}
-          voteTop={740}
-          voteSize={96}
-          nameTop={840}
-          nameSize={44}
-          pedestalTop={920}
-          pedestalW={320}
-          pedestalH={280}
-          pedestalGradient="linear-gradient(180deg, hsl(45,90%,60%), hsl(40,85%,45%))"
-          borderColor="hsl(45,90%,60%)"
-          avatarBorderWidth={7}
+          voteTop={730}
+          voteSize={120}
+          nameTop={850}
+          nameSize={56}
+          pedestalTop={940}
+          pedestalW={360}
+          pedestalH={290}
+          pedestalGradient="linear-gradient(180deg, hsl(45,95%,65%), hsl(40,90%,40%))"
+          borderColor="hsl(45,95%,60%)"
+          avatarBorderWidth={9}
           mvpGlow
         />
 
-        {/* PODIO — 3° (right) */}
+        {/* PODIO — 3° (right) — desaturato / più piccolo */}
         <PodiumSlot
           entry={third}
           place={3}
-          avatarSize={180}
-          avatarTop={740}
-          centerX={840}
-          voteTop={940}
-          voteSize={72}
-          nameTop={1030}
-          nameSize={36}
-          pedestalTop={1100}
-          pedestalW={280}
-          pedestalH={120}
-          pedestalGradient="linear-gradient(180deg, hsl(25,60%,50%), hsl(20,55%,35%))"
-          borderColor="hsl(25, 45%, 45%)"
-          avatarBorderWidth={5}
+          avatarSize={150}
+          avatarTop={780}
+          centerX={860}
+          voteTop={950}
+          voteSize={56}
+          nameTop={1025}
+          nameSize={30}
+          pedestalTop={1090}
+          pedestalW={260}
+          pedestalH={140}
+          pedestalGradient="linear-gradient(180deg, hsl(25,40%,40%), hsl(20,40%,25%))"
+          borderColor="hsl(25, 35%, 38%)"
+          avatarBorderWidth={4}
+          dim
         />
 
         {/* HIGHLIGHTS */}
@@ -288,33 +299,58 @@ export function PodiumCard({ matchDate, podium, highlights = [], qrCodeUrl, scal
                 key={i}
                 style={{
                   width: 920,
-                  height: 100,
-                  background: 'hsl(220,30%,18% / 0.7)',
+                  minHeight: 110,
+                  background: 'hsl(220,30%,18% / 0.75)',
                   borderLeft: `6px solid ${ACCENT_HSL[h.accentColor]}`,
                   borderRadius: 16,
-                  padding: 24,
+                  padding: '20px 24px',
                   boxSizing: 'border-box',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 20,
+                  gap: 22,
                 }}
               >
                 <div
                   style={{
-                    width: 48,
-                    height: 48,
-                    fontSize: 40,
+                    width: 56,
+                    height: 56,
+                    fontSize: 46,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     lineHeight: 1,
+                    flexShrink: 0,
                   }}
                 >
                   {h.icon}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <div style={{ fontSize: 32, fontWeight: 800, textTransform: 'uppercase' }}>{h.titleLine}</div>
-                  <div style={{ fontSize: 24, fontWeight: 500, opacity: 0.75 }}>{h.subtitleLine}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
+                  {/* Riga 1: "BOMBER · 3 GOL" — titolo + dato secondario sulla stessa riga */}
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap' }}>
+                    <div style={{ fontSize: 30, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      {h.titleLine}
+                    </div>
+                    {h.subtitleLine && (
+                      <div style={{ fontSize: 22, fontWeight: 600, opacity: 0.7 }}>
+                        {h.subtitleLine}
+                      </div>
+                    )}
+                  </div>
+                  {/* Riga 2: nome del giocatore IN EVIDENZA con l'accent color */}
+                  {h.playerName && (
+                    <div
+                      style={{
+                        fontSize: 28,
+                        fontWeight: 900,
+                        color: ACCENT_HSL[h.accentColor],
+                        textTransform: 'uppercase',
+                        letterSpacing: 1,
+                        lineHeight: 1.1,
+                      }}
+                    >
+                      → {h.playerName}
+                    </div>
+                  )}
                 </div>
               </div>
             ))
@@ -381,6 +417,8 @@ interface PodiumSlotProps {
   borderColor: string;
   avatarBorderWidth?: number;
   mvpGlow?: boolean;
+  /** Se true riduce opacità generale per far spiccare il 1° */
+  dim?: boolean;
 }
 
 function PodiumSlot({
@@ -400,8 +438,10 @@ function PodiumSlot({
   borderColor,
   avatarBorderWidth,
   mvpGlow,
+  dim,
 }: PodiumSlotProps) {
   const pedestalTopBorderColor = place === 1 ? borderColor : `${borderColor}B3`;
+  const slotOpacity = dim ? 0.78 : 1;
 
   return (
     <>
@@ -410,6 +450,7 @@ function PodiumSlot({
           position: 'absolute',
           left: centerX - avatarSize / 2,
           top: avatarTop,
+          opacity: slotOpacity,
         }}
       >
         <Avatar
@@ -433,6 +474,7 @@ function PodiumSlot({
           color: '#fff',
           WebkitTextStroke: '2px #000',
           lineHeight: 1,
+          opacity: slotOpacity,
         }}
       >
         {formatVote(entry.vote)}
@@ -449,6 +491,7 @@ function PodiumSlot({
           letterSpacing: 1,
           textTransform: 'uppercase',
           lineHeight: 1,
+          opacity: slotOpacity,
         }}
       >
         {truncate(entry.name, 12)}
@@ -466,6 +509,8 @@ function PodiumSlot({
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
+          opacity: dim ? 0.85 : 1,
+          boxShadow: place === 1 ? '0 -8px 30px hsla(45,90%,60%,0.35)' : undefined,
         }}
       >
         <span
@@ -492,8 +537,8 @@ export const MOCK_PODIUM_DATA: PodiumCardProps = {
     { name: 'GIULIA', vote: 7.9 },
   ],
   highlights: [
-    { icon: '🔥', titleLine: '3ª PARTITA MVP DI FILA', subtitleLine: 'PER MARCO', accentColor: 'orange' },
-    { icon: '🗳️', titleLine: '9/10 HANNO VOTATO', subtitleLine: 'OTTIMA AFFLUENZA', accentColor: 'blue' },
+    { icon: '🔥', titleLine: '3ª PARTITA MVP DI FILA', subtitleLine: '', playerName: 'MARCO', accentColor: 'orange' },
+    { icon: '⚽', titleLine: 'BOMBER', subtitleLine: '3 GOL', playerName: 'LUCA', accentColor: 'green' },
   ],
   qrCodeUrl: 'https://pagellefc.app/c/abc123?utm_source=qr',
 };

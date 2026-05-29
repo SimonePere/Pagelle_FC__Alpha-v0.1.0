@@ -40,7 +40,7 @@
  * />
  */
 import { useEffect, useState } from 'react';
-import { Apple, Play, Trophy } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import PodiumCard, { type PodiumCardProps, MOCK_PODIUM_DATA } from './PodiumCard';
 import HeroCard, {
     type HeroCardProps,
@@ -112,8 +112,8 @@ function formatItalianDate(d: Date): string {
 
 export function PublicCardPage({
     state,
-    appStoreUrl = '#',
-    playStoreUrl = '#',
+    // appStoreUrl/playStoreUrl temporaneamente non usati: l'app native non
+    // è ancora disponibile, la CTA è sostituita da "Iscriviti" → /register.
     documentTitle,
 }: PublicCardPageProps) {
     // Imposta document.title + OG meta dinamicamente
@@ -139,16 +139,18 @@ export function PublicCardPage({
                 'flex flex-col',
             )}
         >
-            {/* Header con logo */}
-            <header className="flex-shrink-0 px-6 pt-6 pb-2 flex items-center justify-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-md">
-                    <Trophy className="w-4 h-4 text-white" strokeWidth={2.6} />
-                </div>
+            {/* Header con logo PAGELLE FC + tagline AWARDS */}
+            <header className="flex-shrink-0 px-6 pt-6 pb-3 flex flex-col items-center gap-2">
+                <img
+                    src="/FLAT_BG_TRAS.png"
+                    alt="Pagelle FC"
+                    className="w-14 h-14 object-contain drop-shadow-md"
+                />
                 <span
-                    className="text-lg font-extrabold tracking-tight"
-                    style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: 1.5 }}
+                    className="text-[11px] font-bold tracking-[0.35em] text-yellow-400/90 uppercase border border-yellow-400/40 rounded px-2.5 py-1 bg-yellow-400/5"
+                    style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.35em' }}
                 >
-                    PAGELLE FC
+                    Pagelle FC · Awards
                 </span>
             </header>
 
@@ -159,39 +161,39 @@ export function PublicCardPage({
                 {state.kind === 'data' && <DataState state={state} />}
             </main>
 
-            {/* CTA scarica app — visibile sempre tranne in error */}
+            {/* CTA Iscriviti — visibile sempre tranne in error.
+                NOTA: App Store / Google Play commentati finché le app native non
+                sono pubblicate; in produzione svelare i bottoni e rimuovere CTA web. */}
             {state.kind !== 'error' && (
                 <section className="flex-shrink-0 px-6 py-6 space-y-3 border-t border-white/10 bg-black/30">
                     <p className="text-center text-sm text-white/70 font-medium">
                         Anche tu vuoi creare i trofei della tua squadra?
                     </p>
-                    <div className="flex items-center justify-center gap-2">
-                        <a
-                            href={appStoreUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                    <div className="flex items-center justify-center">
+                        <Link
+                            to="/login"
                             className={cn(
-                                'flex items-center gap-2 px-4 py-2.5 rounded-xl',
-                                'bg-white text-slate-900 font-semibold text-sm',
-                                'transition-transform hover:scale-105 active:scale-95',
+                                'inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl',
+                                'bg-gradient-to-r from-yellow-400 to-orange-500 text-slate-900 font-bold text-sm',
+                                'shadow-lg shadow-yellow-500/20',
+                                'transition-transform hover:scale-[1.03] active:scale-95',
                             )}
                         >
+                            Iscriviti su Pagelle FC
+                        </Link>
+                    </div>
+                    {/* TODO: quando le app sono live, ripristinare i bottoni store qui sotto
+                    <div className="flex items-center justify-center gap-2">
+                        <a href={appStoreUrl} target="_blank" rel="noopener noreferrer"
+                           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-slate-900 font-semibold text-sm">
                             <Apple className="w-5 h-5" />
                             <div className="flex flex-col items-start leading-tight">
                                 <span className="text-[10px] text-slate-600">Scarica su</span>
                                 <span>App Store</span>
                             </div>
                         </a>
-                        <a
-                            href={playStoreUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={cn(
-                                'flex items-center gap-2 px-4 py-2.5 rounded-xl',
-                                'bg-white text-slate-900 font-semibold text-sm',
-                                'transition-transform hover:scale-105 active:scale-95',
-                            )}
-                        >
+                        <a href={playStoreUrl} target="_blank" rel="noopener noreferrer"
+                           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-slate-900 font-semibold text-sm">
                             <Play className="w-5 h-5 fill-current" />
                             <div className="flex flex-col items-start leading-tight">
                                 <span className="text-[10px] text-slate-600">Disponibile su</span>
@@ -199,6 +201,7 @@ export function PublicCardPage({
                             </div>
                         </a>
                     </div>
+                    */}
                 </section>
             )}
 

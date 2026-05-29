@@ -7,7 +7,6 @@
  * <HeroCard {...MOCK_BALLON_DOR} scale={0.3} />
  * <HeroCard {...MOCK_GOLDEN_BOOT} scale={0.3} />
  */
-import { Trophy } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 export type HeroCardType = 'MONTHLY_MVP' | 'BALLON_DOR' | 'GOLDEN_BOOT';
@@ -113,22 +112,30 @@ export function HeroCard({ type, periodLabel, hero, qrCodeUrl, scale = 1 }: Hero
           overflow: 'hidden',
         }}
       >
-        {/* HEADER */}
+        {/* HEADER — LOGO PAGELLE FC + badge "AWARDS" */}
         <div style={{ position: 'absolute', left: 60, top: 80, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <img
+            src="/FLAT_BG_TRAS.png"
+            alt="Pagelle FC"
+            crossOrigin="anonymous"
+            style={{ width: 96, height: 96, objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,.4))' }}
+          />
           <div
             style={{
-              width: 80,
-              height: 80,
-              borderRadius: '50%',
-              background: cfg.themeColor,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              fontFamily: "'Bebas Neue', sans-serif",
+              fontSize: 22,
+              letterSpacing: 3,
+              padding: '6px 14px',
+              border: `2px solid ${cfg.themeColor}`,
+              color: cfg.themeColor,
+              borderRadius: 6,
+              display: 'inline-block',
+              alignSelf: 'flex-start',
+              background: `${cfg.themeColor.replace(')', ' / 0.08)').replace('hsl', 'hsl')}`,
             }}
           >
-            <Trophy size={44} color="hsl(220,50%,12%)" strokeWidth={2.5} />
+            PAGELLE FC AWARDS
           </div>
-          <div style={{ fontSize: 24, fontWeight: 500, opacity: 0.7 }}>pagellefc.app</div>
         </div>
 
         <div

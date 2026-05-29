@@ -23,7 +23,7 @@
  * />
  */
 import { Copy, Download, Trophy } from 'lucide-react';
-import { toast } from 'sonner';
+import { useRef } from 'react';
 import {
     Drawer,
     DrawerContent,
@@ -32,6 +32,7 @@ import {
     DrawerTitle,
 } from '@/components/ui/drawer';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 export interface ShareSheetProps {
     open: boolean;
@@ -45,7 +46,7 @@ export interface ShareSheetProps {
     onShareInstagram?: () => void;
     /** Se passato, mostra pulsante Telegram. */
     onShareTelegram?: () => void;
-    /** Se passato, mostra pulsante Copia link. Il toast "Link copiato" è gestito qui. */
+    /** Se passato, mostra pulsante Copia link. Il toast "Link copiato" è gestito dal caller. */
     onCopyLink?: () => void;
     /** Se passato, mostra pulsante Scarica immagine. */
     onDownloadImage?: () => void;
@@ -125,14 +126,72 @@ export function ShareSheet({
         }
     })();
 
+    const { toast } = useToast();
+    // Textarea nascosto MONTATO DENTRO al DrawerContent. Necessario perché il
+    // focus trap di Radix Drawer ruba subito il focus a qualsiasi elemento
+    // appeso a document.body, facendo fallire silenziosamente execCommand('copy')
+    // (returns true ma la clipboard resta vuota su HTTP/non-secure context).
+    const hiddenTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+
     const handleCopy = () => {
-        onCopyLink?.();
-        toast.success('Link copiato negli appunti');
+        // Strategia 1: Clipboard API se disponibile (HTTPS / localhost)
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(shareUrl)
+                .then(() => {
+                    toast({ title: 'Link copiato!', description: shareUrl });
+                    onCopyLink?.();
+                })
+                .catch(() => copyViaTextarea());
+            return;
+        }
+        // Strategia 2: textarea interno al Drawer (no focus trap conflict)
+        copyViaTextarea();
+    };
+
+    const copyViaTextarea = () => {
+        const ta = hiddenTextareaRef.current;
+        if (!ta) {
+            toast({ title: 'Copia manuale', description: shareUrl, variant: 'destructive' });
+            return;
+        }
+        try {
+            ta.value = shareUrl;
+            ta.focus();
+            ta.select();
+            ta.setSelectionRange(0, shareUrl.length);
+            const ok = document.execCommand('copy');
+            if (ok) {
+                toast({ title: 'Link copiato!', description: shareUrl });
+                onCopyLink?.();
+            } else {
+                toast({ title: 'Copia manuale', description: shareUrl, variant: 'destructive' });
+            }
+        } catch {
+            toast({ title: 'Copia manuale', description: shareUrl, variant: 'destructive' });
+        }
     };
 
     return (
         <Drawer open={open} onOpenChange={onOpenChange}>
             <DrawerContent className="max-h-[88vh]">
+                {/* Textarea nascosto per fallback execCommand('copy'). DEVE essere
+                    figlio di DrawerContent per non essere defocussato dal focus trap. */}
+                <textarea
+                    ref={hiddenTextareaRef}
+                    aria-hidden="true"
+                    tabIndex={-1}
+                    readOnly
+                    defaultValue={shareUrl}
+                    style={{
+                        position: 'absolute',
+                        left: '-9999px',
+                        top: 0,
+                        width: '1px',
+                        height: '1px',
+                        opacity: 0,
+                        pointerEvents: 'none',
+                    }}
+                />
                 <div className="mx-auto w-full max-w-md">
                     <DrawerHeader className="pb-2">
                         <DrawerTitle className="text-lg">Condividi card</DrawerTitle>

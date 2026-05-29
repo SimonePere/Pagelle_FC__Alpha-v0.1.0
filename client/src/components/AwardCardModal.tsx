@@ -127,13 +127,13 @@ export function AwardCardModal({
                         {/* Title/Description nascosti ma presenti per a11y (Radix lo richiede) */}
                         <DialogTitle className="sr-only">{cardTitle}</DialogTitle>
                         <DialogDescription className="sr-only">
-                            Visualizzazione card trofeo. Premi Esc o tocca «Chiudi» per uscire.
+                            Visualizzazione Awards. Premi Esc o tocca «Chiudi» per uscire.
                         </DialogDescription>
 
                         {/* Header: solo close in alto a destra */}
                         <header className="flex-shrink-0 flex items-center justify-between px-4 pt-4 pb-2 h-[64px]">
                             <span className="text-xs uppercase tracking-widest text-white/40 font-semibold">
-                                Pagelle FC · Trofeo
+                                Pagelle FC Awards
                             </span>
                             <button
                                 type="button"

@@ -6,6 +6,7 @@ import votingReducer from "../slices/votingSlice";
 import usersReducer from "../slices/usersSlice";
 import playerCardsReducer from "../slices/playerCardsSlice";
 import newsReducer from "../slices/newsSlice";
+import awardsReducer from "../slices/awardsSlice";
 
 
 
@@ -14,12 +15,15 @@ const store = configureStore({
         auth: authReducer,                      // Autenticazione
         teams: teamReducer,                     // Gestione team
         matches: matchReducer,                  // Gestione partite
-        voting: votingReducer,                  // 🆕 Sistema votazione
-        users: usersReducer,                    // 🆕 Gestione utenti
-        playerCards: playerCardsReducer,       // 🆕 Gestione giocatori
-        news: newsReducer                      // 🆕 Gestione notizie
+        voting: votingReducer,                  // Sistema votazione
+        users: usersReducer,                    // Gestione utenti
+        playerCards: playerCardsReducer,        // Gestione giocatori
+        news: newsReducer,                      // Gestione notizie
+        awards: awardsReducer                   // Pagelle FC Awards
     },
-    devTools: process.env.NODE_ENV !== 'production',
+    // Vite espone l'env via `import.meta.env` (no `process` nel browser).
+    // `import.meta.env.PROD` è true in build di produzione, false in dev.
+    devTools: !import.meta.env.PROD,
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({
             serializableCheck: {

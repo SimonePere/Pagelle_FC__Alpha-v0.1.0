@@ -54,19 +54,24 @@ const DATABASES = {
     }
 };
 
-// Collezioni da gestire
-const COLLECTIONS = [
-    'users',
-    'teams',
-    'matches',
-    'votingsessions',
-    'votesubmissions',
-    'voteresults',
-    'playercardsubmissions',
-    'playercardresults',
-    'playerleaderboardstats',
-    'playercarddemands'
-];
+// === DISCOVERY DINAMICO COLLEZIONI ===
+// Non manteniamo più una lista hardcoded di collezioni: ogni volta interroghiamo
+// MongoDB per scoprire TUTTE le collezioni effettivamente presenti nel database.
+// Vantaggi:
+//   - Automaticamente incluse le collezioni nuove (es. `awards` o futuri schemi)
+//     senza dover toccare lo script.
+//   - Niente rischio di "dimenticare" una collezione e lasciare dati orfani in
+//     destinazione dopo una copia.
+//
+// Vengono escluse le collezioni di sistema (`system.*`) per evitare di toccare
+// strutture interne di MongoDB.
+async function listAllCollectionNames(connection) {
+    const colls = await connection.db.listCollections({}, { nameOnly: true }).toArray();
+    return colls
+        .map(c => c.name)
+        .filter(n => !n.startsWith('system.'))
+        .sort();
+}
 
 class UniversalDBManager {
     constructor() {
@@ -183,19 +188,31 @@ class UniversalDBManager {
             const backupPath = await this.createBackup(destConn, `${destDB.key.toLowerCase()}-auto-backup`);
             console.log(`✅ Backup salvato: ${path.basename(backupPath)}`);
 
+            // === Discovery dinamico delle collezioni ===
+            // Sorgente: tutto quello che esiste (incluse le nuove come `awards`).
+            // Destinazione: lista corrente (così se ha collezioni che non ci sono
+            // più in sorgente, le svuotiamo lo stesso per non lasciare dati orfani).
+            const sourceCollections = await listAllCollectionNames(sourceConn);
+            const destCollections = await listAllCollectionNames(destConn);
+            const allCollections = Array.from(new Set([...sourceCollections, ...destCollections])).sort();
+
+            console.log(`\n🔎 Collezioni trovate:`);
+            console.log(`   📖 sorgente (${sourceCollections.length}): ${sourceCollections.join(', ') || '(vuoto)'}`);
+            console.log(`   📝 destinazione (${destCollections.length}): ${destCollections.join(', ') || '(vuoto)'}`);
+
             // Copia dei dati
             console.log('\n📖 Lettura dati da sorgente...');
             const sourceData = {};
             let totalDocs = 0;
 
-            for (const collName of COLLECTIONS) {
+            for (const collName of sourceCollections) {
                 try {
                     const data = await sourceConn.db.collection(collName).find({}).toArray();
                     sourceData[collName] = data;
                     totalDocs += data.length;
                     console.log(`  ✅ ${collName}: ${data.length} documenti`);
                 } catch (error) {
-                    console.log(`  ⚠️ ${collName}: Collezione non trovata, saltata`);
+                    console.log(`  ⚠️ ${collName}: ${error.message}`);
                     sourceData[collName] = [];
                 }
             }
@@ -207,9 +224,9 @@ class UniversalDBManager {
                 return;
             }
 
-            // Pulizia destinazione
+            // Pulizia destinazione: tutte le collezioni (union sorgente+dest)
             console.log(`\n🧹 Pulizia ${destDB.name}...`);
-            for (const collName of COLLECTIONS) {
+            for (const collName of allCollections) {
                 try {
                     await destConn.db.collection(collName).deleteMany({});
                     console.log(`  ✅ ${collName}: pulita`);
@@ -222,7 +239,7 @@ class UniversalDBManager {
             console.log(`\n📝 Scrittura dati in ${destDB.name}...`);
             let copiedDocs = 0;
 
-            for (const collName of COLLECTIONS) {
+            for (const collName of sourceCollections) {
                 const data = sourceData[collName];
                 if (data && data.length > 0) {
                     try {
@@ -258,14 +275,17 @@ class UniversalDBManager {
         const backupData = {};
         let totalDocs = 0;
 
-        for (const collName of COLLECTIONS) {
+        // Discovery dinamico: backup di TUTTE le collezioni presenti.
+        const collections = await listAllCollectionNames(connection);
+
+        for (const collName of collections) {
             try {
                 const data = await connection.db.collection(collName).find({}).toArray();
                 backupData[collName] = data;
                 totalDocs += data.length;
                 console.log(`  ✅ ${collName}: ${data.length} documenti`);
             } catch (error) {
-                console.log(`  ⚠️ ${collName}: Collezione non trovata`);
+                console.log(`  ⚠️ ${collName}: ${error.message}`);
                 backupData[collName] = [];
             }
         }
@@ -370,9 +390,18 @@ class UniversalDBManager {
             console.log('\n📖 Caricamento backup...');
             const backupData = JSON.parse(fs.readFileSync(backupPath, 'utf8'));
 
+            // Discovery dinamico: pulizia union (collezioni nel backup + collezioni
+            // attualmente presenti in destinazione). Così niente dati orfani.
+            const backupCollections = Object.keys(backupData);
+            const destCollections = await listAllCollectionNames(connection);
+            const allCollections = Array.from(new Set([...backupCollections, ...destCollections])).sort();
+
+            console.log(`\n🔎 Collezioni nel backup (${backupCollections.length}): ${backupCollections.join(', ') || '(vuoto)'}`);
+            console.log(`🔎 Collezioni in destinazione (${destCollections.length}): ${destCollections.join(', ') || '(vuoto)'}`);
+
             // Pulizia database
             console.log(`\n🧹 Pulizia ${destDB.name}...`);
-            for (const collName of COLLECTIONS) {
+            for (const collName of allCollections) {
                 try {
                     await connection.db.collection(collName).deleteMany({});
                     console.log(`  ✅ ${collName}: pulita`);
@@ -385,7 +414,7 @@ class UniversalDBManager {
             console.log(`\n🔄 Ripristino dati in ${destDB.name}...`);
             let restoredDocs = 0;
 
-            for (const collName of COLLECTIONS) {
+            for (const collName of backupCollections) {
                 const data = backupData[collName];
                 if (data && data.length > 0) {
                     try {
@@ -422,14 +451,20 @@ class UniversalDBManager {
             console.log(`🔗 Nome: ${connection.db.databaseName}`);
             console.log(`\n📋 Collezioni e documenti:`);
 
+            // Discovery dinamico: mostra TUTTE le collezioni effettivamente presenti.
+            const collections = await listAllCollectionNames(connection);
+            if (collections.length === 0) {
+                console.log('  (nessuna collezione)');
+            }
+
             let totalDocs = 0;
-            for (const collName of COLLECTIONS) {
+            for (const collName of collections) {
                 try {
                     const count = await connection.db.collection(collName).countDocuments();
                     totalDocs += count;
                     console.log(`  📄 ${collName}: ${count} documenti`);
                 } catch (error) {
-                    console.log(`  ❌ ${collName}: Collezione non trovata`);
+                    console.log(`  ❌ ${collName}: ${error.message}`);
                 }
             }
 

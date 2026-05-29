@@ -1,5 +1,5 @@
 /**
- * BachecaAwards — Sezione "Bacheca Trofei" per la pagina Team.
+ * BachecaAwards — Sezione "Bacheca Awards" per la pagina Team.
  *
  * Mostra tutti i trofei della squadra in una griglia responsive di
  * `AwardCardThumbnail`, con filtri per tipo e per anno. Click su una thumb
@@ -51,11 +51,11 @@ type FilterType = 'ALL' | 'MATCH_RECAP' | 'MONTHLY_MVP' | 'SEASONAL';
 export interface BachecaAwardsProps {
     awards: AwardItem[];
     loading?: boolean;
-    /** Titolo della sezione (default "Bacheca Trofei"). */
+    /** Titolo della sezione (default "Bacheca Awards"). */
     title?: string;
     /** Dimensione delle thumbnail (default 'medium'). 'small' = più compatte, ideali su mobile. */
     size?: 'small' | 'medium';
-    /** Quanti trofei per pagina (default 8). Se 0 o omesso ≥ items.length → niente paginazione. */
+    /** Quanti Awards per pagina (default 8). Se 0 o omesso ≥ items.length → niente paginazione. */
     pageSize?: number;
     /** Chiamato quando l'utente apre la modale di un award (per marcare "visto"). */
     onMarkSeen?: (awardId: string) => void;
@@ -84,7 +84,7 @@ function matchesTypeFilter(award: AwardItem, filter: FilterType): boolean {
 export function BachecaAwards({
     awards,
     loading = false,
-    title = 'Bacheca Trofei',
+    title = 'Bacheca Awards',
     size = 'medium',
     pageSize = 8,
     onMarkSeen,
@@ -139,7 +139,7 @@ export function BachecaAwards({
                         <p className="text-xs text-muted-foreground">
                             {loading
                                 ? 'Caricamento…'
-                                : `${awards.length} trofei totali${newCount > 0 ? ` · ${newCount} nuovi` : ''}`}
+                                : `${awards.length} Awards totali${newCount > 0 ? ` · ${newCount} nuovi` : ''}`}
                         </p>
                     </div>
                 </div>

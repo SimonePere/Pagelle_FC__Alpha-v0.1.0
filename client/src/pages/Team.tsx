@@ -20,7 +20,9 @@ import { useActiveTeamId } from '@/hooks/useActiveTeamId';
 import { isTeamAdmin } from '@/utils/permissions';
 import EditTeamMemberModal, { type EditableMember } from '@/components/EditTeamMemberModal';
 import { RoleBadge, deriveMemberRole } from '@/components/RoleBadge';
-import BachecaAwards, { MOCK_BACHECA_AWARDS } from '@/components/BachecaAwards';
+// [RIMOSSO] BachecaAwards: la sezione awards nella pagina Team è stata disattivata.
+// Gli awards del team sono ora consultabili solo dalla pagina dedicata /awards.
+// import BachecaAwards, { MOCK_BACHECA_AWARDS } from '@/components/BachecaAwards';
 import PaginatedSwiper from '@/components/PaginatedSwiper';
 
 export default function TeamPage() {
@@ -381,22 +383,7 @@ export default function TeamPage() {
             </CardContent>
           </Card>
 
-          {/* Bacheca Trofei — ⚠️ MOCK DATA, da collegare al backend awards */}
-          <Card className="bg-card/80 backdrop-blur-sm border-border shadow-card">
-            <CardContent className="pt-6">
-              <BachecaAwards
-                awards={MOCK_BACHECA_AWARDS}
-                size="small"
-                pageSize={4}
-                onMarkSeen={(id) => console.log('[mock] mark seen:', id)}
-                onShareWhatsApp={(a) => window.open(`https://wa.me/?text=${encodeURIComponent(a.shareUrl)}`, '_blank')}
-                onShareInstagram={(a) => console.log('[mock] share IG:', a.cardTitle)}
-                onShareTelegram={(a) => window.open(`https://t.me/share/url?url=${encodeURIComponent(a.shareUrl)}`, '_blank')}
-                onCopyLink={(a) => navigator.clipboard?.writeText(a.shareUrl)}
-                onDownloadImage={(a) => console.log('[mock] download:', a.cardTitle)}
-              />
-            </CardContent>
-          </Card>
+          {/* [RIMOSSA] Bacheca Awards in pagina Team: la feature è ora dedicata alla pagina /awards. */}
 
           {/* Codice invito */}
           <Card className="bg-card/80 backdrop-blur-sm border-border shadow-card">

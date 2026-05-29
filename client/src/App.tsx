@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Suspense, lazy } from "react";
 import { ProtectedRouteRedux } from "./components/ProtectedRouteRedux";
+import AwardRevealManager from "@/components/AwardRevealManager";
 import { Skeleton } from "@/components/ui/skeleton";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -17,8 +18,10 @@ import JoinByInvite from "./pages/JoinByInvite";
 
 // 🚀 STEP 1: Code splitting per pagine meno critiche
 const TestVote = lazy(() => import("./pages/TestPage.tsx")); // Pagina di test con mock, non critica per il primo accesso
-const TestAwards = lazy(() => import("./pages/TestAwards.tsx")); // Anteprima componenti Pagelle FC Awards (TEMP)
+// const TestAwards = lazy(() => import("./pages/TestAwards.tsx")); // [DISABILITATA] Anteprima componenti Pagelle FC Awards — sostituita dalla pagina /awards in produzione
+const Awards = lazy(() => import("./pages/Awards.tsx")); // Bacheca Awards del team attivo (protetta)
 const RenderCard = lazy(() => import("./pages/RenderCard.tsx")); // Pagina render-only per Puppeteer (server screenshot)
+const PublicCard = lazy(() => import("./pages/PublicCard.tsx")); // Pagina pubblica /c/:cardId (no auth, target di QR/share)
 
 // 🚀 STEP 2: Code splitting per pagine medie
 const Profile = lazy(() => import("./pages/Profile"));
@@ -196,11 +199,14 @@ const App = () => (
           {/* Route pubblica per registrazione guest (accessibile anche da loggati-guest) */}
           <Route path="/promote-guest" element={<Suspense fallback={<PageSkeleton />}><PromoteGuest /></Suspense>} />
 
-          {/* Anteprima Pagelle FC Awards — TEMP, pubblica per validazione design */}
-          <Route path="/test-awards" element={<Suspense fallback={<PageSkeleton />}><TestAwards /></Suspense>} />
+          {/* [DISABILITATA] Anteprima Pagelle FC Awards — sostituita da /awards (pagina dedicata in produzione) */}
+          {/* <Route path="/test-awards" element={<Suspense fallback={<PageSkeleton />}><TestAwards /></Suspense>} /> */}
 
           {/* Render-only per Puppeteer screenshot (NO chrome, NO auth) — consumata dal backend */}
           <Route path="/render-card" element={<Suspense fallback={null}><RenderCard /></Suspense>} />
+
+          {/* Pagina pubblica card (target di QR + link condivisi) — NO auth */}
+          <Route path="/c/:cardId" element={<Suspense fallback={<PageSkeleton />}><PublicCard /></Suspense>} />
 
           {/* Route protette con Redux */}
           <Route path="/" element={<ProtectedRouteRedux><Home /></ProtectedRouteRedux>} />
@@ -216,6 +222,16 @@ const App = () => (
           />
           <Route path="/vote" element={<ProtectedRouteRedux><VotePage /></ProtectedRouteRedux>} />
           <Route path="/match/:matchId" element={<ProtectedRouteRedux><MatchDetails /></ProtectedRouteRedux>} />
+          <Route
+            path="/awards"
+            element={
+              <Suspense fallback={<PageSkeleton />}>
+                <ProtectedRouteRedux>
+                  <Awards />
+                </ProtectedRouteRedux>
+              </Suspense>
+            }
+          />
           <Route
             path="/profile"
             element={
@@ -291,6 +307,8 @@ const App = () => (
           />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        {/* Overlay cerimoniale per nuovi trofei (mount globale, gestisce da sé visibilità) */}
+        <AwardRevealManager />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

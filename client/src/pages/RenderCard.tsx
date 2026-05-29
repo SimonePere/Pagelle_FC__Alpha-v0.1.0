@@ -20,8 +20,10 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import PodiumCard, { type PodiumCardProps } from '@/components/PodiumCard';
-import HeroCard, { type HeroCardProps, type HeroCardType } from '@/components/HeroCard';
+import PodiumCard from '@/components/PodiumCard';
+import HeroCard from '@/components/HeroCard';
+import { mapAwardToCard, type CardData } from '@/utils/awardMapping';
+import type { AwardType } from '@/types/award';
 
 // Dichiarazione type per la flag di ready (consumata da Puppeteer)
 declare global {
@@ -30,10 +32,6 @@ declare global {
         __RENDER_ERROR__?: string;
     }
 }
-
-type CardData =
-    | { kind: 'PODIUM'; props: PodiumCardProps }
-    | { kind: 'HERO'; props: HeroCardProps };
 
 export default function RenderCard() {
     const [params] = useSearchParams();
@@ -55,7 +53,7 @@ export default function RenderCard() {
                     const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
                     const jsonStr = new TextDecoder('utf-8').decode(bytes);
                     const json = JSON.parse(jsonStr);
-                    const card = mapPayloadToCard(json.type, json.payload, json.shareUrl);
+                    const card = mapAwardToCard(json.type as AwardType, json.payload, json.shareUrl);
                     if (!cancelled) setData(card);
                     return;
                 }
@@ -71,7 +69,7 @@ export default function RenderCard() {
                 const body = await res.json();
                 const award = body.award;
                 const shareUrl = `${window.location.origin}/c/${awardId}`;
-                const card = mapPayloadToCard(award.type, award.payload, shareUrl);
+                const card = mapAwardToCard(award.type as AwardType, award.payload, shareUrl);
                 if (!cancelled) setData(card);
             } catch (e) {
                 const msg = e instanceof Error ? e.message : String(e);
@@ -198,99 +196,5 @@ function FitPreview({ data }: { data: CardData }) {
 }
 
 
-// ============================================
-// 🔄 MAPPING: award.payload (server) → props del componente React
-// ============================================
-
-function mapPayloadToCard(type: string, payload: any, shareUrl: string): CardData {
-    if (type === 'MATCH_RECAP') {
-        return {
-            kind: 'PODIUM',
-            props: mapMatchRecap(payload, shareUrl),
-        };
-    }
-    // MONTHLY_MVP / BALLON_DOR / GOLDEN_BOOT → HeroCard
-    return {
-        kind: 'HERO',
-        props: mapHero(type as HeroCardType, payload, shareUrl),
-    };
-}
-
-
-/** Mappa payload MATCH_RECAP → PodiumCardProps */
-function mapMatchRecap(payload: any, shareUrl: string): PodiumCardProps {
-    const podiumArr = (payload.podium || []).slice(0, 3).map((p: any) => ({
-        name: (p.name || '').toUpperCase(),
-        vote: typeof p.avg === 'number' ? p.avg : Number(p.avg) || 0,
-    }));
-
-    // Pad con placeholder se < 3 (difensivo, non dovrebbe accadere)
-    while (podiumArr.length < 3) {
-        podiumArr.push({ name: '—', vote: 0 });
-    }
-
-    // Mappa highlight → formato React component
-    const highlights = (payload.highlights || []).map((h: any) => ({
-        icon: highlightIcon(h.code),
-        titleLine: (h.text?.[0] || '').toUpperCase(),
-        subtitleLine: (h.text?.[1] || '').toUpperCase(),
-        accentColor: highlightAccent(h.code),
-    }));
-
-    // matchDate: il payload ha period.dateFrom (o usa label)
-    const matchDate = payload.period?.dateFrom
-        ? new Date(payload.period.dateFrom)
-        : new Date();
-
-    return {
-        matchDate,
-        podium: podiumArr as PodiumCardProps['podium'],
-        highlights,
-        qrCodeUrl: shareUrl,
-    };
-}
-
-
-/** Mappa payload MONTHLY_MVP / BALLON_DOR / GOLDEN_BOOT → HeroCardProps */
-function mapHero(type: HeroCardType, payload: any, shareUrl: string): HeroCardProps {
-    const hero = payload.hero || {};
-    const stats = (hero.stats || []).slice(0, 4);
-    // Pad a 4 elementi se ne arrivano meno
-    while (stats.length < 4) {
-        stats.push({ value: '—', label: '—' });
-    }
-
-    return {
-        type,
-        periodLabel: (payload.period?.label || '').toUpperCase(),
-        hero: {
-            name: (hero.name || '').toUpperCase(),
-            avatarUrl: hero.avatar || undefined,
-            mainValue: String(hero.mainValue ?? ''),
-            mainLabel: hero.mainLabel || '',
-            stats: stats as HeroCardProps['hero']['stats'],
-        },
-        qrCodeUrl: shareUrl,
-    };
-}
-
-
-function highlightIcon(code: string): string {
-    switch (code) {
-        case 'STREAK_MVP': return '🔥';
-        case 'BEST_BY_MILES': return '💪';
-        case 'UNANIMOUS_MVP': return '🎯';
-        case 'GOAL_MACHINE': return '⚽';
-        default: return '⭐';
-    }
-}
-
-function highlightAccent(code: string): 'gold' | 'orange' | 'green' | 'purple' | 'blue' {
-    switch (code) {
-        case 'STREAK_MVP': return 'orange';
-        case 'BEST_BY_MILES': return 'gold';
-        case 'UNANIMOUS_MVP': return 'purple';
-        case 'GOAL_MACHINE': return 'green';
-        default: return 'blue';
-    }
-}
+// Mapping payload → CardData è stato spostato in `@/utils/awardMapping`
+// (condiviso con PublicCard e AwardsBacheca per evitare duplicazione).

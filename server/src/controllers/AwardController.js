@@ -12,6 +12,7 @@
  * - POST   /api/v1/awards/:awardId/viewed       → Marca award come vista dall'utente
  * - POST   /api/v1/awards/:awardId/share        → Incrementa contatore share per canale
  * - GET    /api/v1/awards/public/:awardId       → Pagina pubblica card (nessuna auth, tracking visita)
+ * - GET    /api/v1/awards/public/:awardId/download → Download PNG (Content-Disposition attachment)
  */
 
 const { AwardRepository, TeamRepository } = require('../repositories');
@@ -259,11 +260,66 @@ const getPublicAward = async (req, res, next) => {
 };
 
 
+// ============================================
+// ⬇️  GET /api/v1/awards/public/:awardId/download
+// ============================================
+/**
+ * Stream del PNG della card con Content-Disposition: attachment.
+ * Pubblico (la card stessa è già esposta via /c/:id e /api/v1/awards/public/:id).
+ *
+ * Query: ?variant=square|story|thumb (default: square — 1080x1080, ideale IG/WA)
+ *
+ * Vantaggio rispetto al link diretto a /awards-static:
+ *  - Funziona da mobile LAN (passa per la stessa base URL dell'API client → reachable)
+ *  - Garantisce il download nativo del browser (Content-Disposition attachment)
+ *  - Evita problemi CORS in fetch+blob
+ */
+const path = require('path');
+const fs = require('fs');
+
+const downloadAwardImage = async (req, res, next) => {
+    try {
+        const { awardId } = req.params;
+        const variant = ['square', 'story', 'thumb'].includes(req.query.variant) ? req.query.variant : 'square';
+
+        const award = await awardRepository.findById(awardId);
+        if (!award) {
+            return res.status(404).json({ error: 'Award non trovato' });
+        }
+        if (award.status !== 'READY') {
+            return res.status(409).json({ error: 'Card ancora in generazione', status: award.status });
+        }
+
+        // Le immagini locali stanno in server/public/awards/<id>/<variant>.png.
+        // In produzione (Cloudinary) i file non sono su disco → in quel caso
+        // facciamo redirect 302 all'URL Cloudinary (che fa il download nativo).
+        const localPath = path.join(__dirname, '..', '..', 'public', 'awards', String(awardId), `${variant}.png`);
+        if (fs.existsSync(localPath)) {
+            const filename = `pagelle-fc-${awardId}-${variant}.png`;
+            return res.download(localPath, filename);
+        }
+
+        // Fallback Cloudinary / URL remoto
+        const remoteUrl =
+            variant === 'story' ? award.imageUrl :
+                variant === 'thumb' ? award.imageThumbUrl :
+                    award.imageSquareUrl;
+        if (!remoteUrl) {
+            return res.status(404).json({ error: 'Variant non disponibile' });
+        }
+        return res.redirect(302, remoteUrl);
+    } catch (error) {
+        next(error);
+    }
+};
+
+
 module.exports = {
     getTeamAwards,
     getPendingAwards,
     getAwardById,
     markViewed,
     trackShare,
-    getPublicAward
+    getPublicAward,
+    downloadAwardImage
 };
