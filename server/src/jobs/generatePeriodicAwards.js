@@ -201,6 +201,22 @@ function startPeriodicAwardsCron() {
         );
     }, { timezone: 'Europe/Rome' });
 
+    // ────────────────────────────────────────────────────────────────────
+    // 🚧 TEMP DEBUG (1 GIUGNO 2026): verifica che lo scheduler MONTHLY
+    //    funzioni davvero. 3 tick: 09:42, 09:45, 09:50 ora di Roma, SOLO oggi.
+    //    RIMUOVERE dopo la verifica.
+    // ────────────────────────────────────────────────────────────────────
+    const TEMP_TICKS = ['42 9 1 6 *', '45 9 1 6 *', '50 9 1 6 *'];
+    for (const expr of TEMP_TICKS) {
+        cron.schedule(expr, () => {
+            console.log(`\n🧪 [CRON monthly-mvp TEMP TEST] Tick "${expr}" attivato`);
+            runMonthlyMVPGeneration().catch(err =>
+                console.error('❌ [CRON monthly-mvp TEMP TEST] Unhandled:', err)
+            );
+        }, { timezone: 'Europe/Rome' });
+    }
+    console.log(`🧪 [CRON awards] TEMP TEST registrati: ${TEMP_TICKS.join(' | ')} (Europe/Rome) — RIMUOVERE dopo la verifica.`);
+
     console.log('🏆 [CRON awards] Scheduler avviato — monthly=09:00 1°mese, season=10:00 daily (Europe/Rome). Ballon=+1g da seasonEndDate, Golden=+8g.');
 }
 
