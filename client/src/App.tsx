@@ -13,7 +13,7 @@ import VotePage from "./pages/Vote.tsx";
 import MatchDetails from "./pages/MatchDetails";
 import NotFound from "./pages/NotFound";
 import TeamPage from "./pages/Team.tsx";
-import AdminDashboard from "./pages/AdminDashboard.tsx";
+import GodDashboard from "./pages/GodDashboard.tsx";
 import JoinByInvite from "./pages/JoinByInvite";
 
 // 🚀 STEP 1: Code splitting per pagine meno critiche
@@ -283,7 +283,7 @@ const App = () => (
             }
           />
 
-          <Route
+          {/* <Route
             path="/test"
             element={
               <Suspense fallback={<PageSkeleton />}>
@@ -292,15 +292,15 @@ const App = () => (
                 </ProtectedRouteRedux>
               </Suspense>
             }
-          />
+          /> */}
           {/* Successivamente andrà messa ad accesso riservato e 
           VISIBILE SOLAMENTE A ME. CREATORE APP */}
           <Route
-            path="/admin-dashboard"
+            path="/god-dashboard"
             element={
               <Suspense fallback={<PageSkeleton />}>
                 <ProtectedRouteRedux>
-                  <AdminDashboard />
+                  <GodDashboard />
                 </ProtectedRouteRedux>
               </Suspense>
             }

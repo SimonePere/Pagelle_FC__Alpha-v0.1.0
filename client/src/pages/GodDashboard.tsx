@@ -56,7 +56,7 @@ const Kpi = ({ icon: Icon, label, value, hint, accent }: KpiProps) => (
   </motion.div>
 );
 
-export default function AdminDashboard() {
+export default function GodDashboard() {
   const { user } = useSelector((state: RootState) => state.auth);
   const navigate = useNavigate();
 
@@ -258,7 +258,7 @@ export default function AdminDashboard() {
             </div>
             <div className="min-w-0">
               <h1 className="font-display text-2xl sm:text-4xl font-bold text-foreground leading-tight">
-                Admin Dashboard
+                God Dashboard
               </h1>
               <p className="text-sm text-muted-foreground">Panoramica generale dell'app</p>
             </div>
