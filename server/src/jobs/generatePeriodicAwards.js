@@ -201,24 +201,85 @@ function startPeriodicAwardsCron() {
         );
     }, { timezone: 'Europe/Rome' });
 
-    // ────────────────────────────────────────────────────────────────────
-    // 🚧 TEMP DEBUG (1 GIUGNO 2026): verifica che lo scheduler MONTHLY
-    //    funzioni davvero. 3 tick: 09:42, 09:45, 09:50 ora di Roma, SOLO oggi.
-    //    RIMUOVERE dopo la verifica.
-    // ────────────────────────────────────────────────────────────────────
-    const TEMP_TICKS = ['42 9 1 6 *', '45 9 1 6 *', '50 9 1 6 *'];
-    for (const expr of TEMP_TICKS) {
-        cron.schedule(expr, () => {
-            console.log(`\n🧪 [CRON monthly-mvp TEMP TEST] Tick "${expr}" attivato`);
-            runMonthlyMVPGeneration().catch(err =>
-                console.error('❌ [CRON monthly-mvp TEMP TEST] Unhandled:', err)
-            );
-        }, { timezone: 'Europe/Rome' });
-    }
-    console.log(`🧪 [CRON awards] TEMP TEST registrati: ${TEMP_TICKS.join(' | ')} (Europe/Rome) — RIMUOVERE dopo la verifica.`);
-
     console.log('🏆 [CRON awards] Scheduler avviato — monthly=09:00 1°mese, season=10:00 daily (Europe/Rome). Ballon=+1g da seasonEndDate, Golden=+8g.');
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * 📒 NOTE / DEBITI TECNICI APERTI sul sottosistema Awards periodici
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * Contesto: il 1° giugno 2026 il cron MONTHLY_MVP NON ha generato nulla in
+ * produzione, pur funzionando perfettamente nei test con script (trigger-award.js).
+ * Debug del giorno: lo scheduler era partito regolarmente, il job era stato
+ * eseguito alle 09:00 Rome, ma `Team.find({ awardsEnabled: true })` restituiva
+ * Teams=0 → zero iterazioni, zero award creati.
+ *
+ * ── CAUSA ROOT ─────────────────────────────────────────────────────────────
+ * Sui documenti `teams` in PROD, il campo `awardsEnabled` era salvato come
+ * STRINGA `"true"` invece che come BOOLEAN `true`. Stesso problema (su almeno
+ * un team) per `seasonEndDate`, salvata come stringa ISO invece che come Date.
+ * Mongo è schemaless e Mongoose non riconverte i tipi su documenti già
+ * esistenti; un filtro `{ awardsEnabled: true }` matcha SOLO il boolean true,
+ * non la stringa "true" → no match → no award.
+ *
+ * Probabile origine: patch manuale dei documenti via Compass / script senza
+ * cast dei tipi (es. inserimento di `"true"` con virgolette).
+ *
+ * Il test con `scripts/trigger-award.js --team=<id>` non si era accorto del
+ * problema perché bypassa il filtro `awardsEnabled` (usa `Team.findById` diretto).
+ *
+ * ── FIX ONE-SHOT APPLICATO IN DB (PROD) ────────────────────────────────────
+ *   db.teams.updateMany(
+ *     { awardsEnabled: { $type: "string" } },
+ *     [ { $set: { awardsEnabled: { $eq: ["$awardsEnabled", "true"] } } } ]
+ *   )
+ *   db.teams.updateMany(
+ *     { seasonEndDate: { $type: "string" } },
+ *     [ { $set: { seasonEndDate: { $toDate: "$seasonEndDate" } } } ]
+ *   )
+ *
+ * ── DEBITI TECNICI / HARDENING DA PIANIFICARE ──────────────────────────────
+ *
+ *  1) RESILIENZA DEL FILTRO QUERY (codice qui in `runMonthlyMVPGeneration` e
+ *     `runSeasonAwardsGeneration`):
+ *     Valutare di usare `{ awardsEnabled: { $ne: false } }` invece di
+ *     `{ awardsEnabled: true }`. Semantica "feature attiva di default, esclude
+ *     solo opt-out esplicito" — tollera valori legacy (stringa, null, undefined).
+ *
+ *  2) NORMALIZZAZIONE TIPI ALLA SCRITTURA:
+ *     Hook pre-save su Team che forzi `awardsEnabled` a Boolean(...) e
+ *     `seasonEndDate` a `new Date(...)`. Evita che future patch manuali o
+ *     payload API mal formati ri-introducano stringhe.
+ *
+ *  3) CATCH-UP ALL'AVVIO DEL PROCESSO (alto valore, basso rischio):
+ *     `node-cron` non ha persistenza né recupero dei tick mancati. Se il
+ *     processo è giù alle 09:00 del 1° del mese (deploy, restart, crash),
+ *     il MONTHLY_MVP del mese precedente NON viene più generato fino al mese
+ *     successivo. Soluzione: all'avvio del server, se siamo nei primi N
+ *     giorni del mese (es. 1-7), per ogni team awardsEnabled controllare se
+ *     esiste già l'Award `(team, refId=YYYY-MM mese precedente, MONTHLY_MVP)`;
+ *     se no, eseguire `createMonthlyMVPAward` subito. L'anti-duplicato già
+ *     presente nel service (`findByTeamAndRef`) rende l'operazione idempotente.
+ *     Stesso ragionamento estendibile a BALLON_DOR / GOLDEN_BOOT.
+ *
+ *  4) MIGRAZIONE / BACKFILL ESISTENTI:
+ *     Script `scripts/migrate-awards-fields.js` riusabile (esegue le 2
+ *     updateMany sopra) da rilanciare se in futuro emergono altri doc con
+ *     tipi sbagliati. Per ora applicato a mano in PROD il 1/6/2026.
+ *
+ *  5) OSSERVABILITÀ:
+ *     Loggare all'avvio dello scheduler il count di team con
+ *     `awardsEnabled === true` (sanity-check immediato). Se appare "Teams
+ *     awards-enabled in DB: 0", è chiaro a colpo d'occhio che c'è un
+ *     problema dati prima del primo tick.
+ *
+ *  6) TEST E2E PERIODIC AWARDS:
+ *     I test attuali usano `trigger-award.js` (bypass filtro). Aggiungere
+ *     un test che invoca direttamente `runMonthlyMVPGeneration()` su un DB
+ *     di test con team che hanno `awardsEnabled` rispettivamente true / false
+ *     / "true" (stringa) / mancante, per coprire la regressione di oggi.
+ * ════════════════════════════════════════════════════════════════════════════
+ */
 
 module.exports = {
     startPeriodicAwardsCron,
