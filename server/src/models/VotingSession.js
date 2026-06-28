@@ -43,6 +43,14 @@ const VotingSessionSchema = new mongoose.Schema({
     index: true
   },
 
+  // === STAGIONE (denormalizzato, Fase 2) ===
+  // Propagato dal Match collegato a write-time. Optional finché il backfill non completa.
+  seasonId: {
+    type: String,
+    index: true,
+    default: null
+  },
+
 
 
   // === CONFIGURAZIONE PARTECIPANTI ===
@@ -221,6 +229,9 @@ const VotingSessionSchema = new mongoose.Schema({
     { deadline: 1, status: 1 }
   ]
 });
+
+// Indice season-aware
+VotingSessionSchema.index({ teamId: 1, seasonId: 1, status: 1 });
 
 // === METODI VIRTUALI ===
 

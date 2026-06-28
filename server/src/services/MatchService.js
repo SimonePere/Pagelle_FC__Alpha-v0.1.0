@@ -9,6 +9,7 @@ const {
 } = require('../repositories');
 
 const NewsService = require('./NewsService');
+const SeasonService = require('./SeasonService');
 
 const AppError = require('../utils/AppError');
 const CacheService = require('./CacheService'); // Cache invalidation per match updates
@@ -85,6 +86,7 @@ class MatchService {
         this.votingSessionRepository = new VotingSessionRepository();
         this.userRepository = new UserRepository();
         this.newsService = new NewsService();
+        this.seasonService = new SeasonService();
     }
 
     /**
@@ -108,6 +110,7 @@ class MatchService {
                 field: field,
                 playersCount: playersCount,
                 date: new Date(date),
+                seasonId: this.seasonService.resolveSeasonId(date),
                 notes: notes || '',
                 teamMemberIds: teamMemberIds || [userId],
                 status: 'active',
@@ -475,6 +478,7 @@ class MatchService {
                 type: 'match_rating',
                 targetId: match._id,
                 teamId: match.teamId,
+                seasonId: this.seasonService.resolveSeasonId(match.date),
                 title: `⚽ Vota la partita del ${new Date(match.date).toLocaleDateString('it-IT')}`,
                 description: `Valuta le prestazioni dei tuoi compagni nella partita ${match.field ? `al ${match.field}` : ''}`,
                 eligibleVoters: eligibleVoters,

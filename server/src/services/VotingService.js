@@ -9,6 +9,7 @@ const {
 } = require('../repositories');
 
 const NewsService = require('./NewsService');
+const SeasonService = require('./SeasonService');
 
 /**
  * VotingService - Business Logic Layer per Gestione Votazioni
@@ -39,6 +40,7 @@ class VotingService {
         this.userRepository = new UserRepository();
         this.playerStatsRepository = new PlayerLeaderboardStatsRepository();
         this.newsService = new NewsService();
+        this.seasonService = new SeasonService();
     }
 
     // ====================
@@ -140,6 +142,7 @@ class VotingService {
             type: 'match_rating',
             targetId: match._id,
             teamId: match.teamId,
+            seasonId: this.seasonService.resolveSeasonId(match.date),
             createdBy: userData.id,
             title: title || `Vota la partita vs ${match.opponent}`,
             description: description || `Valuta le prestazioni dei tuoi compagni nella partita del ${match.date ? new Date(match.date).toLocaleDateString('it-IT') : 'oggi'}`,
@@ -911,6 +914,7 @@ class VotingService {
         // 5. Salva risultati ufficiali con struttura corretta VoteResult
         const voteResultData = {
             votingSessionId: sessionId,
+            seasonId: session.seasonId || this.seasonService.resolveSeasonId(session.startedAt),
             matchRatingResults: new Map(),
             sessionMetadata: {
                 totalVoters: submissions.length,

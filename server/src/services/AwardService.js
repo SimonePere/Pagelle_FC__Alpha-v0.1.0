@@ -7,6 +7,8 @@ const {
     MatchRepository,
 } = require('../repositories');
 
+const SeasonService = require('./SeasonService');
+
 // Renderer: converte Award PENDING → PNG → upload → READY
 // Lazy-require per evitare errori circolari e ritardare il caricamento dei font
 let _renderAndUpload = null;
@@ -76,6 +78,7 @@ class AwardService {
         this.AwardRepository = new AwardRepository();
         this.UserRepository = new UserRepository();
         this.MatchRepository = new MatchRepository();
+        this.seasonService = new SeasonService();
         // this.newsService = new NewsService(); TODO: integrare NewsService per creare notizie su MVP, Recap, ecc.
     }
 
@@ -212,6 +215,7 @@ class AwardService {
         const matchDoc = await this.MatchRepository.findById(matchId);
         const matchDate = matchDoc?.date || votingSession.createdAt || new Date();
         const payload = {
+            seasonId: this.seasonService.resolveSeasonId(matchDate),
             period: {
                 label: this._formatItalianDate(matchDate),     // "16 Maggio 2026"
                 dateFrom: matchDate,
@@ -231,6 +235,7 @@ class AwardService {
             teamId: votingSession.teamId,
             type: 'MATCH_RECAP',
             refId: String(matchId),
+            seasonId: this.seasonService.resolveSeasonId(matchDate),
             status: 'PENDING',
             generatedAt: new Date(),
             payload
@@ -555,6 +560,7 @@ class AwardService {
 
         // 7. Costruisci payload Hero
         const payload = {
+            seasonId: this.seasonService.resolveSeasonId(dateFrom),
             period: {
                 label: monthLabel,                                              // "Maggio 2026"
                 dateFrom,
@@ -584,6 +590,7 @@ class AwardService {
             teamId,
             type: 'MONTHLY_MVP',
             refId: month,
+            seasonId: this.seasonService.resolveSeasonId(dateFrom),
             status: 'PENDING',
             generatedAt: new Date(),
             payload
@@ -709,6 +716,7 @@ class AwardService {
 
         // 6. Payload
         const payload = {
+            seasonId: season.seasonId,
             period: {
                 label: seasonLabel,
                 dateFrom: season.seasonStart,
@@ -725,6 +733,7 @@ class AwardService {
             teamId,
             type: opts.type,
             refId,
+            seasonId: season.seasonId,
             status: 'PENDING',
             generatedAt: new Date(),
             payload

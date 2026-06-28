@@ -23,6 +23,14 @@ const VoteResultSchema = new mongoose.Schema({
     index: true
   },
 
+  // === STAGIONE (denormalizzato, Fase 2) ===
+  // Propagato via VotingSession -> Match a write-time / backfill. Optional in Fase 2.
+  seasonId: {
+    type: String,
+    index: true,
+    default: null
+  },
+
   // === RISULTATI MATCH RATING MULTI-PLAYER ===
   matchRatingResults: {
     type: Map,

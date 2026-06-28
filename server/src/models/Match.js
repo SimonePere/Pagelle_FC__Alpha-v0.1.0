@@ -53,6 +53,15 @@ const matchSchema = new mongoose.Schema({
     default: 'draft'
   },
 
+  // === STAGIONE (denormalizzato, Fase 2) ===
+  // Calcolato a write-time da SeasonService.resolveSeasonId(date). Optional finché
+  // il backfill non ha taggato tutto lo storico (poi diventerà required in fase contract).
+  seasonId: {
+    type: String,
+    index: true,
+    default: null
+  },
+
   // === RISULTATI FINALI (calcolati dai VotingSession) ===
   finalResults: {
     // Questi campi verranno popolati dai risultati delle VotingSession
@@ -111,6 +120,7 @@ matchSchema.virtual('isCompleted').get(function () {
 
 // === INDEXING ===
 matchSchema.index({ teamId: 1, date: -1 });
+matchSchema.index({ teamId: 1, seasonId: 1, date: -1 });   // query season-aware
 matchSchema.index({ status: 1 });
 matchSchema.index({ createdBy: 1 });
 matchSchema.index({ teamMemberIds: 1 });
