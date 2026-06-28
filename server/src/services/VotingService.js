@@ -1010,6 +1010,23 @@ class VotingService {
         // console.log('📊 Giocatori elaborati:', Object.keys(finalResults).length);
         // console.log('🗳️ Votanti totali:', submissions.length);
 
+        // 8-bis. 📅 SEASON STATS HOOK — ricalcola le statistiche stagionali del team.
+        //    Idempotente (full recompute della stagione). La sessione è già 'completed'
+        //    in DB a questo punto, quindi viene inclusa nell'aggregazione.
+        //    Guardato da try/catch: il completamento non deve dipendere da questo step.
+        try {
+            const seasonId = voteResultData.seasonId;
+            if (session.teamId && seasonId) {
+                const PlayerSeasonStatsService = require('./PlayerSeasonStatsService');
+                const seasonStatsService = new PlayerSeasonStatsService();
+                await seasonStatsService.recompute(session.teamId.toString(), seasonId);
+                console.log(`📅 [SeasonStats] Ricalcolo completato team=${session.teamId} season=${seasonId}`);
+            }
+        } catch (seasonStatsError) {
+            console.error('⚠️ [SeasonStats] Errore ricalcolo statistiche stagionali:', seasonStatsError.message);
+            // Non blocchiamo il flusso principale.
+        }
+
         // 9. Leggi risultati salvati per il return
         const savedResults = finalResults; // Ora abbiamo già i risultati aggregati
 
