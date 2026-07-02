@@ -21,6 +21,7 @@ import { OnboardingTutorial } from '@/components/OnboardingTutorial';
 import useHomeDashboard from '@/hooks/useHomeDashboard';
 import { WeatherWidget } from '@/components/WeatherWidget';
 import { isAdmin, isTeamAdmin } from '@/utils/permissions';
+import SeasonSelector from '@/components/SeasonSelector';
 
 // Types now handled by useHomeDashboard hook
 type LeaderboardType = 'rating' | 'goals' | 'assists' | 'playercard' | 'stats-per-match';
@@ -71,7 +72,11 @@ const Home = () => {
     error,
     setActiveLeaderboard,
     handleOnboardingComplete,
-    loadLeaderboard
+    loadLeaderboard,
+    seasons,
+    selectedSeason,
+    setSelectedSeason,
+    showSelector,
   } = useHomeDashboard();
 
   const handleTabChange = (newTab: LeaderboardType) => {
@@ -85,7 +90,7 @@ const Home = () => {
   const getLeaderboardTitle = (type: LeaderboardType) => {
     switch (type) {
       case 'rating':
-        return 'Classifica Generale';
+        return 'Classifica';
       case 'goals':
         return 'Marcatori';
       case 'assists':
@@ -93,9 +98,21 @@ const Home = () => {
       case 'playercard':
         return 'Player Card';
       case 'stats-per-match':
-        return 'Media Gol-Assist per Partita';
+        return 'Gol-Assist / Partita';
       default:
-        return 'Classifica Generale';
+        return 'Classifica';
+    }
+  };
+
+  const getLeaderboardIcon = (type: LeaderboardType) => {
+    const cls = 'w-5 h-5 text-primary';
+    switch (type) {
+      case 'rating': return <BarChart3 className={cls} />;
+      case 'goals': return <Goal className={cls} />;
+      case 'assists': return <Hand className={cls} />;
+      case 'playercard': return <Star className={cls} />;
+      case 'stats-per-match': return <TrendingUp className={cls} />;
+      default: return <BarChart3 className={cls} />;
     }
   };
 
@@ -427,11 +444,24 @@ const Home = () => {
           >
             <Card className="bg-card/80 backdrop-blur-sm border-border shadow-card">
               <CardHeader className="border-b border-border bg-gradient-to-r from-primary/10 to-accent/10">
-                <CardTitle className="flex items-center gap-3 font-display text-3xl">
-                  <Trophy className="w-8 h-8 text-primary animate-pulse" />
+                {/* Riga 1: icona tab-specifica + selettore stagione — sempre su una riga */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {getLeaderboardIcon(activeLeaderboard)}
+                  </div>
+                  <SeasonSelector
+                    seasons={seasons}
+                    selectedSeason={selectedSeason}
+                    onSeasonChange={setSelectedSeason}
+                    showSelector={showSelector}
+
+                  />
+                </div>
+                {/* Riga 2: titolo grande libero da vincoli di spazio */}
+                <CardTitle className="font-display text-3xl leading-tight mt-2">
                   {getLeaderboardTitle(activeLeaderboard)}
                 </CardTitle>
-                <p className="text-muted-foreground text-sm mt-1">
+                <p className="hidden md:block text-muted-foreground text-sm mt-1">
                   {getLeaderboardSubtitle(activeLeaderboard)}
                 </p>
               </CardHeader>

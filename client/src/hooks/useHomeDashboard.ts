@@ -17,9 +17,11 @@ import { loadEnrichedUserData } from '@/redux/slices/authSlice';
 import { Match } from '@/types/match';
 import { User } from '@/types/api';
 import { PlayerCard } from '@/types/playerCard';
+import { Season } from '@/types/season';
 import { api } from '@/lib/api';
 import useAppData from './useAppData';
 import { useActiveTeamId } from './useActiveTeamId';
+import { useActiveSeason } from './useActiveSeason';
 
 // Types per Home Dashboard
 interface PlayerStats {
@@ -83,6 +85,12 @@ interface UseHomeDashboardReturn {
     loadNewsByPriority: (priority: string) => void;
     loadUrgentNews: () => void;
 
+    // 🗓️ Season selector
+    seasons: Season[];
+    selectedSeason: string;
+    setSelectedSeason: (season: string) => void;
+    showSelector: boolean;
+
     // 🏠 Home-specific actions
     setActiveLeaderboard: (type: LeaderboardType) => void;
     handleOnboardingComplete: () => void;
@@ -93,6 +101,7 @@ export const useHomeDashboard = (): UseHomeDashboardReturn => {
     const { user } = useSelector((state: RootState) => state.auth);
     const dispatch = useDispatch<AppDispatch>();
     const { activeTeamId } = useActiveTeamId();
+    const { seasons, selectedSeason, setSelectedSeason, showSelector } = useActiveSeason();
 
     // 🎯 Base data da useAppData - include NEWS!
     const {
@@ -125,11 +134,14 @@ export const useHomeDashboard = (): UseHomeDashboardReturn => {
         setLeaderboardError(null);
 
         try {
-            // 🆕 Se richiedi stats-per-match, includi il query param ?stat=both
-            let url = `/leaderboards/${teamId}/${type}`;
-            if (type === 'stats-per-match') {
-                url = `${url}?stat=both`;
-            }
+            // Costruisce i query params: season + stat (per stats-per-match)
+            const params = new URLSearchParams();
+            // Legge la stagione corrente al momento della chiamata
+            const season = localStorage.getItem('season_selected') || 'current';
+            params.set('season', season);
+            if (type === 'stats-per-match') params.set('stat', 'both');
+
+            const url = `/leaderboards/${teamId}/${type}?${params.toString()}`;
 
             const response = await api.get(url);
 
@@ -209,12 +221,12 @@ export const useHomeDashboard = (): UseHomeDashboardReturn => {
         }
     }, [user?.id]);
 
-    //  Auto-load leaderboard when activeLeaderboard or team changes
+    // Auto-load leaderboard quando cambia tab, team o stagione selezionata
     useEffect(() => {
         if (activeTeamId) {
             loadLeaderboard(activeLeaderboard, activeTeamId);
         }
-    }, [activeLeaderboard, activeTeamId]);
+    }, [activeLeaderboard, activeTeamId, selectedSeason]);
 
     // 🔗 Combined loading states
     const combinedLoading = {
@@ -257,6 +269,12 @@ export const useHomeDashboard = (): UseHomeDashboardReturn => {
         loadNewsById,
         loadNewsByPriority,
         loadUrgentNews,
+
+        // 🗓️ Season selector
+        seasons,
+        selectedSeason,
+        setSelectedSeason,
+        showSelector,
 
         // 🏠 Home-specific actions
         setActiveLeaderboard,

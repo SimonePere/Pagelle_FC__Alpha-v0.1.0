@@ -9,6 +9,7 @@ const {
 } = require('../repositories');
 
 const NewsService = require('./NewsService');
+const SeasonService = require('./SeasonService');
 
 /**
  * VotingService - Business Logic Layer per Gestione Votazioni
@@ -39,6 +40,7 @@ class VotingService {
         this.userRepository = new UserRepository();
         this.playerStatsRepository = new PlayerLeaderboardStatsRepository();
         this.newsService = new NewsService();
+        this.seasonService = new SeasonService();
     }
 
     // ====================
@@ -140,6 +142,7 @@ class VotingService {
             type: 'match_rating',
             targetId: match._id,
             teamId: match.teamId,
+            seasonId: this.seasonService.resolveSeasonId(match.date),
             createdBy: userData.id,
             title: title || `Vota la partita vs ${match.opponent}`,
             description: description || `Valuta le prestazioni dei tuoi compagni nella partita del ${match.date ? new Date(match.date).toLocaleDateString('it-IT') : 'oggi'}`,
@@ -911,6 +914,7 @@ class VotingService {
         // 5. Salva risultati ufficiali con struttura corretta VoteResult
         const voteResultData = {
             votingSessionId: sessionId,
+            seasonId: session.seasonId || this.seasonService.resolveSeasonId(session.startedAt),
             matchRatingResults: new Map(),
             sessionMetadata: {
                 totalVoters: submissions.length,
@@ -1005,6 +1009,23 @@ class VotingService {
         // console.log('✅ Session completata e risultati salvati');
         // console.log('📊 Giocatori elaborati:', Object.keys(finalResults).length);
         // console.log('🗳️ Votanti totali:', submissions.length);
+
+        // 8-bis. 📅 SEASON STATS HOOK — ricalcola le statistiche stagionali del team.
+        //    Idempotente (full recompute della stagione). La sessione è già 'completed'
+        //    in DB a questo punto, quindi viene inclusa nell'aggregazione.
+        //    Guardato da try/catch: il completamento non deve dipendere da questo step.
+        try {
+            const seasonId = voteResultData.seasonId;
+            if (session.teamId && seasonId) {
+                const PlayerSeasonStatsService = require('./PlayerSeasonStatsService');
+                const seasonStatsService = new PlayerSeasonStatsService();
+                await seasonStatsService.recompute(session.teamId.toString(), seasonId);
+                console.log(`📅 [SeasonStats] Ricalcolo completato team=${session.teamId} season=${seasonId}`);
+            }
+        } catch (seasonStatsError) {
+            console.error('⚠️ [SeasonStats] Errore ricalcolo statistiche stagionali:', seasonStatsError.message);
+            // Non blocchiamo il flusso principale.
+        }
 
         // 9. Leggi risultati salvati per il return
         const savedResults = finalResults; // Ora abbiamo già i risultati aggregati

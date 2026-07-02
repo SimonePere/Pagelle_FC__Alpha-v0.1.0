@@ -27,9 +27,11 @@ export const fetchTeamMatches = createAsyncThunk(
   'matches/fetchTeamMatches',
   async (teamId: string, { rejectWithValue }) => {
     try {
-      // 🔧 SOLUZIONE SEMPLICE: Random parameter per invalidare cache
+      // Legge la stagione selezionata dal localStorage (impostata da SeasonSelector).
+      // Se assente, il backend usa la stagione corrente come default.
+      const season = localStorage.getItem('season_selected') || 'current';
       const randomParam = Math.random().toString(36).substring(7);
-      const response = await api.get(`/matches/team/${teamId}?force=${randomParam}`);
+      const response = await api.get(`/matches/team/${teamId}?season=${season}&force=${randomParam}`);
 
       // Mappiamo ogni match per adattarlo al formato frontend
       const matches = (response.matches || []).map((match: any) => ({

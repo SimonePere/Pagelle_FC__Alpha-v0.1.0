@@ -144,6 +144,8 @@ RIEPILOGO COMPLETO ARCHITETTURA BACKEND - PAGELLE FC.md
 SYSTEM_ARCHITECTURE_GUIDE.md
 AWARDS_FEATURE_TECHNICAL_GUIDE.md
 SEASONALITY_REQUIREMENTS.md
+SEASONALITY_IMPLEMENTATION_PLAN.md
+SEASONALITY_CHANGELOG.md
 
 # =========================== guide per spostare backend su railway ===========================
 # Railway deployment files (local only)

@@ -19,6 +19,16 @@ import {
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import useEnrichedMatches from '@/hooks/useEnrichedMatches';
+import { useActiveSeason } from '@/hooks/useActiveSeason';
+import SeasonSelector from '@/components/SeasonSelector';
+import { useActiveTeamId } from '@/hooks/useActiveTeamId';
+import { fetchTeamMatches } from '@/redux/slices/matchSlice';
+import { AppDispatch } from '@/redux/store/store';
+
+
+
+import { useDispatch } from 'react-redux';
+
 
 
 
@@ -219,6 +229,20 @@ function MatchCard({ match, index, isAbstainedInfoLoading = false }: MatchCardPr
 }
 
 const MatchGrid: React.FC<MatchGridProps> = ({ showStats = true, onCreateMatch }) => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { activeTeamId } = useActiveTeamId();
+  const { seasons, selectedSeason, setSelectedSeason, showSelector } = useActiveSeason();
+
+  // Re-fetch partite al cambio stagione (fetchTeamMatches legge season_selected da localStorage)
+  useEffect(() => {
+    if (!activeTeamId) return;
+    dispatch(fetchTeamMatches(activeTeamId));
+  }, [activeTeamId, selectedSeason, dispatch]);
+
+  const handleSeasonChange = (season: string) => {
+    setSelectedSeason(season);
+  };
+
 
   // 🧪 TEST: Sostituiamo useAppData con useEnrichedMatches
   const { matches, isLoading, abstainedInfoLoading } = useEnrichedMatches();
@@ -301,21 +325,22 @@ const MatchGrid: React.FC<MatchGridProps> = ({ showStats = true, onCreateMatch }
 
           {/* Controlli di filtro e ordinamento */}
           <div className="flex items-center gap-3 p-4 bg-secondary/20 rounded-lg">
-            <div className="flex items-center gap-2">
-              <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger className="w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tutti</SelectItem>
-                  {availableYears.map(year => (
-                    <SelectItem key={year} value={year.toString()}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+
+
+            {/* Selettore stagione — visibile solo se ci sono più stagioni */}
+            {showSelector && (
+              <div className="shrink-0">
+                <SeasonSelector
+                  seasons={seasons}
+                  selectedSeason={selectedSeason}
+                  onSeasonChange={handleSeasonChange}
+                  showSelector={showSelector}
+                  showAllOption
+                />
+              </div>
+            )}
+
+
 
             <div className="flex items-center gap-2">
               <Button

@@ -16,9 +16,11 @@
  */
 
 const { AwardRepository, TeamRepository } = require('../repositories');
+const SeasonService = require('../services/SeasonService');
 
 const awardRepository = new AwardRepository();
 const teamRepository = new TeamRepository();
+const seasonService = new SeasonService();
 
 
 // ============================================
@@ -57,6 +59,13 @@ const getTeamAwards = async (req, res, next) => {
         filters.limit = Math.min(parseInt(req.query.limit) || 20, 50);
         filters.skip = parseInt(req.query.skip) || 0;
 
+        // Filtro stagione (default: stagione corrente)
+        try {
+            filters.seasonId = seasonService.resolveSeasonParam(req.query.season);
+        } catch (seasonErr) {
+            return res.status(400).json({ error: seasonErr.message });
+        }
+
         const awards = await awardRepository.findByTeam(teamId, filters);
 
         res.json({
@@ -65,6 +74,7 @@ const getTeamAwards = async (req, res, next) => {
             filters: {
                 type: filters.type || 'all',
                 status: filters.status || 'all',
+                season: filters.seasonId || 'all',
                 limit: filters.limit,
                 skip: filters.skip
             }

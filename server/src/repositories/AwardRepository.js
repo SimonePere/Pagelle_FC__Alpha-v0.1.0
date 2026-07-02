@@ -47,6 +47,8 @@ class AwardRepository extends BaseRepository {
         const query = { teamId };
         if (filters.type) query.type = filters.type;
         if (filters.status) query.status = filters.status;
+        // Filtro stagione: null significa nessun filtro ("all")
+        if (filters.seasonId) query.seasonId = filters.seasonId;
 
         return this.findAll(query, {
             sort: { generatedAt: -1 },

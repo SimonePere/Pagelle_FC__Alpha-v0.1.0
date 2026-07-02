@@ -1,12 +1,14 @@
 // controllers/LeaderboardController.js
 const LeaderboardService = require('../services/LeaderboardService');
-const CacheService = require("../services/CacheService")
+const CacheService = require("../services/CacheService");
+const SeasonService = require('../services/SeasonService');
+
 /**
  * LEADERBOARD CONTROLLER
- * 
+ *
  * Orchestration-only controller che delega tutta la business logic
  * al LeaderboardService. Gestisce solo HTTP request/response.
- * 
+ *
  * Endpoint supportati:
  * - GET /leaderboard/:teamId/rating
  * - GET /leaderboard/:teamId/goals
@@ -14,32 +16,50 @@ const CacheService = require("../services/CacheService")
  * - GET /leaderboard/:teamId/playercard
  * - GET /leaderboard/:teamId/goals-per-match
  * - GET /leaderboard/:teamId/all
+ *
+ * Parametro opzionale (Fase 4): ?season=YYYY-YY|current|all
+ * Default = stagione corrente. ?season=all → dati lifetime (legacy).
  */
 
-// Initialize service
+// Initialize services
 const leaderboardService = new LeaderboardService();
+const seasonService = new SeasonService();
+
+/**
+ * Helper locale: parsing + validazione del parametro ?season=
+ * Restituisce { seasonId, seasonKey } oppure lancia e risponde 400.
+ */
+function parseSeasonParam(req, res) {
+    try {
+        const seasonId = seasonService.resolveSeasonParam(req.query.season);
+        const seasonKey = seasonId || 'all';
+        return { seasonId, seasonKey };
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+        return null;
+    }
+}
 
 // === CLASSIFICA RATING (+ CACHE) ===
 exports.getRatingLeaderboard = async (req, res, next) => {
     try {
         const { teamId } = req.params;
         const limit = parseInt(req.query.limit) || 10;
+        const parsed = parseSeasonParam(req, res);
+        if (!parsed) return;
+        const { seasonId, seasonKey } = parsed;
 
-        // Cache key specifico per rating leaderboard
-        const cacheKey = `leaderboard:rating:${teamId}:limit${limit}`;
+        const cacheKey = `leaderboard:rating:${teamId}:season:${seasonKey}:limit${limit}`;
 
-        // Try cache first
         const cached = await CacheService.get(cacheKey);
         if (cached) {
-            console.log(`⚡ CLASSIFICA RAPIDA: Rating team ${teamId} servita dalla cache (${limit} posizioni)`);
+            console.log(`⚡ CLASSIFICA RAPIDA: Rating team ${teamId} season=${seasonKey} dalla cache`);
             return res.json({ ...cached, source: 'cache', cached: true });
         }
 
-        // Cache miss - fetch fresh data
-        console.log(`🗄️ CLASSIFICA DA DATABASE: Caricamento Rating team ${teamId} in corso...`);
-        const result = await leaderboardService.getLeaderboard(teamId, 'rating', limit);
+        console.log(`🗄️ CLASSIFICA DA DATABASE: Rating team ${teamId} season=${seasonKey}...`);
+        const result = await leaderboardService.getLeaderboard(teamId, 'rating', limit, seasonId);
 
-        // Cache for 30 minutes
         await CacheService.set(cacheKey, result, 30 * 60, [`team:${teamId}`, 'leaderboard', 'rating']);
 
         res.json({ ...result, source: 'database', cached: false });
@@ -54,17 +74,20 @@ exports.getGoalsLeaderboard = async (req, res, next) => {
     try {
         const { teamId } = req.params;
         const limit = parseInt(req.query.limit) || 10;
+        const parsed = parseSeasonParam(req, res);
+        if (!parsed) return;
+        const { seasonId, seasonKey } = parsed;
 
-        const cacheKey = `leaderboard:goals:${teamId}:limit${limit}`;
+        const cacheKey = `leaderboard:goals:${teamId}:season:${seasonKey}:limit${limit}`;
 
         const cached = await CacheService.get(cacheKey);
         if (cached) {
-            console.log(`⚡ Cache HIT: Goals leaderboard team ${teamId}`);
+            console.log(`⚡ Cache HIT: Goals leaderboard team ${teamId} season=${seasonKey}`);
             return res.json({ ...cached, source: 'cache', cached: true });
         }
 
-        console.log(`🗄️ Cache MISS: Fetching goals leaderboard team ${teamId}`);
-        const result = await leaderboardService.getLeaderboard(teamId, 'goals', limit);
+        console.log(`🗄️ Cache MISS: Fetching goals leaderboard team ${teamId} season=${seasonKey}`);
+        const result = await leaderboardService.getLeaderboard(teamId, 'goals', limit, seasonId);
 
         await CacheService.set(cacheKey, result, 30 * 60, [`team:${teamId}`, 'leaderboard', 'goals']);
 
@@ -80,17 +103,20 @@ exports.getAssistsLeaderboard = async (req, res, next) => {
     try {
         const { teamId } = req.params;
         const limit = parseInt(req.query.limit) || 10;
+        const parsed = parseSeasonParam(req, res);
+        if (!parsed) return;
+        const { seasonId, seasonKey } = parsed;
 
-        const cacheKey = `leaderboard:assists:${teamId}:limit${limit}`;
+        const cacheKey = `leaderboard:assists:${teamId}:season:${seasonKey}:limit${limit}`;
 
         const cached = await CacheService.get(cacheKey);
         if (cached) {
-            console.log(`⚡ Cache HIT: Assists leaderboard team ${teamId}`);
+            console.log(`⚡ Cache HIT: Assists leaderboard team ${teamId} season=${seasonKey}`);
             return res.json({ ...cached, source: 'cache', cached: true });
         }
 
-        console.log(`🗄️ Cache MISS: Fetching assists leaderboard team ${teamId}`);
-        const result = await leaderboardService.getLeaderboard(teamId, 'assists', limit);
+        console.log(`🗄️ Cache MISS: Fetching assists leaderboard team ${teamId} season=${seasonKey}`);
+        const result = await leaderboardService.getLeaderboard(teamId, 'assists', limit, seasonId);
 
         await CacheService.set(cacheKey, result, 30 * 60, [`team:${teamId}`, 'leaderboard', 'assists']);
 
@@ -102,12 +128,13 @@ exports.getAssistsLeaderboard = async (req, res, next) => {
 };
 
 // === CLASSIFICA PLAYERCARD ===
+// PlayerSeasonStats non include i dati playercard → cade sempre sul lifetime.
 exports.getPlayercardLeaderboard = async (req, res, next) => {
     try {
         const { teamId } = req.params;
         const limit = parseInt(req.query.limit) || 10;
 
-        const result = await leaderboardService.getLeaderboard(teamId, 'playercard', limit);
+        const result = await leaderboardService.getLeaderboard(teamId, 'playercard', limit, null);
 
         res.json(result);
 
@@ -122,8 +149,9 @@ exports.getStatsPerMatchLeaderboard = async (req, res, next) => {
         const { teamId } = req.params;
         const stat = req.query.stat || 'goals';
         const limit = parseInt(req.query.limit) || 10;
-
-        let result;
+        const parsed = parseSeasonParam(req, res);
+        if (!parsed) return;
+        const { seasonId } = parsed;
 
         if (!['goals', 'assists', 'both'].includes(stat)) {
             return res.status(400).json({
@@ -132,13 +160,13 @@ exports.getStatsPerMatchLeaderboard = async (req, res, next) => {
             });
         }
 
+        let result;
         if (stat === 'goals') {
-            result = await leaderboardService.getLeaderboard(teamId, 'goalPerMatch', limit);
+            result = await leaderboardService.getLeaderboard(teamId, 'goalPerMatch', limit, seasonId);
         } else if (stat === 'assists') {
-            result = await leaderboardService.getLeaderboard(teamId, 'assistPerMatch', limit);
+            result = await leaderboardService.getLeaderboard(teamId, 'assistPerMatch', limit, seasonId);
         } else {
-            // Per il frontend mobile-first usiamo una lista unica con dati completi del player.
-            result = await leaderboardService.getLeaderboard(teamId, 'goalPerMatch', limit);
+            result = await leaderboardService.getLeaderboard(teamId, 'goalPerMatch', limit, seasonId);
         }
 
         res.json(result);
@@ -149,7 +177,7 @@ exports.getStatsPerMatchLeaderboard = async (req, res, next) => {
 };
 
 
-// === TUTTE LE CLASSIFICHE (OTTIMIZZATO + CACHE) === 
+// === TUTTE LE CLASSIFICHE (OTTIMIZZATO + CACHE) ===
 // * IMPORTANTE: AL MOMENTO QUESTO METODO NON E' UTILIZZATO,
 // viene utilizzato invece getLeaderboard con tipo (es) 'playercard' e 'goalPerMatch'
 exports.getAllLeaderboards = async (req, res, next) => {
@@ -157,16 +185,12 @@ exports.getAllLeaderboards = async (req, res, next) => {
         const { teamId } = req.params;
         const limit = parseInt(req.query.limit) || 5;
 
-        // 🎯 CACHE INTEGRATION
-        // Generate cache key che include parametri importanti
         const cacheKey = `leaderboard:all:${teamId}:limit${limit}`;
 
-        // 🔍 Try cache first
         console.log(`🔍 Checking cache for leaderboards team ${teamId}`);
         const cached = await CacheService.get(cacheKey);
 
         if (cached) {
-            // Cache HIT - return immediately
             console.log(`⚡ Cache HIT: Returning cached leaderboards for team ${teamId}`);
             return res.json({
                 ...cached,
@@ -176,17 +200,13 @@ exports.getAllLeaderboards = async (req, res, next) => {
             });
         }
 
-        // 💾 Cache MISS - fetch from database
         console.log(`🗄️ Cache MISS: Fetching fresh leaderboards for team ${teamId}`);
         const result = await leaderboardService.getAllLeaderboards(teamId, limit);
 
-        // ✅ Save in cache for future requests
-        // TTL: 30 minuti (le classifiche non cambiano spesso)
         await CacheService.set(cacheKey, result, 30 * 60, [`team:${teamId}`, 'leaderboard']);
 
         console.log(`💾 Cached leaderboards for team ${teamId} (30min TTL)`);
 
-        // Return fresh data
         res.json({
             ...result,
             source: 'database',

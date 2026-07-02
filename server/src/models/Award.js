@@ -58,6 +58,14 @@ const awardSchema = new mongoose.Schema({
         required: true
         // matchId per MATCH_RECAP, "YYYY-MM" per MONTHLY_MVP, "season-{seasonId}" per stagionali
     },
+    // === STAGIONE (denormalizzato, Fase 2) ===
+    // Stringa "YYYY-YY". Per stagionali coincide col seasonId in refId; per MATCH_RECAP/MONTHLY_MVP
+    // è risolto dalla data del periodo. Optional in Fase 2.
+    seasonId: {
+        type: String,
+        index: true,
+        default: null
+    },
     status: {
         type: String,
         enum: ['PENDING', 'READY', 'FAILED'],
@@ -69,6 +77,7 @@ const awardSchema = new mongoose.Schema({
 
     // === PAYLOAD SNAPSHOT (immutabile dopo READY) ===
     payload: {
+        seasonId: String,                 // stagione di riferimento ("2025-26")
         period: {
             label: String,                    // "16 Maggio 2026" / "Maggio 2026" / "Stagione 2025/26"
             dateFrom: Date,
@@ -134,6 +143,7 @@ const awardSchema = new mongoose.Schema({
 
 // === INDICI ===
 awardSchema.index({ teamId: 1, type: 1, generatedAt: -1 });                  // bacheca team
+awardSchema.index({ teamId: 1, seasonId: 1, type: 1 });                      // bacheca per stagione
 awardSchema.index({ teamId: 1, refId: 1, type: 1 }, { unique: true });       // anti-duplicati
 awardSchema.index({ status: 1, generatedAt: 1 });                            // retry job
 awardSchema.index({ viewedBy: 1, teamId: 1 });                               // pending-awards check

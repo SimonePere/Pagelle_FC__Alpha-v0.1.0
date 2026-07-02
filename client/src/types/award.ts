@@ -110,4 +110,6 @@ export interface AwardsListFilters {
     status?: AwardStatus;
     limit?: number;
     skip?: number;
+    /** Filtro stagione: "YYYY-YY" | "current" | "all". Default = current sul backend. */
+    season?: string;
 }
