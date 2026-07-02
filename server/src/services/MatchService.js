@@ -227,22 +227,26 @@ class MatchService {
         this.validateTeamId(teamId);
         this.validateUserId(userId);
 
-        const { page = 1, limit = 10 } = options;
+        const { page = 1, limit = 10, seasonId } = options;
         const skip = (page - 1) * limit;
 
         try {
             // Check team access
             await this.validateTeamAccess(teamId, userId);
 
+            // Filtro base: team. Se seasonId è specificato (non null), filtra per stagione.
+            const filter = { teamId };
+            if (seasonId) filter.seasonId = seasonId;
+
             // 🎯 USA IL NUOVO METODO CON POPULATION AUTOMATICA
-            const matches = await this.matchRepository.findWithUsers({ teamId }, {
+            const matches = await this.matchRepository.findWithUsers(filter, {
                 page,
                 limit,
                 sort: { date: -1 }
             });
 
             // Count total usando BaseRepository per consistency
-            const totalMatches = await this.matchRepository.countDocuments({ teamId });
+            const totalMatches = await this.matchRepository.countDocuments(filter);
 
             // Format matches for response
             const formattedMatches = await Promise.all(

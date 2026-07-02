@@ -2,7 +2,8 @@
 
 // 🎯 REPOSITORY PATTERN - Accesso dati tramite Repository
 const {
-    PlayerLeaderboardStatsRepository
+    PlayerLeaderboardStatsRepository,
+    PlayerSeasonStatsRepository
 } = require('../repositories');
 
 const NewsService = require('./NewsService');
@@ -32,6 +33,7 @@ class LeaderboardService {
     constructor() {
         // Inizializza i repository per accesso dati
         this.playerStatsRepository = new PlayerLeaderboardStatsRepository();
+        this.playerSeasonStatsRepository = new PlayerSeasonStatsRepository();
         this.newsService = new NewsService();
 
 
@@ -44,12 +46,19 @@ class LeaderboardService {
      * @param {string} teamId - ID del team
      * @param {string} type - Tipo classifica: 'rating'|'goals'|'assists'|'playercard'|'goalPerMatch'|'assistPerMatch'
      * @param {number} limit - Numero massimo risultati
+     * @param {string|null} seasonId - Stagione "YYYY-YY" oppure null (lifetime, default)
      * @returns {Promise<Object>} Classifica con metadati
      */
-    async getLeaderboard(teamId, type, limit = 10) {
+    async getLeaderboard(teamId, type, limit = 10, seasonId = null) {
         // Input validation
         this.validateLeaderboardInput(teamId, type, limit);
 
+        // Se richiesta una stagione specifica, usa PlayerSeasonStats
+        if (seasonId) {
+            return this._getSeasonLeaderboard(teamId, type, limit, seasonId);
+        }
+
+        // Comportamento storico: usa PlayerLeaderboardStats (lifetime)
         // Build query based on type
         const queryConfig = this.buildLeaderboardQuery(teamId, type);
 
@@ -75,6 +84,88 @@ class LeaderboardService {
             }
         };
     }
+
+    /**
+     * Classifica season-scoped da PlayerSeasonStats.
+     *
+     * Tipi supportati: rating, goals, assists → ordinati lato DB.
+     * goalPerMatch, assistPerMatch → calcolati in JS (piccolo dataset).
+     * playercard, form → non in PlayerSeasonStats → fallback lifetime.
+     *
+     * @private
+     */
+    async _getSeasonLeaderboard(teamId, type, limit, seasonId) {
+        // playercard e form non sono in PlayerSeasonStats → lifetime
+        if (type === 'playercard' || type === 'form') {
+            const queryConfig = this.buildLeaderboardQuery(teamId, type);
+            const players = await this.playerStatsRepository.findAll(
+                queryConfig.filter,
+                { sort: queryConfig.sort, limit, select: this.STANDARD_FIELDS }
+            );
+            return {
+                success: true,
+                data: players,
+                type,
+                seasonId: null,
+                metadata: { teamId, limit, count: players.length, note: 'playercard non stagionale, dati lifetime' }
+            };
+        }
+
+        const sortMap = {
+            rating: { averageRating: -1 },
+            goals: { totalGoals: -1, averageRating: -1 },
+            assists: { totalAssists: -1, averageRating: -1 }
+        };
+
+        let players;
+
+        if (sortMap[type]) {
+            // Query diretta con sort DB
+            const raw = await this.playerSeasonStatsRepository.findAll(
+                { teamId, seasonId },
+                { sort: sortMap[type], limit }
+            );
+            // Normalizza: PlayerSeasonStats usa 'matchesPlayed', il frontend si aspetta 'totalMatches'
+            players = raw.map(p => {
+                const plain = p.toObject ? p.toObject() : { ...p };
+                plain.totalMatches = plain.matchesPlayed ?? 0;
+                return plain;
+            });
+        } else if (type === 'goalPerMatch' || type === 'assistPerMatch') {
+            // Calcolo ratio in JS (dataset piccolo).
+            // Calcoliamo SEMPRE entrambi i ratios (goalPerMatch + assistPerMatch) in un unico
+            // passaggio: quando il controller chiama stat=both usa solo goalPerMatch come tipo
+            // principale per l'ordinamento, ma il frontend legge entrambi i campi dalla stessa riga.
+            const all = await this.playerSeasonStatsRepository.findAll({ teamId, seasonId });
+            players = all
+                .map(p => {
+                    const plain = p.toObject ? p.toObject() : { ...p };
+                    const played = plain.matchesPlayed ?? 0;
+                    plain.totalMatches = played;   // alias atteso dal frontend
+                    plain.goalPerMatch = played > 0
+                        ? Number((plain.totalGoals / played).toFixed(2))
+                        : 0;
+                    plain.assistPerMatch = played > 0
+                        ? Number((plain.totalAssists / played).toFixed(2))
+                        : 0;
+                    return plain;
+                })
+                .sort((a, b) => b[type] - a[type])
+                .slice(0, limit);
+        } else {
+            // Tipo sconosciuto — delega al comportamento lifetime
+            return this.getLeaderboard(teamId, type, limit, null);
+        }
+
+        return {
+            success: true,
+            data: players,
+            type,
+            seasonId,
+            metadata: { teamId, limit, count: players.length, season: seasonId }
+        };
+    }
+
 
     /**
      * IMPORTANTE: AL MOMENTO QUESTO METODO NON E' UTILIZZATO, viene utilizzato invece getLeaderboard con tipo (es) 'playercard' e 'goalPerMatch'

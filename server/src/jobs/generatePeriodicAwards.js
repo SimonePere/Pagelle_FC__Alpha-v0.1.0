@@ -26,6 +26,9 @@
 const cron = require('node-cron');
 const Team = require('../models/Team');
 const AwardService = require('../services/AwardService');
+const SeasonService = require('../services/SeasonService');
+
+const seasonService = new SeasonService();
 
 let runningMonthly = false;
 let runningSeason = false;
@@ -128,7 +131,9 @@ async function runSeasonAwardsGeneration() {
         if (teamsForBallon.length > 0) {
             console.log(`\n🏆 [CRON ballon-dor] ${teamsForBallon.length} team con fine stagione ieri`);
             for (const team of teamsForBallon) {
-                const season = buildSeasonFromEndDate(team.seasonEndDate);
+                const seasonId = seasonService.resolveSeasonId(team.seasonEndDate);
+                const { seasonStart, seasonEnd } = seasonService.seasonBounds(seasonId);
+                const season = { seasonId, seasonStart, seasonEnd };
                 try {
                     const bd = await awardService.createBallonDorAward(team._id, season);
                     if (bd) {
@@ -145,7 +150,9 @@ async function runSeasonAwardsGeneration() {
         if (teamsForGolden.length > 0) {
             console.log(`\n🏆 [CRON golden-boot] ${teamsForGolden.length} team a +7 giorni dalla fine stagione`);
             for (const team of teamsForGolden) {
-                const season = buildSeasonFromEndDate(team.seasonEndDate);
+                const seasonId = seasonService.resolveSeasonId(team.seasonEndDate);
+                const { seasonStart, seasonEnd } = seasonService.seasonBounds(seasonId);
+                const season = { seasonId, seasonStart, seasonEnd };
                 try {
                     const gb = await awardService.createGoldenBootAward(team._id, season);
                     if (gb) {
@@ -164,21 +171,6 @@ async function runSeasonAwardsGeneration() {
     } finally {
         runningSeason = false;
     }
-}
-
-/**
- * Costruisce l'oggetto season {seasonId, seasonStart, seasonEnd} a partire da seasonEndDate.
- * Convenzione: stagione = 1 Settembre (anno precedente) → seasonEndDate.
- */
-function buildSeasonFromEndDate(seasonEndDate) {
-    const seasonEnd = new Date(seasonEndDate);
-    const seasonEndYear = seasonEnd.getFullYear();
-    const seasonStartYear = seasonEndYear - 1;
-    return {
-        seasonId: `${seasonStartYear}-${String(seasonEndYear).slice(2)}`,
-        seasonStart: new Date(seasonStartYear, 8, 1),   // 1 Settembre anno precedente
-        seasonEnd
-    };
 }
 
 

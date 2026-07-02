@@ -28,10 +28,12 @@ import {
     markAwardViewed,
 } from '@/redux/slices/awardsSlice';
 import { useActiveTeamId } from '@/hooks/useActiveTeamId';
+import { useActiveSeason } from '@/hooks/useActiveSeason';
 import { useAwardShareActions } from '@/hooks/useAwardShareActions';
 import AwardCardModal, { type AwardModalCard } from '@/components/AwardCardModal';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import PaginatedSwiper from '@/components/PaginatedSwiper';
+import SeasonSelector from '@/components/SeasonSelector';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -116,6 +118,7 @@ type GridItem =
 export default function Awards() {
     const dispatch = useDispatch();
     const { activeTeamId } = useActiveTeamId();
+    const { seasons, selectedSeason, setSelectedSeason, showSelector } = useActiveSeason();
     const userId = useSelector((s: RootState) => s.auth.user?._id || s.auth.user?.id);
     const { teamAwards, pendingAwards, isLoadingList, error } = useSelector(
         (s: RootState) => s.awards,
@@ -124,14 +127,19 @@ export default function Awards() {
     const [filter, setFilter] = useState<AwardType | 'ALL'>('ALL');
     const [selected, setSelected] = useState<Award | null>(null);
 
-    // Carica gli award del team attivo (e i pending, per il badge sidebar globale)
+    // Carica gli award del team attivo per la stagione selezionata
     useEffect(() => {
         if (!activeTeamId) return;
         // @ts-expect-error redux-thunk typing
-        dispatch(fetchTeamAwards({ teamId: activeTeamId }));
+        dispatch(fetchTeamAwards({ teamId: activeTeamId, filters: { season: selectedSeason } }));
         // @ts-expect-error redux-thunk typing
         dispatch(fetchPendingAwards());
-    }, [activeTeamId, dispatch]);
+    }, [activeTeamId, selectedSeason, dispatch]);
+
+    const handleSeasonChange = (season: string) => {
+        setSelectedSeason(season);
+        // Il re-fetch è gestito dall'useEffect sopra che dipende da selectedSeason
+    };
 
     const pendingIds = useMemo(() => new Set(pendingAwards.map(a => a.id)), [pendingAwards]);
 
@@ -201,7 +209,16 @@ export default function Awards() {
                     </CardHeader>
 
                     <CardContent className="space-y-5">
-                        {/* Filtri */}
+                        {/* Selettore stagione — visibile solo se ci sono più stagioni */}
+                        <SeasonSelector
+                            seasons={seasons}
+                            selectedSeason={selectedSeason}
+                            onSeasonChange={handleSeasonChange}
+                            showSelector={showSelector}
+                            showAllOption
+                        />
+
+                        {/* Filtri tipo */}
                         <div className="flex flex-wrap gap-2">
                             {FILTER_OPTIONS.map(opt => (
                                 <Button

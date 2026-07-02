@@ -63,6 +63,25 @@ class SeasonService {
     }
 
     /**
+     * Normalizza il parametro `?season=` delle richieste HTTP → seasonId stringa o null.
+     *
+     * - undefined / null / "current"  → stagione corrente (stringa "YYYY-YY")
+     * - "all"                         → null  (nessun filtro, dati lifetime)
+     * - "YYYY-YY"                     → usato direttamente dopo validazione formato
+     *
+     * Usato dai controller per standardizzare il parsing senza toccare il DB.
+     *
+     * @param {string|undefined} param - valore di req.query.season
+     * @returns {string|null}          - seasonId "YYYY-YY" oppure null
+     */
+    resolveSeasonParam(param) {
+        if (!param || param === 'current') return this.resolveSeasonId(new Date());
+        if (param === 'all') return null;
+        if (/^\d{4}-\d{2}$/.test(param)) return param;
+        throw new Error(`Parametro season non valido: "${param}". Usa YYYY-YY, "current" o "all".`);
+    }
+
+    /**
      * Nome leggibile della stagione. Es. "2025-26" → "Stagione 2025/26".
      * @param {string} seasonId
      * @returns {string}

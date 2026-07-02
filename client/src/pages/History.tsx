@@ -13,8 +13,12 @@ import MatchGrid from "@/components/MatchGrid";
 import { Component, ReactNode } from "react";
 import { createTeam } from '@/redux/slices/teamSlice';
 import { refreshUserData, loadEnrichedUserData } from '@/redux/slices/authSlice';
+import { fetchTeamMatches } from '@/redux/slices/matchSlice';
 import { toast } from 'sonner';
 import { isAdmin } from '@/utils/permissions';
+import { useActiveTeamId } from '@/hooks/useActiveTeamId';
+import { useActiveSeason } from '@/hooks/useActiveSeason';
+import SeasonSelector from '@/components/SeasonSelector';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -62,10 +66,22 @@ export default function History() {
   const { user, isGuest } = useSelector((state: RootState) => state.auth);
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
+  const { activeTeamId } = useActiveTeamId();
+  const { seasons, selectedSeason, setSelectedSeason, showSelector } = useActiveSeason();
 
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
   const [isCreatingTeam, setIsCreatingTeam] = useState(false);
+
+  // Re-fetch partite al cambio stagione (fetchTeamMatches legge season_selected da localStorage)
+  useEffect(() => {
+    if (!activeTeamId) return;
+    dispatch(fetchTeamMatches(activeTeamId));
+  }, [activeTeamId, selectedSeason, dispatch]);
+
+  const handleSeasonChange = (season: string) => {
+    setSelectedSeason(season);
+  };
 
   const handleCreateTeamSubmit = async () => {
     if (!newTeamName.trim()) return;
@@ -188,6 +204,7 @@ export default function History() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
+
             <ErrorBoundary fallback={ErrorFallback}>
               <MatchGrid showStats={false} onCreateMatch={isAdmin(user) && user?.teams?.length ? handleCreateMatch : undefined} />
             </ErrorBoundary>

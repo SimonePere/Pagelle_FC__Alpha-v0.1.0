@@ -1,5 +1,8 @@
 const MatchService = require('../services/MatchService');
 const CacheService = require('../services/CacheService');
+const SeasonService = require('../services/SeasonService');
+
+const seasonService = new SeasonService();
 
 /**
  * MATCH CONTROLLER
@@ -87,13 +90,25 @@ const getTeamMatches = async (req, res, next) => {
   try {
     const { teamId } = req.params;
     const userId = req.user.id;
+
+    // Risolve il parametro ?season= (default: stagione corrente)
+    let seasonId;
+    try {
+      seasonId = seasonService.resolveSeasonParam(req.query.season);
+    } catch (seasonErr) {
+      return res.status(400).json({ success: false, error: seasonErr.message });
+    }
+
     const options = {
       page: parseInt(req.query.page) || 1,
-      limit: parseInt(req.query.limit) || 100
+      limit: parseInt(req.query.limit) || 100,
+      seasonId
     };
 
-    // 🎯 CACHE STRATEGY: Solo per history match (completed), non per match attivi
-    const cacheKey = `matches:team:${teamId}:page${options.page}:limit${options.limit}:completed:history`;
+    // 🎯 CACHE STRATEGY: Solo per history match (completed), non per match attivi.
+    // La cache key include il seasonId per evitare collisioni tra stagioni.
+    const seasonKey = seasonId || 'all';
+    const cacheKey = `matches:team:${teamId}:season:${seasonKey}:page${options.page}:limit${options.limit}:completed:history`;
     const cached = await CacheService.get(cacheKey);
 
     if (cached) {

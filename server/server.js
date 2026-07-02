@@ -2,6 +2,7 @@ const app = require('./src/app');
 const connectDB = require('./src/config/database');
 const { startCloseExpiredVotingSessionsCron } = require('./src/jobs/closeExpiredVotingSessions');
 const { startPeriodicAwardsCron } = require('./src/jobs/generatePeriodicAwards');
+const { startSeasonRolloverCron } = require('./src/jobs/seasonRolloverJob');
 
 const PORT = process.env.PORT || 5000;
 
@@ -17,4 +18,7 @@ app.listen(PORT, () => {
 
   // 🏆 Avvia scheduler per generazione Award periodici (monthly + season).
   startPeriodicAwardsCron();
+
+  // 🔄 Avvia scheduler per rollover automatico della stagione (11:00 daily).
+  startSeasonRolloverCron();
 });

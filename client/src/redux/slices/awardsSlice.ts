@@ -80,6 +80,7 @@ export const fetchTeamAwards = createAsyncThunk(
             if (filters?.status) params.set('status', filters.status);
             if (filters?.limit !== undefined) params.set('limit', String(filters.limit));
             if (filters?.skip !== undefined) params.set('skip', String(filters.skip));
+            if (filters?.season) params.set('season', filters.season);
             const qs = params.toString();
             const url = `/awards/team/${teamId}${qs ? `?${qs}` : ''}`;
             const response: AwardsListResponse = await api.get(url);

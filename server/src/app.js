@@ -16,6 +16,7 @@ const leaderboardRoutes = require('./routes/leaderboards');
 const newsRoutes = require('./routes/news');
 const awardRoutes = require('./routes/awards');
 const inviteRoutes = require('./routes/invite');
+const seasonRoutes = require('./routes/seasons');
 
 const app = express();
 
@@ -93,6 +94,7 @@ app.use('/api/v1/leaderboards', leaderboardRoutes);
 app.use('/api/v1/news', newsRoutes);
 app.use('/api/v1/awards', awardRoutes);
 app.use('/api/v1/invite', inviteRoutes);
+app.use('/api/v1/seasons', seasonRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
