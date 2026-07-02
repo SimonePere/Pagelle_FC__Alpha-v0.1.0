@@ -146,14 +146,7 @@ AWARDS_FEATURE_TECHNICAL_GUIDE.md
 SEASONALITY_REQUIREMENTS.md
 SEASONALITY_IMPLEMENTATION_PLAN.md
 SEASONALITY_CHANGELOG.md
-
-# =========================== guide per spostare backend su railway ===========================
-# Railway deployment files (local only)
-RAILWAY_COST_OPTIMIZATION_GUIDE.md
-RAILWAY_MIGRATION_GUIDE.md
-RAILWAY_QUICK_START.md
-RAILWAY_TECHNICAL_GUIDE.md
-README_RAILWAY.md
+GOLDEN_TOT_BONUS_IMPLEMENTATION_PLAN.md
 
 
 # Development documentation (local only)

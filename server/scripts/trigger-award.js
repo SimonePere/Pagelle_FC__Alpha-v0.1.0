@@ -20,6 +20,18 @@
  *   --month=YYYY-MM   solo per `monthly`
  *   --season-end=YYYY-MM-DD  override della seasonEndDate del team (solo per ballon/golden/season)
  *
+ * RENDER (PROMEMORIA IMPORTANTE):
+ *   Il renderer apre FRONTEND_URL + "/render-card" con Puppeteer.
+ *   Se FRONTEND_URL non e' impostato, usa default http://localhost:8080.
+ *   Per evitare errori net::ERR_CONNECTION_REFUSED nei trigger manuali,
+ *   conviene puntare al frontend online reale.
+ *
+ *   Esempio PowerShell (TEST):
+ *   $env:FRONTEND_URL="https://pagelleclientfc.vercel.app"; $env:NODE_ENV="test"; node scripts/trigger-award.js season --team=<TEAM_ID> --season-end=YYYY-MM-DD
+ *
+ *   Esempio PowerShell (PROD):
+ *   $env:FRONTEND_URL="https://pagelleclientfc.vercel.app"; $env:NODE_ENV="production"; node scripts/trigger-award.js season --team=<TEAM_ID> --season-end=YYYY-MM-DD
+ *
  * NB: idempotente — se l'award esiste già viene restituito quello esistente (vedi findByTeamAndRef).
  */
 
@@ -48,6 +60,13 @@ Uso:
   node scripts/trigger-award.js golden  --team=<TEAM_ID> [--season-end=YYYY-MM-DD]
   node scripts/trigger-award.js season  --team=<TEAM_ID> [--season-end=YYYY-MM-DD]
   (sostituisci --team=<ID> con --all per tutti i team awardsEnabled=true)
+
+Promemoria render:
+    - Se FRONTEND_URL non e' impostato, il renderer usa http://localhost:8080
+    - Per trigger manuali stabili, imposta FRONTEND_URL al frontend online reale
+
+Esempio PowerShell PROD:
+    $env:FRONTEND_URL="https://pagelleclientfc.vercel.app"; $env:NODE_ENV="production"; node scripts/trigger-award.js season --team=<TEAM_ID> --season-end=YYYY-MM-DD
 `);
     process.exit(msg ? 1 : 0);
 }

@@ -6,16 +6,16 @@
  *   1. MONTHLY_MVP: il 1° di ogni mese alle 09:00 genera il premio MVP del mese precedente
  *      per ogni team con awardsEnabled=true e almeno 2 partite nel mese.
  *
- *   2. BALLON_DOR: il giorno dopo la `seasonEndDate` di ogni team genera il Pallone d'Oro.
+ *   2. BALLON_DOR: 2 giorni dopo la `seasonEndDate` di ogni team genera il Pallone d'Oro.
  *      `seasonEndDate` (default 30 Giugno) è l'unica data configurabile sul Team e
  *      coincide con la data dell'evento "Pallone d'Oro".
  *
- *   3. GOLDEN_BOOT: 7 giorni dopo BALLON_DOR (= seasonEndDate + 8 giorni il check).
+ *   3. GOLDEN_BOOT: il giorno dopo BALLON_DOR (= seasonEndDate + 3 giorni il check).
  *      Stessa stagione (finestra dati identica), evento separato per dare risalto.
  *
  * SCHEDULING
  *   - Monthly:  '0 9 1 * *'   → 1° del mese, ore 09:00 Rome
- *   - Season:   '0 10 * * *'  → ogni giorno ore 10:00 Rome (check leggero)
+ *   - Season:   '0 18 * * *'  → ogni giorno ore 18:00 Rome (check leggero)
  *
  * SINGLETON & IDEMPOTENZA
  *   - Flag `running` per evitare overlap.
@@ -88,10 +88,13 @@ async function runSeasonAwardsGeneration() {
     if (runningSeason) return;
     runningSeason = true;
 
-    // Per BALLON_DOR generiamo se "ieri" era seasonEndDate del team.
-    // Per GOLDEN_BOOT generiamo se "ieri" era seasonEndDate + 7 giorni.
-    // → Le finestre target (per `ieri`) sono quindi: seasonEndDate ∈ [oggi-1g] OR seasonEndDate ∈ [oggi-8g]
+    // Per BALLON_DOR generiamo se la seasonEndDate è di 2 giorni fa.
+    // Per GOLDEN_BOOT generiamo se la seasonEndDate è di 3 giorni fa.
+    // → Le finestre target sono: seasonEndDate ∈ [oggi-2g] OR seasonEndDate ∈ [oggi-3g]
     const now = new Date();
+
+    const BALLON_TRIGGER_OFFSET_DAYS = 2;
+    const GOLDEN_TRIGGER_OFFSET_DAYS = BALLON_TRIGGER_OFFSET_DAYS + 1;
 
     const dayWindow = (offsetDays) => {
         const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - offsetDays);
@@ -101,10 +104,10 @@ async function runSeasonAwardsGeneration() {
         };
     };
 
-    // BALLON_DOR: trigger il giorno dopo seasonEndDate (offset = 1)
-    const ballonWindow = dayWindow(1);
-    // GOLDEN_BOOT: trigger 8 giorni dopo seasonEndDate (offset = 8 → ieri = seasonEndDate + 7)
-    const goldenWindow = dayWindow(8);
+    // BALLON_DOR: trigger 2 giorni dopo seasonEndDate
+    const ballonWindow = dayWindow(BALLON_TRIGGER_OFFSET_DAYS);
+    // GOLDEN_BOOT: trigger 3 giorni dopo seasonEndDate (= +1 giorno dal BALLON_DOR)
+    const goldenWindow = dayWindow(GOLDEN_TRIGGER_OFFSET_DAYS);
 
     try {
         const [teamsForBallon, teamsForGolden] = await Promise.all([
@@ -129,7 +132,7 @@ async function runSeasonAwardsGeneration() {
 
         // ─── BALLON_DOR ───────────────────────────────────────────────────
         if (teamsForBallon.length > 0) {
-            console.log(`\n🏆 [CRON ballon-dor] ${teamsForBallon.length} team con fine stagione ieri`);
+            console.log(`\n🏆 [CRON ballon-dor] ${teamsForBallon.length} team con fine stagione da ${BALLON_TRIGGER_OFFSET_DAYS} giorni`);
             for (const team of teamsForBallon) {
                 const seasonId = seasonService.resolveSeasonId(team.seasonEndDate);
                 const { seasonStart, seasonEnd } = seasonService.seasonBounds(seasonId);
@@ -146,9 +149,9 @@ async function runSeasonAwardsGeneration() {
             }
         }
 
-        // ─── GOLDEN_BOOT (7 giorni dopo BALLON_DOR) ───────────────────────
+        // ─── GOLDEN_BOOT (1 giorno dopo BALLON_DOR) ───────────────────────
         if (teamsForGolden.length > 0) {
-            console.log(`\n🏆 [CRON golden-boot] ${teamsForGolden.length} team a +7 giorni dalla fine stagione`);
+            console.log(`\n🏆 [CRON golden-boot] ${teamsForGolden.length} team con fine stagione da ${GOLDEN_TRIGGER_OFFSET_DAYS} giorni`);
             for (const team of teamsForGolden) {
                 const seasonId = seasonService.resolveSeasonId(team.seasonEndDate);
                 const { seasonStart, seasonEnd } = seasonService.seasonBounds(seasonId);
@@ -186,14 +189,14 @@ function startPeriodicAwardsCron() {
         );
     }, { timezone: 'Europe/Rome' });
 
-    // SEASON: ogni giorno alle 10:00 (check leggero)
-    cron.schedule('0 10 * * *', () => {
+    // SEASON: ogni giorno alle 18:00 (check leggero)
+    cron.schedule('0 18 * * *', () => {
         runSeasonAwardsGeneration().catch(err =>
             console.error('❌ [CRON season-awards] Unhandled:', err)
         );
     }, { timezone: 'Europe/Rome' });
 
-    console.log('🏆 [CRON awards] Scheduler avviato — monthly=09:00 1°mese, season=10:00 daily (Europe/Rome). Ballon=+1g da seasonEndDate, Golden=+8g.');
+    console.log('🏆 [CRON awards] Scheduler avviato — monthly=09:00 1°mese, season=18:00 daily (Europe/Rome). Ballon=+2g da seasonEndDate, Golden=+3g.');
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
