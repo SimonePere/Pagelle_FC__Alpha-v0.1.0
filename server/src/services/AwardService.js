@@ -348,7 +348,14 @@ class AwardService {
             if (b.votersExclSelf !== a.votersExclSelf) return b.votersExclSelf - a.votersExclSelf;
             if (b.maxVoteExclSelf !== a.maxVoteExclSelf) return b.maxVoteExclSelf - a.maxVoteExclSelf;
             if (b.matchesPlayed !== a.matchesPlayed) return b.matchesPlayed - a.matchesPlayed;
-            return a.name.localeCompare(b.name, 'it');
+            // Criterio #6: nome alfabetico (italiano)
+            const nameOrder = a.name.localeCompare(b.name, 'it');
+            if (nameOrder !== 0) return nameOrder;
+            // Criterio #7 (safety): playerId come stringa — deterministico al 100%
+            // anche nel caso (rarissimo) di due giocatori con identico nome.
+            // Garantisce che GoldenTotService.applyBonusesForSeason trovi sempre
+            // un unico vincitore stabile via payload.hero.playerId.
+            return a.playerId.toString().localeCompare(b.playerId.toString());
         });
     }
 

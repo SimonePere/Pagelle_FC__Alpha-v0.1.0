@@ -237,6 +237,16 @@ class NewsRepository extends BaseRepository {
             .sort({ averageRating: 1 })
             .limit(limit);
     }
+
+    /**
+     * 🗑️ Elimina TUTTE le news di un team (usato a fine stagione per il reset).
+     * @param {string|ObjectId} teamId
+     * @returns {Promise<number>} Numero di documenti eliminati
+     */
+    async deleteAllForTeam(teamId) {
+        const result = await this.model.deleteMany({ teamId });
+        return result.deletedCount;
+    }
 }
 
 module.exports = NewsRepository;

@@ -97,6 +97,9 @@ uploads/
 temp/
 *.tmp
 
+# Award card renderizzate a runtime (artefatti generati)
+server/public/awards/
+
 # ===========================
 # CERTIFICATES & KEYS
 # ===========================

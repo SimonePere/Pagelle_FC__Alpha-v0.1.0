@@ -69,6 +69,13 @@ Il tutto con un'interfaccia moderna, responsive e pensata per essere utilizzata 
 - **Tracking integrato** di view, share per canale, visite pagina pubblica e signup attribuiti
 - **Idempotenza nativa** via indice unique `{teamId, refId, type}` su MongoDB
 
+### 🌟 **Golden TOT Bonus — premi che contano nella stagione successiva**
+- **Vincitore `BALLON_DOR`** (Pallone d'Oro) stagione N → **+3 al TOT** della PlayerCard nella stagione N+1
+- **Vincitore `GOLDEN_BOOT`** (Scarpa d'Oro) stagione N → **+2 su `fin`** (Finalizzazione) nella stagione N+1
+- **Temporaneo e reversibile**: bonus materializzati nella collection `GoldenTot`, validi solo per la stagione successiva
+- **Automatico**: applicato via cron 4 giorni dopo la fine stagione (quando gli award sono pronti), con generazione delle news dedicate
+- **UI parlante**: `+3`/`+2` con badge 🏆/👟, popover esplicativi e glow dorato sulla carta del vincitore
+
 ### �👥 **Team Management**
 - **Gestione membri**: Inviti, ruoli e permessi granulari
 - **Profili personalizzabili**: Informazioni dettagliate e foto profilo

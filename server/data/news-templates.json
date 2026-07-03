@@ -302,8 +302,6 @@
         "style": "success"
       }
     ],
-
-
     "weekend": [
       {
         "text": "🎉 WEEKEND WARRIORS! Il {date} al {field} Stadium - Il fine settimana si tinge di calcio!",
@@ -322,7 +320,6 @@
         "style": "info"
       }
     ],
-
     "motivational": [
       {
         "text": "💪 CHIAMATA ALLE ARMI! Il {date} al {field} Sports Park - È l'ora di dimostrare di cosa siamo fatti!",
@@ -792,7 +789,6 @@
       }
     ]
   },
- 
   "match_completed": {
     "mvp_performance": [
       {
@@ -818,23 +814,23 @@
         "priority": "medium",
         "icon": "⭐",
         "style": "success"
-    },
-    {
+      },
+      {
         "text": "🌟 MASTERCLASS! {playerName} domina la partita con un {rating} da standing ovation! Prestazione da manuale!",
         "category": "match_completed",
         "type": "mvp_performance",
         "priority": "medium",
         "icon": "🌟",
         "style": "success"
-    },
-    {
+      },
+      {
         "text": "👑 RE DEL CAMPO! {playerName} si prende la scena con un {rating} spettacolare! Che classe!",
         "category": "match_completed",
         "type": "mvp_performance",
         "priority": "medium",
         "icon": "👑",
         "style": "success"
-    }
+      }
     ],
     "flop_performance": [
       {
@@ -1040,15 +1036,15 @@
         "priority": "high",
         "icon": "🌟",
         "style": "success"
-    },
-    {
+      },
+      {
         "text": "🔥 PRESTAZIONI STELLARI! Ben {playersCount} giocatori sopra l'8! Livello altissimo in campo!",
         "category": "match_completed",
         "type": "multiple_high_ratings",
         "priority": "high",
         "icon": "🔥",
         "style": "success"
-    }
+      }
     ]
   },
   "playercard_creation": {
@@ -1344,5 +1340,59 @@
       "icon": "🎲",
       "style": "default"
     }
-  ]
+  ],
+  "awards_season": {
+    "ballon_dor": [
+      {
+        "text": "🏆 PALLONE D'ORO {seasonLabel}! {playerName} è il miglior giocatore della stagione con media {avgRating}! Un'annata da incorniciare!",
+        "category": "award_season",
+        "type": "ballon_dor",
+        "priority": "urgent",
+        "icon": "🏆",
+        "style": "success"
+      },
+      {
+        "text": "🏆 CAMPIONE! {playerName} si aggiudica il Pallone d'Oro {seasonLabel} grazie a {matchesPlayed} partite da protagonista e una media di {avgRating}. Leggendario!",
+        "category": "award_season",
+        "type": "ballon_dor",
+        "priority": "urgent",
+        "icon": "🏆",
+        "style": "success"
+      },
+      {
+        "text": "🏆 {playerName} Pallone d'Oro {seasonLabel}! Media di {avgRating}, {mvpCount} MVP: E' lui il più forte!",
+        "category": "award_season",
+        "type": "ballon_dor",
+        "priority": "urgent",
+        "icon": "🏆",
+        "style": "success"
+      }
+    ],
+    "golden_boot": [
+      {
+        "text": "👟 SCARPA D'ORO {seasonLabel}! {playerName} è il capocannoniere con {goals} gol ({goalsPerMatch} gol/partita). Un bomber spaziale!",
+        "category": "award_season",
+        "type": "golden_boot",
+        "priority": "urgent",
+        "icon": "👟",
+        "style": "success"
+      },
+      {
+        "text": "👟 {playerName} devastante in stagione {seasonLabel}: {goals} reti, {triplette} triplette e {assists} assist. Scarpa d'Oro meritatissima!",
+        "category": "award_season",
+        "type": "golden_boot",
+        "priority": "urgent",
+        "icon": "👟",
+        "style": "success"
+      },
+      {
+        "text": "👟 CAPOCANNONIERE! {playerName} chiude la stagione {seasonLabel} con {goals} gol in {matchesPlayed} partite. Implacabile!",
+        "category": "award_season",
+        "type": "golden_boot",
+        "priority": "urgent",
+        "icon": "👟",
+        "style": "success"
+      }
+    ]
+  }
 }

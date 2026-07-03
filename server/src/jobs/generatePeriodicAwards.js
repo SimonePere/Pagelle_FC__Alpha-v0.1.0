@@ -13,6 +13,11 @@
  *   3. GOLDEN_BOOT: il giorno dopo BALLON_DOR (= seasonEndDate + 3 giorni il check).
  *      Stessa stagione (finestra dati identica), evento separato per dare risalto.
  *
+ *   4. GOLDEN_TOT: 4 giorni dopo la seasonEndDate (quando BALLON_DOR e GOLDEN_BOOT
+ *      sono già READY) applica automaticamente i bonus GoldenTot alla stagione N+1
+ *      (playerCardTOT +3 al vincitore Pallone d'Oro, fin +2 al capocannoniere) e
+ *      genera le relative news. Idempotente (upsert su indice univoco).
+ *
  * SCHEDULING
  *   - Monthly:  '0 9 1 * *'   → 1° del mese, ore 09:00 Rome
  *   - Season:   '0 18 * * *'  → ogni giorno ore 18:00 Rome (check leggero)
@@ -95,6 +100,9 @@ async function runSeasonAwardsGeneration() {
 
     const BALLON_TRIGGER_OFFSET_DAYS = 2;
     const GOLDEN_TRIGGER_OFFSET_DAYS = BALLON_TRIGGER_OFFSET_DAYS + 1;
+    // Golden TOT: applica i bonus 4 giorni dopo la fine stagione, quando SIA
+    // BALLON_DOR (day+2) SIA GOLDEN_BOOT (day+3) sono già stati creati e renderizzati a READY.
+    const GOLDEN_TOT_APPLY_OFFSET_DAYS = GOLDEN_TRIGGER_OFFSET_DAYS + 1;
 
     const dayWindow = (offsetDays) => {
         const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - offsetDays);
@@ -108,9 +116,11 @@ async function runSeasonAwardsGeneration() {
     const ballonWindow = dayWindow(BALLON_TRIGGER_OFFSET_DAYS);
     // GOLDEN_BOOT: trigger 3 giorni dopo seasonEndDate (= +1 giorno dal BALLON_DOR)
     const goldenWindow = dayWindow(GOLDEN_TRIGGER_OFFSET_DAYS);
+    // GOLDEN_TOT apply: 4 giorni dopo seasonEndDate
+    const goldenTotWindow = dayWindow(GOLDEN_TOT_APPLY_OFFSET_DAYS);
 
     try {
-        const [teamsForBallon, teamsForGolden] = await Promise.all([
+        const [teamsForBallon, teamsForGolden, teamsForGoldenTot] = await Promise.all([
             Team.find({
                 awardsEnabled: true,
                 seasonEndDate: { $gte: ballonWindow.start, $lte: ballonWindow.end }
@@ -119,9 +129,13 @@ async function runSeasonAwardsGeneration() {
                 awardsEnabled: true,
                 seasonEndDate: { $gte: goldenWindow.start, $lte: goldenWindow.end }
             }).select('_id name seasonEndDate').lean(),
+            Team.find({
+                awardsEnabled: true,
+                seasonEndDate: { $gte: goldenTotWindow.start, $lte: goldenTotWindow.end }
+            }).select('_id name seasonEndDate').lean(),
         ]);
 
-        if (teamsForBallon.length === 0 && teamsForGolden.length === 0) {
+        if (teamsForBallon.length === 0 && teamsForGolden.length === 0 && teamsForGoldenTot.length === 0) {
             // Nessun team interessato — silenzio totale (daily check)
             return;
         }
@@ -169,6 +183,36 @@ async function runSeasonAwardsGeneration() {
         }
 
         console.log(`✅ [CRON season-awards] Fine. BALLON_DOR=${createdBD} GOLDEN_BOOT=${createdGB}\n`);
+
+        // ─── GOLDEN_TOT (applica bonus per la stagione N+1) ────────────────
+        // A day+4 sia BALLON_DOR (day+2) sia GOLDEN_BOOT (day+3) sono READY.
+        // applyBonusesForSeason è idempotente (upsert su indice univoco) e
+        // genera anche le news award (hook interno al service).
+        if (teamsForGoldenTot.length > 0) {
+            const GoldenTotService = require('../services/GoldenTotService');
+            const goldenTotService = new GoldenTotService();
+            let appliedTeams = 0;
+            let appliedBonuses = 0;
+            console.log(`\n🌟 [CRON golden-tot] ${teamsForGoldenTot.length} team con fine stagione da ${GOLDEN_TOT_APPLY_OFFSET_DAYS} giorni`);
+            for (const team of teamsForGoldenTot) {
+                try {
+                    // La stagione appena conclusa è resolveSeasonId(seasonEndDate);
+                    // i bonus si applicano alla stagione SUCCESSIVA (quella ora attiva).
+                    const dayAfterEnd = new Date(team.seasonEndDate);
+                    dayAfterEnd.setDate(dayAfterEnd.getDate() + 2);
+                    const nextSeasonId = seasonService.resolveSeasonId(dayAfterEnd);
+                    const res = await goldenTotService.applyBonusesForSeason(team._id, nextSeasonId);
+                    if (res && res.applied > 0) {
+                        appliedTeams++;
+                        appliedBonuses += res.applied;
+                        console.log(`  🌟 ${team.name}: ${res.applied} bonus GoldenTot → stagione ${nextSeasonId}`);
+                    }
+                } catch (err) {
+                    console.error(`  ❌ ${team.name}: GOLDEN_TOT errore: ${err.message}`);
+                }
+            }
+            console.log(`✅ [CRON golden-tot] Fine. team=${appliedTeams} bonus=${appliedBonuses}\n`);
+        }
     } catch (err) {
         console.error('❌ [CRON season-awards] Errore fatale:', err.message);
     } finally {

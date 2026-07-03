@@ -26,6 +26,7 @@ const PlayerLeaderboardStatsRepository = require('./PlayerLeaderboardStatsReposi
 const PlayerSeasonStatsRepository = require('./PlayerSeasonStatsRepository');
 const NewsRepository = require('./NewsRepository');
 const AwardRepository = require('./AwardRepository');
+const GoldenTotRepository = require('./GoldenTotRepository');
 
 // 📦 Export di tutti i repository
 module.exports = {
@@ -44,5 +45,6 @@ module.exports = {
     PlayerLeaderboardStatsRepository,
     PlayerSeasonStatsRepository,
     NewsRepository,
-    AwardRepository
+    AwardRepository,
+    GoldenTotRepository
 };

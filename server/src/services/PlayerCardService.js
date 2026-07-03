@@ -912,8 +912,13 @@ class PlayerCardService {
      * @returns {Promise<Object>} Lista risultati con paginazione
      */
     async getPlayerCardResults(filters = {}) {
+        // Importazione lazy per evitare dipendenze circolari (GoldenTotService → AwardRepository
+        // → non dipende da PlayerCardService, ma usiamo require lazy per coerenza con il progetto).
+        const GoldenTotService = require('./GoldenTotService');
+        const SeasonService = require('./SeasonService');
+
         try {
-            const { targetPlayerId, teamId, limit = 10, offset = 0 } = filters;
+            const { targetPlayerId, teamId, seasonId: seasonFilter, limit = 10, offset = 0 } = filters;
 
             // Build query
             const query = {
@@ -926,13 +931,10 @@ class PlayerCardService {
 
             if (teamId) {
                 // Find sessions for this team, then filter results
-                const teamSessions = await this.votingSessionRepository.findAll({
-                    filter: {
-                        teamId: teamId,
-                        type: 'player_card_rating'
-                    },
-                    select: '_id'
-                });
+                const teamSessions = await this.votingSessionRepository.findAll(
+                    { teamId: teamId, type: 'player_card_rating' },
+                    { select: '_id' }
+                );
 
                 query.votingSessionId = { $in: teamSessions.map(s => s._id) };
             }
@@ -952,21 +954,61 @@ class PlayerCardService {
 
             const totalResults = await this.playerCardResultRepository.countDocuments(query);
 
+            // ── GOLDEN TOT DECORATION ──────────────────────────────────────────────────
+            // Se abbiamo teamId, arricchiamo ogni risultato con i bonus GoldenTot attivi
+            // per la stagione corrente (o quella specificata).
+            // Contratto D-B: i campi nativi (finalOverallRating, finalAttributes.fin)
+            // restano INVARIATI. Il bonus viene esposto nel campo separato `goldenTot`.
+            // Il frontend usa quei dati per il badge +3 / +2 in UI.
+            let bonusMap = {};
+            if (teamId) {
+                try {
+                    const goldenTotService = new GoldenTotService();
+                    const seasonService = new SeasonService();
+                    // Se il chiamante non passa una stagione specifica, usa la corrente.
+                    const resolvedSeasonId = seasonFilter
+                        ? seasonService.resolveSeasonParam(seasonFilter)
+                        : seasonService.resolveSeasonId(new Date());
+                    if (resolvedSeasonId) {
+                        bonusMap = await goldenTotService.getActiveBonuses(teamId, resolvedSeasonId);
+                    }
+                } catch (bonusErr) {
+                    // Il bonus è addizionale: non bloccare il flusso se fallisce.
+                    console.warn('[PlayerCardService] getActiveBonuses error (non bloccante):', bonusErr.message);
+                }
+            }
+            // ── fine GOLDEN TOT ────────────────────────────────────────────────────────
+
             return {
                 success: true,
-                results: results.map(result => ({
-                    id: result._id,
-                    targetPlayer: result.targetPlayerId,
-                    session: result.votingSessionId,
-                    finalAttributes: result.finalAttributes,
-                    finalAdditionalAttributes: result.finalAdditionalAttributes, // ⭐ STELLE
-                    goalkeeperAttributes: result.goalkeeperAttributes, // ✅ AGGIUNTO PORTIERI
-                    finalOverallRating: result.finalOverallRating, // ✅ CAMPO CORRETTO!
-                    consensusProfile: result.consensusProfile, // ✅ AGGIUNTO PROFILO CONSENSUALE
-                    sessionMetadata: result.sessionMetadata, // ✅ METADATI COMPLETI
-                    totalVotes: result.sessionMetadata?.totalVoters || 0,
-                    createdAt: result.createdAt
-                })),
+                results: results.map(result => {
+                    const playerId = (result.targetPlayerId?._id || result.targetPlayerId)?.toString();
+                    const bonus = bonusMap[playerId];
+
+                    // goldenTot è null quando nessun bonus è attivo per questo giocatore.
+                    // La struttura esposta al frontend:
+                    //   goldenTot.playerCardTOT → bonus Pallone d'Oro (+3 sul TOT)
+                    //   goldenTot.fin           → bonus Scarpa d'Oro (+2 su finalizzazione)
+                    const goldenTot = bonus ? {
+                        ...(bonus.playerCardTOT ? { playerCardTOT: bonus.playerCardTOT } : {}),
+                        ...(bonus.fin ? { fin: bonus.fin } : {})
+                    } : null;
+
+                    return ({
+                        id: result._id,
+                        targetPlayer: result.targetPlayerId,
+                        session: result.votingSessionId,
+                        finalAttributes: result.finalAttributes,
+                        finalAdditionalAttributes: result.finalAdditionalAttributes, // ⭐ STELLE
+                        goalkeeperAttributes: result.goalkeeperAttributes, // ✅ AGGIUNTO PORTIERI
+                        finalOverallRating: result.finalOverallRating, // ✅ CAMPO CORRETTO!
+                        consensusProfile: result.consensusProfile, // ✅ AGGIUNTO PROFILO CONSENSUALE
+                        sessionMetadata: result.sessionMetadata, // ✅ METADATI COMPLETI
+                        totalVotes: result.sessionMetadata?.totalVoters || 0,
+                        createdAt: result.createdAt,
+                        goldenTot  // null se nessun bonus, oggetto con i campi attivi altrimenti
+                    });
+                }),
                 pagination: {
                     total: totalResults,
                     limit,

@@ -128,14 +128,28 @@ exports.getAssistsLeaderboard = async (req, res, next) => {
 };
 
 // === CLASSIFICA PLAYERCARD ===
-// PlayerSeasonStats non include i dati playercard → cade sempre sul lifetime.
+// I dati carta (playerCardTOT) vengono da PlayerLeaderboardStats (lifetime), non da
+// PlayerSeasonStats. Tuttavia il parametro ?season= viene passato a LeaderboardService
+// perché _getSeasonLeaderboard applica i bonus GoldenTot (Pallone d'Oro / Scarpa d'Oro)
+// quando è selezionata una stagione specifica. Senza ?season= (o ?season=all) → lifetime puro.
 exports.getPlayercardLeaderboard = async (req, res, next) => {
     try {
         const { teamId } = req.params;
         const limit = parseInt(req.query.limit) || 10;
 
-        const result = await leaderboardService.getLeaderboard(teamId, 'playercard', limit, null);
+        const parsed = parseSeasonParam(req, res);
+        if (!parsed) return;
+        const { seasonId, seasonKey } = parsed;
 
+        const cacheKey = `leaderboard:playercard:${teamId}:season:${seasonKey}:limit${limit}`;
+        const cached = await CacheService.get(cacheKey);
+        if (cached) {
+            return res.json(cached);
+        }
+
+        const result = await leaderboardService.getLeaderboard(teamId, 'playercard', limit, seasonId);
+
+        await CacheService.set(cacheKey, result, 30 * 60, [`team:${teamId}`, 'leaderboard', 'playercard']);
         res.json(result);
 
     } catch (error) {

@@ -161,6 +161,18 @@ class NewsGenerator {
         }
     }
 
+    /**
+     * Genera una news per un award stagionale (BALLON_DOR o GOLDEN_BOOT).
+     * @param {'BALLON_DOR'|'GOLDEN_BOOT'} awardType
+     * @param {Object} eventData  { playerName, avgRating, goals, goalsPerMatch, matchesPlayed, mvpCount, triplette, assists, seasonLabel, seasonId, teamId }
+     */
+    generateSeasonAwardNews(awardType, eventData) {
+        const key = awardType === 'BALLON_DOR' ? 'ballon_dor' : 'golden_boot';
+        const templates = this.loadTemplates().awards_season?.[key] || [];
+        const cacheKey = `award_${awardType}_${eventData.teamId}_${eventData.seasonId}`;
+        return this.selectAndProcessTemplate(templates, eventData, cacheKey);
+    }
+
 }
 
 

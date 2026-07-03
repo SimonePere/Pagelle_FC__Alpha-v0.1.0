@@ -161,9 +161,13 @@ export default function PlayerCards() {
   // Vera API per risultati finali
   const handleLoadResults = async (playerId: string) => {
     try {
-      // Chiama la vera API con timestamp per bypassare cache
+      // Passa teamId e season=current così il backend decora con i bonus GoldenTot attivi.
+      // Il timestamp bypassa la cache del browser; la cache server usa la season nella key.
       const timestamp = Date.now();
-      const response = await apiCall(`/player-cards/results/user/${playerId}?t=${timestamp}`);
+      const teamId = user?.teams?.[0]?.id || '';
+      const response = await apiCall(
+        `/player-cards/results/user/${playerId}?t=${timestamp}&teamId=${teamId}&season=current`
+      );
       // 🐛 DEBUG: Verifica contenuto COMPLETO della risposta  
 
 
@@ -202,7 +206,8 @@ export default function PlayerCards() {
         metadata: {
           totalVoters: latestResult.sessionMetadata?.totalVoters || latestResult.totalVotes || 4,
           confidence: latestResult.statistics?.overallStats?.confidence || 95
-        }
+        },
+        goldenTot: latestResult.goldenTot ?? null  // bonus GoldenTot (null se assente)
       };
       return result;
 

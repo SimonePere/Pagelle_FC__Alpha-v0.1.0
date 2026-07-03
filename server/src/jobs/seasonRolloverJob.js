@@ -99,6 +99,21 @@ async function runSeasonRollover() {
             console.log(`✅ [rollover] Rollover completato. ${active.seasonId} → archived · ${nextSeasonId} → active.`);
         }
 
+        // ── Reset news: elimina tutto e lascia solo le news dei premi stagionali.
+        //    Fire-and-forget: non blocca il rollover se fallisce.
+        try {
+            const Team = require('../models/Team');
+            const NewsService = require('../services/NewsService');
+            const newsService = new NewsService();
+            const teams = await Team.find({}).select('_id').lean();
+            for (const team of teams) {
+                await newsService.resetNewsForSeasonEnd(team._id, active.seasonId);
+            }
+            console.log(`🗞️  [rollover] News resettate per ${teams.length} team. Solo award news mantenute.`);
+        } catch (newsErr) {
+            console.warn(`⚠️  [rollover] News reset error: ${newsErr.message}`);
+        }
+
         return {
             action: 'rolled_over',
             prevSeason: active.seasonId,

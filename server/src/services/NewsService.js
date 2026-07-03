@@ -765,6 +765,92 @@ class NewsService {
             throw new AppError(`Failed to fetch team news: ${error.message}`, 500);
         }
     }
+    /**
+     * 🏆 Crea news per i premi stagionali (Pallone d'Oro e/o Scarpa d'Oro).
+     * Viene chiamato dopo che GoldenTotService ha confermato i bonus (award READY).
+     *
+     * @param {string|ObjectId} teamId
+     * @param {Array<{type:string, hero:Object, seasonId:string}>} awards  award objects
+     * @returns {Promise<Array>} news create
+     */
+    async createNewsOnSeasonAwards(teamId, awards = []) {
+        const created = [];
+        for (const award of awards) {
+            try {
+                const hero = award.hero || {};
+                // Mappa i placeholder dal payload hero dell'award
+                const eventData = {
+                    teamId: teamId.toString(),
+                    seasonId: award.seasonId || '',
+                    seasonLabel: award.seasonId || '',
+                    playerName: hero.name || 'N/A',
+                    // BALLON_DOR
+                    avgRating: hero.mainValue || '',
+                    matchesPlayed: hero.stats?.find(s => s.label === 'PARTITE GIOCATE')?.value || '',
+                    mvpCount: hero.stats?.find(s => s.label === 'VOLTE MVP')?.value || '',
+                    // GOLDEN_BOOT
+                    goals: hero.mainValue || '',
+                    goalsPerMatch: hero.stats?.find(s => s.label === 'GOL A PARTITA')?.value || '',
+                    triplette: hero.stats?.find(s => s.label === 'TRIPLETTE')?.value || '',
+                    assists: hero.stats?.find(s => s.label === 'ASSIST')?.value || '',
+                };
+
+                const newsObj = this.newsGenerator.generateSeasonAwardNews(award.type, eventData);
+                if (!newsObj) continue;
+
+                const saved = await this.newsRepository.create({
+                    teamId,
+                    text: newsObj.text,
+                    category: 'award_season',
+                    type: award.type === 'BALLON_DOR' ? 'ballon_dor' : 'golden_boot',
+                    priority: 'urgent',
+                    icon: newsObj.icon,
+                    style: newsObj.style || 'success',
+                    eventData: { awardType: award.type, seasonId: award.seasonId },
+                    createdAt: new Date()
+                });
+                created.push(saved);
+                console.log(`[NewsService] ✅ Award news creata: ${award.type} team=${teamId}`);
+            } catch (err) {
+                console.warn(`[NewsService] Award news error (${award.type}): ${err.message}`);
+            }
+        }
+        return created;
+    }
+
+    /**
+     * 🔄 Reset news a fine stagione: elimina TUTTE le news del team e ricrea
+     * solo le news dei premi stagionali (Pallone d'Oro + Scarpa d'Oro) della
+     * stagione appena archiviata. Idempotente.
+     *
+     * @param {string|ObjectId} teamId
+     * @param {string} prevSeasonId  stagione appena archiviata (es. "2025-26")
+     * @returns {Promise<{deleted:number, created:number}>}
+     */
+    async resetNewsForSeasonEnd(teamId, prevSeasonId) {
+        // 1. Leggi i premi READY della stagione appena chiusa
+        const Award = require('../models/Award');
+        const awards = await Award.find({
+            teamId,
+            seasonId: prevSeasonId,
+            type: { $in: ['BALLON_DOR', 'GOLDEN_BOOT'] },
+            status: 'READY'
+        }).lean();
+
+        // 2. Elimina tutte le news del team
+        const deleted = await this.newsRepository.deleteAllForTeam(teamId);
+        console.log(`[NewsService] resetNewsForSeasonEnd: team=${teamId} deleted=${deleted} news`);
+
+        // 3. Ricrea solo le news dei premi
+        const awardData = awards.map(a => ({
+            type: a.type,
+            hero: a.payload?.hero,
+            seasonId: a.seasonId
+        }));
+        const created = await this.createNewsOnSeasonAwards(teamId, awardData);
+
+        return { deleted, created: created.length };
+    }
 }
 
 module.exports = NewsService;

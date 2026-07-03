@@ -7,7 +7,7 @@ const {
 } = require('../repositories');
 
 const NewsService = require('./NewsService');
-
+const GoldenTotService = require('./GoldenTotService');
 
 const AppError = require('../utils/AppError');
 
@@ -35,7 +35,9 @@ class LeaderboardService {
         this.playerStatsRepository = new PlayerLeaderboardStatsRepository();
         this.playerSeasonStatsRepository = new PlayerSeasonStatsRepository();
         this.newsService = new NewsService();
-
+        // GoldenTotService: decoration bonus Pallone d'Oro / Scarpa d'Oro sulla classifica playercard.
+        // Istanziato qui (no circular dep: GoldenTotService non dipende da LeaderboardService).
+        this.goldenTotService = new GoldenTotService();
 
         // Standard fields per consistency
         this.STANDARD_FIELDS = 'playerId playerName totalMatches totalGoals totalAssists averageRating playerCardTOT playerCardAverage goalPerMatch assistPerMatch';
@@ -95,19 +97,78 @@ class LeaderboardService {
      * @private
      */
     async _getSeasonLeaderboard(teamId, type, limit, seasonId) {
-        // playercard e form non sono in PlayerSeasonStats → lifetime
+        // playercard e form non sono in PlayerSeasonStats → dati da PlayerLeaderboardStats (lifetime).
+        // Per playercard applichiamo i bonus GoldenTot se presenti per questa stagione.
         if (type === 'playercard' || type === 'form') {
             const queryConfig = this.buildLeaderboardQuery(teamId, type);
-            const players = await this.playerStatsRepository.findAll(
+            // Recuperiamo tutti i giocatori senza limit: il limit lo applichiamo DOPO
+            // aver applicato i bonus e ri-ordinato, altrimenti potremmo tagliare il
+            // vincitore del Pallone d'Oro prima di sommargli il +3.
+            const allPlayers = await this.playerStatsRepository.findAll(
                 queryConfig.filter,
-                { sort: queryConfig.sort, limit, select: this.STANDARD_FIELDS }
+                { sort: queryConfig.sort, select: this.STANDARD_FIELDS }
             );
+
+            // ── GOLDEN TOT BONUS (solo per playercard, non per form) ────────────────
+            // Contratto D-C: in classifica il TOT mostrato è già il valore sommato
+            // (nativo + delta). Il design UI non cambia; cambia solo il numero.
+            // Il re-sort garantisce l'ordine corretto: se qualcuno ha 87 nativo e
+            // il vincitore ha 82+3=85, il 87 nativo resta comunque sopra.
+            if (type === 'playercard') {
+                const bonusMap = await this.goldenTotService.getActiveBonuses(teamId, seasonId);
+
+                if (Object.keys(bonusMap).length > 0) {
+                    const decorated = allPlayers.map(p => {
+                        const plain = p.toObject ? p.toObject() : { ...p };
+                        const pid = plain.playerId?.toString();
+                        const bonus = bonusMap[pid];
+
+                        if (bonus?.playerCardTOT) {
+                            // Somma il delta al TOT: questo è il valore che il frontend
+                            // mostra e usa per l'ordinamento. Il dato grezzo in DB è intatto.
+                            plain.playerCardTOT = (plain.playerCardTOT || 0) + bonus.playerCardTOT.delta;
+                            // Esponiamo i metadati del bonus: il frontend può usarli
+                            // per micro-indicatori futuri senza ulteriori chiamate API.
+                            plain.goldenTotBonus = {
+                                source: bonus.playerCardTOT.source,        // 'BALLON_DOR'
+                                delta: bonus.playerCardTOT.delta,         // 3
+                                sourceSeasonId: bonus.playerCardTOT.sourceSeasonId // '2025-26'
+                            };
+                        }
+                        return plain;
+                    });
+
+                    // Re-sort in JS dopo aver applicato i bonus: stessa logica del DB
+                    // (playerCardTOT desc, poi playerCardAverage desc come tiebreaker).
+                    decorated.sort((a, b) => {
+                        const totDiff = (b.playerCardTOT || 0) - (a.playerCardTOT || 0);
+                        if (totDiff !== 0) return totDiff;
+                        return (b.playerCardAverage || 0) - (a.playerCardAverage || 0);
+                    });
+
+                    return {
+                        success: true,
+                        data: decorated.slice(0, limit),
+                        type,
+                        seasonId,
+                        metadata: {
+                            teamId,
+                            limit,
+                            count: decorated.length,
+                            season: seasonId,
+                            note: 'playercard lifetime + golden-tot bonus applicato'
+                        }
+                    };
+                }
+            }
+            // ── fine GOLDEN TOT ─────────────────────────────────────────────────────
+
             return {
                 success: true,
-                data: players,
+                data: allPlayers.slice(0, limit),
                 type,
                 seasonId: null,
-                metadata: { teamId, limit, count: players.length, note: 'playercard non stagionale, dati lifetime' }
+                metadata: { teamId, limit, count: allPlayers.length, note: 'playercard non stagionale, dati lifetime' }
             };
         }
 

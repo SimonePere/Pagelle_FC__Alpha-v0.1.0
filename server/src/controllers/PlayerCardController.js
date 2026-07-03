@@ -181,13 +181,17 @@ const getPlayerCardResults = async (req, res, next) => {
             // Use route parameter userId if present, otherwise fall back to query parameter
             targetPlayerId: req.params.userId || req.query.targetPlayerId,
             teamId: req.query.teamId,
+            // season: passato per la decoration GoldenTot (opzionale, default = stagione corrente)
+            seasonId: req.query.season || null,
             limit: parseInt(req.query.limit) || 10,
             offset: parseInt(req.query.offset) || 0
         };
 
         // 🎯 CACHE INTEGRATION - Historical results
-        // Generate cache key che include tutti i filtri importanti
-        const cacheKey = `playercard:results:${filters.targetPlayerId || 'all'}:team${filters.teamId || 'all'}:limit${filters.limit}:offset${filters.offset}`;
+        // La cache key include season per evitare che una risposta con bonus
+        // venga servita per una stagione diversa.
+        const seasonKey = filters.seasonId || 'current';
+        const cacheKey = `playercard:results:${filters.targetPlayerId || 'all'}:team${filters.teamId || 'all'}:season${seasonKey}:limit${filters.limit}:offset${filters.offset}`;
 
         // 🔍 Try cache first
         console.log(`🔍 Controllo cache per risultati PlayerCard user ${filters.targetPlayerId || 'multipli'}`);

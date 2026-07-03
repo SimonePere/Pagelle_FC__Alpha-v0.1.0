@@ -186,7 +186,8 @@ const Profile = () => {
     try {
       // Chiama la vera API con timestamp per bypassare cache
       const timestamp = Date.now();
-      const response = await apiCall(`/player-cards/results/user/${playerId}?t=${timestamp}`);
+      const teamId = user?.teams?.[0]?.id || '';
+      const response = await apiCall(`/player-cards/results/user/${playerId}?t=${timestamp}&teamId=${teamId}&season=current`);
 
       if (!response.success || !response.results || response.results.length === 0) {
         return null;
@@ -223,7 +224,8 @@ const Profile = () => {
         metadata: {
           totalVoters: latestResult.sessionMetadata?.totalVoters || latestResult.totalVotes || 4,
           confidence: latestResult.statistics?.overallStats?.confidence || 95
-        }
+        },
+        goldenTot: latestResult.goldenTot ?? null
       };
       return result;
 
