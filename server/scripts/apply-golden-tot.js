@@ -47,7 +47,8 @@
  * =============================================================================
  */
 
-require('dotenv').config();
+// Carica il .env di server/ indipendentemente dalla cwd (root, server/ o server/scripts/)
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const mongoose = require('mongoose');
 
 // ─── PARSING ARGOMENTI CLI ────────────────────────────────────────────────────
