@@ -28,8 +28,13 @@ const userId = (user: User | null | undefined): string | null => {
  *
  * Default fail-closed: se manca user o role → false.
  */
+
+export const isGod = (user: User | null | undefined): boolean => {
+    return !!user && user.role === 'god';
+};
+
 export const isAdmin = (user: User | null | undefined): boolean => {
-    return !!user && user.role === "admin";
+    return !!user && (user.role === "admin" || user.role === "god");
 };
 
 /**

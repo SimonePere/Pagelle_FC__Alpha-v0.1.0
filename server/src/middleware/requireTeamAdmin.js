@@ -37,7 +37,7 @@ const requireTeamAdmin = ({ paramName = 'id' } = {}) => async (req, res, next) =
         req.team = team;
 
         // 1) Admin globale → bypass
-        if (req.user?.role === 'admin') {
+        if (req.user?.role === 'admin' || req.user?.role === 'god') {
             return next();
         }
 

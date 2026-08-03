@@ -21,7 +21,6 @@ import {
 import { NavLink } from "@/components/NavLink";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ThemeToggle } from "@/components/ThemeToggle";
 
 type NavItem = {
   title: string;
@@ -336,10 +335,8 @@ export function AppSidebar() {
           </div>
         )}
 
-        {/* Theme Toggle & Logout */}
+        {/* Logout */}
         <div className={`mt-auto p-6 border-t border-sidebar-border space-y-3 transition-all ${isCollapsed ? 'px-3' : ''}`}>
-          {!isCollapsed && <ThemeToggle />}
-
           <Button
             onClick={handleLogout}
             variant="ghost"

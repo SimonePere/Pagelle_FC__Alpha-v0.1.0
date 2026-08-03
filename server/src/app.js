@@ -17,6 +17,7 @@ const newsRoutes = require('./routes/news');
 const awardRoutes = require('./routes/awards');
 const inviteRoutes = require('./routes/invite');
 const seasonRoutes = require('./routes/seasons');
+const godRoutes = require('./god/routes/god');
 
 const app = express();
 
@@ -95,6 +96,9 @@ app.use('/api/v1/news', newsRoutes);
 app.use('/api/v1/awards', awardRoutes);
 app.use('/api/v1/invite', inviteRoutes);
 app.use('/api/v1/seasons', seasonRoutes);
+// Rotte God Dashboard: overview, dashboard graph data, guest conversion,
+// engagement, awards analytics e usage tecnico.
+app.use("/api/v1/god", godRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

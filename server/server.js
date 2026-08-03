@@ -3,6 +3,7 @@ const connectDB = require('./src/config/database');
 const { startCloseExpiredVotingSessionsCron } = require('./src/jobs/closeExpiredVotingSessions');
 const { startPeriodicAwardsCron } = require('./src/jobs/generatePeriodicAwards');
 const { startSeasonRolloverCron } = require('./src/jobs/seasonRolloverJob');
+const { startGodKpiSnapshotCron } = require('./src/god/jobs/godKpiSnapshotJob');
 
 const PORT = process.env.PORT || 5000;
 
@@ -21,4 +22,7 @@ app.listen(PORT, () => {
 
   // 🔄 Avvia scheduler per rollover automatico della stagione (11:00 daily).
   startSeasonRolloverCron();
+
+  // 📊 Avvia scheduler per snapshot KPI di God (hourly + daily).
+  startGodKpiSnapshotCron();
 });

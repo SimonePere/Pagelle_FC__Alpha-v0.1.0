@@ -20,7 +20,7 @@ const teamRepository = new TeamRepository();
 const requireMatchAdmin = async (req, res, next) => {
     try {
         // Admin globale → bypass
-        if (req.user?.role === 'admin') return next();
+        if (req.user?.role === 'admin' || req.user?.role === 'god') return next();
 
         const matchId = req.params.matchId || req.params.id;
         if (!matchId) {

@@ -20,6 +20,7 @@ import { useActiveTeamId } from '@/hooks/useActiveTeamId';
 import { useActiveSeason } from '@/hooks/useActiveSeason';
 import SeasonSelector from '@/components/SeasonSelector';
 
+// Gestione Errori per MatchGrid (es. fetch fallito)
 interface ErrorBoundaryState {
   hasError: boolean;
   error?: Error;

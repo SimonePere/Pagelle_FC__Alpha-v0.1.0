@@ -952,17 +952,36 @@ class VotingService {
         let totalRating = 0;
         for (const [playerId, playerStats] of Object.entries(finalResults)) {
             const avgRating = playerStats.averageRating || 6;
+            const goals = playerStats.goals || 0;
+            const assists = playerStats.assists || 0;
+            const badges = playerStats.badges || [];
             voteResultData.matchRatingResults.set(playerId, {
                 playerId: playerId,
                 averageRating: avgRating,
                 medianRating: avgRating,
-                goals: playerStats.goals || 0,
-                assists: playerStats.assists || 0,
+                goals,
+                assists,
                 voteCount: playerStats.voteCount || 1,
-                badges: playerStats.badges || [],
+                badges,
                 grade: this.calculateGrade(avgRating)
             });
             totalRating += avgRating;
+
+            // Roll-up statistiche di partita (prima restavano a 0: la God Dashboard
+            // e ogni consumer di statistics.* leggevano dati errati).
+            voteResultData.statistics.totalGoalsReported += goals;
+            voteResultData.statistics.totalAssistsReported += assists;
+            badges.forEach(badge => {
+                if (voteResultData.statistics.badgesSummary[badge] !== undefined) {
+                    voteResultData.statistics.badgesSummary[badge] += 1;
+                }
+            });
+            if (avgRating >= 9) voteResultData.statistics.ratingDistribution['9-10'] += 1;
+            else if (avgRating >= 8) voteResultData.statistics.ratingDistribution['8-9'] += 1;
+            else if (avgRating >= 7) voteResultData.statistics.ratingDistribution['7-8'] += 1;
+            else if (avgRating >= 6) voteResultData.statistics.ratingDistribution['6-7'] += 1;
+            else if (avgRating >= 5) voteResultData.statistics.ratingDistribution['5-6'] += 1;
+            else voteResultData.statistics.ratingDistribution['below-5'] += 1;
         }
 
         voteResultData.statistics.overallAverageRating = totalRating / Object.keys(finalResults).length;

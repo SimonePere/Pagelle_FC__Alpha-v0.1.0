@@ -20,7 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { TrendingUp, Target, Users, Trophy, Award, TrendingDown, Star, LogOut, Goal, Hand, User as UserIcon, Lock, KeyRound } from 'lucide-react';
+import { TrendingUp, Target, Users, Trophy, Award, TrendingDown, Star, LogOut, Goal, Hand, User as UserIcon, Lock, KeyRound, Settings, Crown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Progress } from '@/components/ui/progress';
 import { RoleBadge, deriveMemberRole } from '@/components/RoleBadge';
@@ -33,7 +33,8 @@ import { apiCall } from '@/lib/api';
 import { toast } from 'sonner';
 import { useToast } from '@/hooks/use-toast';
 import { calculateAge } from '@/utils/playerCardCalculations';
-import { isAdmin } from '@/utils/permissions';
+import { isAdmin, isGod } from '@/utils/permissions';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 // Semplifichiamo l'interface utilizzando i dati già disponibili
 interface UserStats {
@@ -524,6 +525,51 @@ const Profile = () => {
                     </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Impostazioni */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+          >
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Settings className="w-5 h-5 text-primary" /> Impostazioni
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Tema chiaro/scuro */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-foreground">Tema</p>
+                    <p className="text-sm text-muted-foreground">Alterna aspetto chiaro e scuro</p>
+                  </div>
+                  <ThemeToggle />
+                </div>
+
+                {/* Accesso God Dashboard - solo ruolo god */}
+                {isGod(user) && (
+                  <div className="flex items-center justify-between border-t border-border pt-4">
+                    <div>
+                      <p className="font-medium text-foreground flex items-center gap-1.5">
+                        <Crown className="w-4 h-4 text-accent" /> God Dashboard
+                      </p>
+                      <p className="text-sm text-muted-foreground">Pannello riservato al Creatore dell'app</p>
+                    </div>
+                    <Button
+                      onClick={() => navigate('/god-dashboard')}
+                      variant="outline"
+                      size="sm"
+                      className="bg-accent/10 hover:bg-accent/20 border-accent/30"
+                    >
+                      Apri
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>

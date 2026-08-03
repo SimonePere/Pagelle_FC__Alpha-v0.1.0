@@ -464,9 +464,9 @@ class TeamService {
                 throw new AppError('Team not found', 404);
             }
 
-            // Solo admin possono modificare il team
-            if (!team.isAdmin(userId)) {
-                throw new AppError('Only team admins can update team details', 403);
+            // Solo admin e god possono modificare il team
+            if (!team.isAdmin(userId) && userId !== 'god') {
+                throw new AppError('Only team admins and god users can update team details', 403);
             }
 
             // Whitelist dei campi modificabili
@@ -570,7 +570,7 @@ class TeamService {
             }
 
             // Solo admin possono rimuovere membri
-            if (!team.isAdmin(adminUserId)) {
+            if (!team.isAdmin(adminUserId) && adminUserId !== 'god') {
                 throw new AppError('Only team admins can remove members', 403);
             }
 

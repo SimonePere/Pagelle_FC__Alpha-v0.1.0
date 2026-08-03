@@ -7,19 +7,19 @@ import usersReducer from "../slices/usersSlice";
 import playerCardsReducer from "../slices/playerCardsSlice";
 import newsReducer from "../slices/newsSlice";
 import awardsReducer from "../slices/awardsSlice";
-
-
+import godReducer from "../slices/godSlice";
 
 const store = configureStore({
     reducer: {
-        auth: authReducer,                      // Autenticazione
-        teams: teamReducer,                     // Gestione team
-        matches: matchReducer,                  // Gestione partite
-        voting: votingReducer,                  // Sistema votazione
-        users: usersReducer,                    // Gestione utenti
-        playerCards: playerCardsReducer,        // Gestione giocatori
-        news: newsReducer,                      // Gestione notizie
-        awards: awardsReducer                   // Pagelle FC Awards
+        auth: authReducer,
+        teams: teamReducer,
+        matches: matchReducer,
+        voting: votingReducer,
+        users: usersReducer,
+        playerCards: playerCardsReducer,
+        news: newsReducer,
+        awards: awardsReducer,
+        god: godReducer,
     },
     // Vite espone l'env via `import.meta.env` (no `process` nel browser).
     // `import.meta.env.PROD` è true in build di produzione, false in dev.

@@ -15,12 +15,26 @@
  * Esempio:
  *   router.post('/', auth, requireScope('full'), requireRole('admin'), handler);
  */
+
+const ROLE_HIERARCHY = {
+    god: ['god', 'admin', 'moderator', 'player'],
+    admin: ['admin', 'moderator', 'player'],
+    moderator: ['moderator', 'player'],
+    captain: ['captain', 'player'],
+    player: ['player']
+};
+
+const checkRole = (currentRole, requiredRole) => {
+    const allowedRoles = ROLE_HIERARCHY[currentRole] || [];
+    return allowedRoles.includes(requiredRole);
+
+}
+
 const requireRole = (...allowedRoles) => (req, res, next) => {
     const role = req.user?.role || 'player';
-    if (allowedRoles.includes(role)) return next();
-    return res.status(403).json({
-        error: 'Azione riservata agli amministratori'
-    });
+    const ok = allowedRoles.some((r) => checkRole(role, r));
+    if (ok) return next();
+    return res.status(403).json({ error: 'Azione non consentita per il tuo ruolo' });
 };
 
 module.exports = requireRole;

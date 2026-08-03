@@ -98,7 +98,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['player', 'admin', 'moderator'],
+    enum: ['player', 'admin', 'moderator', 'god', 'captain'],
     default: 'player'
   },
   // Nuovi Campi per utenti guest: possibilità da parte di un utente registrato ADMIN di Team,
