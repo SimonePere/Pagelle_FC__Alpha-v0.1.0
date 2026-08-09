@@ -81,7 +81,10 @@ async function closeBrowser() {
 async function renderAndUpload(award) {
     const awardId = String(award._id);
     const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:8080').replace(/\/+$/, '');
-    const shareUrl = `${frontendUrl}/c/${awardId}`;
+    const publicApiBase = (process.env.PUBLIC_API_BASE_URL || '').replace(/\/+$/, '');
+    const shareUrl = publicApiBase
+        ? `${publicApiBase}/awards/public/${awardId}/share`
+        : `${frontendUrl}/c/${awardId}`;
 
     let page = null;
     try {

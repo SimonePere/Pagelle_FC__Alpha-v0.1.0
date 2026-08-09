@@ -25,10 +25,15 @@ export function useAwardShareActions() {
         dispatch(trackAwardShare({ awardId, channel }));
     }, [dispatch]);
 
-    // shareUrl può essere null se l'award è ancora PENDING → fallback su /c/:id
-    const resolveShareUrl = useCallback((award: Award): string =>
-        award.shareUrl || `${window.location.origin}/c/${award.id}`,
-        []);
+    // Per social preview coerenti, preferiamo una pagina share lato backend con OG dinamico.
+    // Fallback: shareUrl persistita (storica) o route pubblica frontend /c/:id.
+    const resolveShareUrl = useCallback((award: Award): string => {
+        const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
+        if (apiBase) {
+            return `${apiBase}/awards/public/${award.id}/share`;
+        }
+        return award.shareUrl || `${window.location.origin}/c/${award.id}`;
+    }, []);
 
     const shareWhatsApp = useCallback((award: Award) => {
         const url = resolveShareUrl(award);
@@ -68,22 +73,114 @@ export function useAwardShareActions() {
         track(award.id, 'copyLink');
     }, [track]);
 
-    const downloadImage = useCallback((award: Award) => {
-        // Rotta backend dedicata: invia PNG con Content-Disposition: attachment.
-        // Vantaggi: download nativo browser, niente CORS, raggiungibile da mobile LAN.
-        // variant=story (1080x1920) = la card "principale" mostrata nel reveal.
-        // (square=1080x1080 è la versione croppata per IG feed/WhatsApp anteprima)
+    const downloadImage = useCallback(async (award: Award) => {
+        // Rotta backend dedicata: restituisce attachment.
+        // Usiamo story (1080x1920) per avere la card intera, non tagliata.
         const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1';
-        const downloadUrl = `${apiBase}/awards/public/${award.id}/download?variant=story`;
-        const a = document.createElement('a');
-        a.href = downloadUrl;
-        a.download = `pagelle-fc-${award.id}.png`;
-        a.rel = 'noopener';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        track(award.id, 'download');
-    }, [track]);
+        const variant = 'story';
+        const downloadUrl = `${apiBase}/awards/public/${award.id}/download?variant=${variant}`;
+
+        try {
+            const response = await fetch(downloadUrl, { method: 'GET' });
+            if (!response.ok) {
+                let message = `Errore download (${response.status})`;
+                try {
+                    const data = await response.json();
+                    message = data?.error || message;
+                } catch {
+                    // noop
+                }
+                throw new Error(message);
+            }
+
+            const blob = await response.blob();
+            if (!blob || blob.size === 0) {
+                throw new Error('File vuoto o non disponibile');
+            }
+
+            const contentDisposition = response.headers.get('content-disposition');
+            const ext = detectImageExt(blob.type);
+            const fallbackName = buildFallbackFilename(award, variant, ext);
+            const filename = parseFilenameFromDisposition(contentDisposition) || fallbackName;
+
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = filename;
+            a.rel = 'noopener';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(blobUrl);
+
+            track(award.id, 'download');
+            toast({
+                title: '✓ Download completato',
+            });
+        } catch (error: any) {
+            toast({
+                title: 'Download non riuscito',
+                description: error?.message || 'Impossibile scaricare l\'immagine in questo momento',
+                variant: 'destructive',
+            });
+        }
+    }, [toast, track]);
+
+    function parseFilenameFromDisposition(disposition: string | null): string | null {
+        if (!disposition) return null;
+        const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+        if (utf8Match?.[1]) {
+            try {
+                return decodeURIComponent(utf8Match[1]);
+            } catch {
+                return utf8Match[1];
+            }
+        }
+        const quotedMatch = disposition.match(/filename="([^"]+)"/i);
+        if (quotedMatch?.[1]) return quotedMatch[1];
+        const plainMatch = disposition.match(/filename=([^;]+)/i);
+        if (plainMatch?.[1]) return plainMatch[1].trim();
+        return null;
+    }
+
+    function detectImageExt(contentType: string): string {
+        const ct = String(contentType || '').toLowerCase();
+        if (ct.includes('image/webp')) return 'webp';
+        if (ct.includes('image/jpeg') || ct.includes('image/jpg')) return 'jpg';
+        return 'png';
+    }
+
+    function buildFallbackFilename(award: Award, variant: string, ext: string): string {
+        const typeSlug = awardTypeSlug(award.type);
+        const periodSlug = slugify(award.payload?.period?.label || 'periodo');
+        const shortId = String(award.id || '').slice(-8) || 'award';
+        return `pagelle-fc-${typeSlug}-${periodSlug}-${variant}-${shortId}.${ext}`;
+    }
+
+    function awardTypeSlug(type: Award['type']): string {
+        switch (type) {
+            case 'MATCH_RECAP':
+                return 'podio-partita';
+            case 'MONTHLY_MVP':
+                return 'mvp-mese';
+            case 'BALLON_DOR':
+                return 'pallone-oro';
+            case 'GOLDEN_BOOT':
+                return 'scarpa-oro';
+            default:
+                return 'award';
+        }
+    }
+
+    function slugify(value: string): string {
+        return String(value)
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .replace(/-{2,}/g, '-');
+    }
 
     return {
         shareWhatsApp,

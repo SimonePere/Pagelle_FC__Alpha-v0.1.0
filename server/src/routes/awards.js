@@ -28,6 +28,11 @@ const auth = require('../middleware/auth');
 // @access  Public
 router.get('/public/:awardId', awardController.getPublicAward);
 
+// @route   GET /api/v1/awards/public/:awardId/share
+// @desc    Pagina HTML con meta OG dinamici per preview social + redirect alla pagina /c/:id
+// @access  Public
+router.get('/public/:awardId/share', awardController.getPublicAwardSharePage);
+
 // @route   GET /api/v1/awards/public/:awardId/download
 // @desc    Download PNG della card (Content-Disposition attachment).
 //          ?variant=square|story|thumb (default: square)
