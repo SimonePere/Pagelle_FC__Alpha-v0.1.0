@@ -54,10 +54,14 @@ async function enrichLeaderboardWithAvatars(result) {
     }
 
     try {
-        // Estrai tutti i playerId dalla classifica
+        // Estrai tutti i playerId dalla classifica (supporta sia ObjectId che String che Populated)
         const playerIds = result.data
-            .filter(p => p.playerId)
-            .map(p => p.playerId);
+            .map(p => {
+                if (!p) return null;
+                const rawId = p.playerId?._id || p.playerId || p._id || p.id;
+                return rawId ? rawId.toString() : null;
+            })
+            .filter(Boolean);
 
         if (playerIds.length === 0) {
             return result;
@@ -70,16 +74,28 @@ async function enrichLeaderboardWithAvatars(result) {
             { select: 'profile.avatarUpdatedAt' }
         );
 
-        // Mappa per lookup O(1): chiave = id stringa (ObjectId.toString())
+        // Mappa per lookup O(1): chiave = id stringa
         const userMap = new Map(users.map(u => [u._id.toString(), u]));
 
-        // Arricchisci ogni entry con avatarUpdatedAt
-        for (const player of result.data) {
-            const user = userMap.get(player.playerId.toString());
+        // Converte ogni Mongoose Document in Plain Old JavaScript Object (POJO)
+        // affinché Mongoose non rimuova avatarUpdatedAt (non presente nello schema stats) durante toJSON()
+        result.data = result.data.map(player => {
+            const plainPlayer = typeof player.toObject === 'function'
+                ? player.toObject()
+                : typeof player.toJSON === 'function'
+                    ? player.toJSON()
+                    : { ...player };
+
+            const rawId = plainPlayer.playerId?._id || plainPlayer.playerId || plainPlayer._id || plainPlayer.id;
+            const pIdStr = rawId ? rawId.toString() : null;
+
+            const user = pIdStr ? userMap.get(pIdStr) : null;
             if (user && user.profile && user.profile.avatarUpdatedAt) {
-                player.avatarUpdatedAt = user.profile.avatarUpdatedAt;
+                plainPlayer.avatarUpdatedAt = user.profile.avatarUpdatedAt;
             }
-        }
+
+            return plainPlayer;
+        });
     } catch (err) {
         // Non-bloccante: se il lookup fallisce, la classifica rimane comunque valida senza avatar
         console.warn('[LeaderboardController] Avatar enrichment fallito:', err.message);
@@ -102,6 +118,7 @@ exports.getRatingLeaderboard = async (req, res, next) => {
         const cached = await CacheService.get(cacheKey);
         if (cached) {
             console.log(`⚡ CLASSIFICA RAPIDA: Rating team ${teamId} season=${seasonKey} dalla cache`);
+            await enrichLeaderboardWithAvatars(cached);
             return res.json({ ...cached, source: 'cache', cached: true });
         }
 
@@ -132,6 +149,7 @@ exports.getGoalsLeaderboard = async (req, res, next) => {
         const cached = await CacheService.get(cacheKey);
         if (cached) {
             console.log(`⚡ Cache HIT: Goals leaderboard team ${teamId} season=${seasonKey}`);
+            await enrichLeaderboardWithAvatars(cached);
             return res.json({ ...cached, source: 'cache', cached: true });
         }
 
@@ -162,6 +180,7 @@ exports.getAssistsLeaderboard = async (req, res, next) => {
         const cached = await CacheService.get(cacheKey);
         if (cached) {
             console.log(`⚡ Cache HIT: Assists leaderboard team ${teamId} season=${seasonKey}`);
+            await enrichLeaderboardWithAvatars(cached);
             return res.json({ ...cached, source: 'cache', cached: true });
         }
 
@@ -195,6 +214,7 @@ exports.getPlayercardLeaderboard = async (req, res, next) => {
         const cacheKey = `leaderboard:playercard:${teamId}:season:${seasonKey}:limit${limit}`;
         const cached = await CacheService.get(cacheKey);
         if (cached) {
+            await enrichLeaderboardWithAvatars(cached);
             return res.json(cached);
         }
 
