@@ -164,7 +164,7 @@ class TeamService {
         try {
             const team = await this.teamRepository.findById(teamId, {
                 populate: [
-                    { path: 'memberIds', select: 'name email birthdate profile.position stats teamName isGuest canPromoteToPlayer role' },
+                    { path: 'memberIds', select: 'name email birthdate profile.position profile.avatarUpdatedAt stats teamName isGuest canPromoteToPlayer role' },
                     { path: 'adminIds', select: 'name email birthdate teamName' },
                     { path: 'createdBy', select: 'name email birthdate teamName' }
                 ]

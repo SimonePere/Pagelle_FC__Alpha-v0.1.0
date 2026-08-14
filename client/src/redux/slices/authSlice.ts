@@ -218,6 +218,62 @@ export const promoteGuestById = createAsyncThunk(
   }
 );
 
+// Upload avatar utente
+export const uploadAvatar = createAsyncThunk(
+  'auth/uploadAvatar',
+  async (blob: Blob, { rejectWithValue }) => {
+    try {
+      const formData = new FormData();
+      formData.append('avatar', blob);
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL || '/api/v1'}/users/me/avatar`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          },
+          body: formData
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        return rejectWithValue(error.error || 'Avatar upload failed');
+      }
+
+      const data = await response.json();
+
+      // Salva l'utente aggiornato nel localStorage
+      localStorage.setItem('user', JSON.stringify(data.user));
+
+      return data.user;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Errore upload avatar');
+    }
+  }
+);
+
+// Rimuovi avatar utente
+export const deleteAvatar = createAsyncThunk(
+  'auth/deleteAvatar',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.delete('/users/me/avatar');
+
+      if (response.success && response.user) {
+        // Salva l'utente aggiornato nel localStorage
+        localStorage.setItem('user', JSON.stringify(response.user));
+        return response.user;
+      } else {
+        return rejectWithValue(response.message || 'Avatar deletion failed');
+      }
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Errore rimozione avatar');
+    }
+  }
+);
+
 // Stato iniziale
 const initialState: AuthState = {
   user: null,
@@ -428,6 +484,38 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(promoteGuestById.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
+
+    // Upload avatar
+    builder
+      .addCase(uploadAvatar.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(uploadAvatar.fulfilled, (state, action) => {
+        state.user = action.payload;
+        state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(uploadAvatar.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
+
+    // Delete avatar
+    builder
+      .addCase(deleteAvatar.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(deleteAvatar.fulfilled, (state, action) => {
+        state.user = action.payload;
+        state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(deleteAvatar.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       });

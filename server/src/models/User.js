@@ -155,8 +155,13 @@ const userSchema = new mongoose.Schema({
     },
     avatar: {
       type: String,
-      trim: true,
-      match: [/^https?:\/\/.+/, 'Avatar must be a valid URL']
+      trim: true
+      // Removed: match regex. Avatar is now stored in Avatar collection.
+      // Presence/absence determined by Avatar record and avatarUpdatedAt.
+    },
+    avatarUpdatedAt: {
+      type: Date,
+      default: null
     },
     bio: {
       type: String,

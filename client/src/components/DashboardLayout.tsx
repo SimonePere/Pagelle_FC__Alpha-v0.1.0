@@ -8,6 +8,7 @@ import { Menu } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSelector } from 'react-redux';
 import { RootState } from '@/redux/store/store';
+import { userAvatarUrl } from '@/utils/avatarUrl';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -62,7 +63,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   className="focus:outline-none"
                 >
                   <Avatar className="w-9 h-9 border-2 border-primary/30">
-                    <AvatarImage src="" alt={user.name || ''} />
+                    <AvatarImage src={userAvatarUrl(user)} alt={user.name || ''} />
                     <AvatarFallback className="bg-gradient-primary text-primary-foreground text-sm font-semibold">
                       {(user.name || '').substring(0, 2).toUpperCase()}
                     </AvatarFallback>
@@ -87,7 +88,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   className="focus:outline-none"
                 >
                   <Avatar className="w-10 h-10 border-2 border-primary/30">
-                    <AvatarImage src="" alt={user.name || ''} />
+                    <AvatarImage src={userAvatarUrl(user)} alt={user.name || ''} />
                     <AvatarFallback className="bg-gradient-primary text-primary-foreground text-sm font-semibold">
                       {(user.name || '').substring(0, 2).toUpperCase()}
                     </AvatarFallback>

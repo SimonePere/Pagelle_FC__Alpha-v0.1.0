@@ -29,7 +29,13 @@ export interface User {
    * /auth/promote-guest-by-invite-token e /auth/promote-guest-by-id. Default false.
    */
   canPromoteToPlayer?: boolean;
-  profile?: any;
+  profile?: {
+    position?: string;
+    preferredFoot?: string;
+    avatar?: string;
+    avatarUpdatedAt?: string | null;
+    bio?: string;
+  };
   totalTeams?: number;
   createdAt?: string;
   updatedAt?: string;
@@ -106,10 +112,13 @@ export interface AuthResponse {
 // Team Types
 export interface Team {
   _id: string;
+  id?: string;
   name: string;
   description?: string;
   city?: string;
   logo?: string;
+  avatar?: string;
+  avatarUpdatedAt?: string | null;
   creator: string | User;
   memberIds: User[];
   adminIds: User[];

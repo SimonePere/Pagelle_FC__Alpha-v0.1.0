@@ -4,6 +4,8 @@ const teamController = require('../controllers/TeamController');
 const auth = require('../middleware/auth');
 const requireScope = require('../middleware/requireScope');
 const requireTeamAdmin = require('../middleware/requireTeamAdmin');
+const uploadAvatar = require('../middleware/uploadAvatar');
+const avatarController = require('../controllers/AvatarController');
 
 // =============================================
 // 🌍 PUBLIC ROUTES (No Authentication Required)
@@ -32,5 +34,28 @@ router.delete('/:id/members/:userId', auth, requireScope('full'), requireTeamAdm
 // 🔒 Gestione guest del team (solo team-admin o admin globale)
 router.get('/:id/guests', auth, requireScope('full'), requireTeamAdmin(), teamController.listTeamGuests);
 router.patch('/:id/guests/:userId/promotion', auth, requireScope('full'), requireTeamAdmin(), teamController.setGuestPromotionAllowed);
+
+// ===== AVATAR ROUTES =====
+
+/**
+ * @route   POST /api/v1/teams/:id/avatar
+ * @desc    Upload/replace team avatar (admin only)
+ * @access  Private (team admin)
+ */
+router.post('/:id/avatar', auth, uploadAvatar, avatarController.uploadTeamAvatar);
+
+/**
+ * @route   DELETE /api/v1/teams/:id/avatar
+ * @desc    Delete team avatar (admin only)
+ * @access  Private (team admin)
+ */
+router.delete('/:id/avatar', auth, avatarController.deleteTeamAvatar);
+
+/**
+ * @route   GET /api/v1/teams/:id/avatar
+ * @desc    Get team avatar (public)
+ * @access  Public
+ */
+router.get('/:id/avatar', avatarController.getTeamAvatar);
 
 module.exports = router;

@@ -18,6 +18,8 @@ import { fetchTeamById, leaveTeam, updateTeam, removeMember } from '@/redux/slic
 import { refreshUserData } from '@/redux/slices/authSlice';
 import { useActiveTeamId } from '@/hooks/useActiveTeamId';
 import { isTeamAdmin } from '@/utils/permissions';
+import { userAvatarUrl, teamAvatarUrl } from '@/utils/avatarUrl';
+import { AvatarUploader } from '@/components/AvatarUploader';
 import EditTeamMemberModal, { type EditableMember } from '@/components/EditTeamMemberModal';
 import { RoleBadge, deriveMemberRole } from '@/components/RoleBadge';
 // [RIMOSSO] BachecaAwards: la sezione awards nella pagina Team è stata disattivata.
@@ -38,7 +40,6 @@ export default function TeamPage() {
   const [editDescription, setEditDescription] = useState('');
   const [editColorPrimary, setEditColorPrimary] = useState('#007bff');
   const [editColorSecondary, setEditColorSecondary] = useState('#6c757d');
-  const [editAvatar, setEditAvatar] = useState('');
   const [editAutoApprove, setEditAutoApprove] = useState(false);
   const [editAllowGuestVoting, setEditAllowGuestVoting] = useState(false);
   // 🔒 Modale di modifica del singolo membro (apre per-card)
@@ -64,7 +65,6 @@ export default function TeamPage() {
       setEditDescription(t.description || '');
       setEditColorPrimary(t.colors?.primary || '#007bff');
       setEditColorSecondary(t.colors?.secondary || '#6c757d');
-      setEditAvatar(t.avatar || '');
       setEditAutoApprove(t.settings?.autoApprove ?? false);
       setEditAllowGuestVoting(t.settings?.allowGuestVoting ?? false);
     }
@@ -142,7 +142,6 @@ export default function TeamPage() {
     if (editName.trim() !== (t.name || '')) changes.push('Nome del team');
     if (editDescription.trim() !== (t.description || '')) changes.push('Descrizione');
     if (editCity.trim() !== (t.city || '')) changes.push('Città');
-    if (editAvatar.trim() !== (t.avatar || '')) changes.push('Avatar');
     if (editColorPrimary !== (t.colors?.primary || '#007bff')) changes.push('Colore primario');
     if (editColorSecondary !== (t.colors?.secondary || '#6c757d')) changes.push('Colore secondario');
 
@@ -180,7 +179,6 @@ export default function TeamPage() {
         name: editName.trim(),
         description: editDescription.trim() || undefined,
         city: editCity.trim() || undefined,
-        avatar: editAvatar.trim() || undefined,
         colors: { primary: editColorPrimary, secondary: editColorSecondary },
         settings: { autoApprove: editAutoApprove, allowGuestVoting: editAllowGuestVoting }
       }
@@ -308,23 +306,27 @@ export default function TeamPage() {
                 <Input value={editCity} onChange={(e) => setEditCity(e.target.value)} placeholder="Es: Roma, Milano, Napoli" />
                 <p className="text-xs text-muted-foreground">Usata per mostrare le previsioni meteo in Home e nella creazione partita.</p>
               </div>
-              {/* [DISABILITATO] Stemma, colori e impostazioni — commentati temporaneamente,
-                  si mostrano solo: nome team, descrizione, città e salva.
               <div className="space-y-2 overflow-hidden">
                 <Label className="flex items-center gap-2"><Image className="w-4 h-4" /> Stemma del team</Label>
                 <div className="flex items-center gap-3">
                   <Avatar className="w-14 h-14 min-w-[3.5rem] rounded-lg border border-border flex-shrink-0">
-                    <AvatarImage src={editAvatar} alt="Anteprima stemma" className="rounded-lg object-cover" />
-                    <AvatarFallback className="rounded-lg bg-secondary text-muted-foreground text-xs">Nessuna</AvatarFallback>
+                    <AvatarImage src={teamAvatarUrl(currentTeam as any)} alt="Stemma team" className="rounded-lg object-cover" />
+                    <AvatarFallback className="rounded-lg bg-secondary text-muted-foreground text-xs">
+                      {(currentTeam as any).name?.[0]?.toUpperCase() || '?'}
+                    </AvatarFallback>
                   </Avatar>
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <Button variant="outline" size="sm" disabled className="w-full opacity-60 truncate">
-                      <Upload className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Carica immagine (prossimamente)</span>
-                    </Button>
-                    <Input value={editAvatar} onChange={(e) => setEditAvatar(e.target.value)} placeholder="oppure incolla URL immagine" className="text-xs w-full" />
-                  </div>
+                  {isTeamAdmin(user, currentTeam as any) && (
+                    <AvatarUploader
+                      ownerType="team"
+                      teamId={teamId}
+                      onSuccess={() => dispatch(fetchTeamById(teamId))}
+                      className="min-w-0 flex-1"
+                    />
+                  )}
                 </div>
               </div>
+              {/* [DISABILITATO] Colori e impostazioni — commentati temporaneamente,
+                  si mostrano solo: nome team, descrizione, città, stemma e salva.
               <div className="space-y-2">
                 <Label className="flex items-center gap-2"><Palette className="w-4 h-4" /> Colori del team</Label>
                 <div className="flex items-center gap-4">
@@ -427,7 +429,7 @@ export default function TeamPage() {
                         <div key={memberId} className="flex items-center justify-between p-3 bg-secondary/40 rounded-lg border border-border/50">
                           <div className="flex items-center gap-3 min-w-0">
                             <Avatar className="w-10 h-10">
-                              <AvatarImage src={m.avatarUrl} alt={m.name} />
+                              <AvatarImage src={userAvatarUrl(m)} alt={m.name} />
                               <AvatarFallback className="bg-gradient-primary text-primary-foreground">
                                 {m.name?.split(' ').map((n: string) => n[0]).join('') || '?'}
                               </AvatarFallback>
@@ -452,7 +454,7 @@ export default function TeamPage() {
                                 id: memberId,
                                 name: m.name,
                                 email: m.email,
-                                avatarUrl: m.avatarUrl,
+                                avatarUrl: userAvatarUrl(m),
                                 isGuest: !!m.isGuest,
                                 canPromoteToPlayer: !!m.canPromoteToPlayer,
                                 role,

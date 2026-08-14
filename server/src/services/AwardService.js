@@ -78,8 +78,23 @@ class AwardService {
         this.AwardRepository = new AwardRepository();
         this.UserRepository = new UserRepository();
         this.MatchRepository = new MatchRepository();
+
+        // Lazy-load AvatarService per evitare circular deps
+        this._avatarService = null;
+
         this.seasonService = new SeasonService();
         // this.newsService = new NewsService(); TODO: integrare NewsService per creare notizie su MVP, Recap, ecc.
+    }
+
+    /**
+     * Lazy getter per AvatarService (inizializza solo se serve)
+     */
+    get avatarService() {
+        if (!this._avatarService) {
+            const AvatarService = require('./AvatarService');
+            this._avatarService = new AvatarService();
+        }
+        return this._avatarService;
     }
 
 
@@ -163,7 +178,8 @@ class AwardService {
         //    Dalle submissions calcoliamo:
         //      - votersExclSelf:  quante persone ≠ il giocatore stesso lo hanno votato (criterio #2)
         //      - maxVoteExclSelf: voto massimo ricevuto DA ALTRI                       (criterio #3)
-        const candidates = this._buildCandidates(
+        //    Avatar: Incorpora lo snapshot data URI (non-bloccante se manca)
+        const candidates = await this._buildCandidates(
             voteResult.matchRatingResults,
             submissions,
             userMap
@@ -267,14 +283,14 @@ class AwardService {
      *  - calcola dai voti grezzi (submissions) le metriche "esclusione autovoto":
      *      votersExclSelf  → numero votanti diversi dal giocatore stesso
      *      maxVoteExclSelf → voto massimo ricevuto da altri
-     *  - aggiunge nome/avatar dall'userMap (fallback se utente cancellato)
+     *  - aggiunge nome/avatar snapshot dall'Avatar collection (fallback se manca)
      *
      * @param {Map}   matchRatingResults  Map playerId → { averageRating, voteCount, ... }
      * @param {Array} submissions         lista di VoteSubmission grezze
      * @param {Map}   userMap             Map idString → User (per nickname/avatar)
-     * @returns {Array<Object>}           array di candidati pronti per il sort
+     * @returns {Promise<Array<Object>>}  array di candidati pronti per il sort
      */
-    _buildCandidates(matchRatingResults, submissions, userMap) {
+    async _buildCandidates(matchRatingResults, submissions, userMap) {
         const candidates = [];
 
         // matchRatingResults è una Map Mongoose: itero come una Map standard.
@@ -303,10 +319,29 @@ class AwardService {
             }
 
             const user = userMap.get(playerIdStr);
+
+            // Avatar snapshot — Leggi il buffer da Avatar collection e converti in data URI
+            // Guardia difensiva: se manca/corrotto/troppo grande → null (fallback iniziali)
+            let avatarDataUri = null;
+            try {
+                if (user?._id) {
+                    const avatarBuffer = await this.avatarService.getAvatarBuffer('user', user._id);
+                    if (avatarBuffer) {
+                        // Converti Buffer in base64
+                        const base64 = avatarBuffer.toString('base64');
+                        avatarDataUri = `data:image/webp;base64,${base64}`;
+                    }
+                }
+            } catch (err) {
+                // Silenziosamente fallback a null — non bloccare la generazione dell'award
+                console.warn(`[Award] Avatar snapshot fallito per player ${playerIdStr}:`, err.message);
+                avatarDataUri = null;
+            }
+
             candidates.push({
                 playerId: playerObjectId,
                 name: user?.name || 'Sconosciuto',
-                avatar: user?.profile?.avatar || null,
+                avatar: avatarDataUri,
                 avg: stat.averageRating,
                 votersCount: stat.voteCount,
                 votersExclSelf,

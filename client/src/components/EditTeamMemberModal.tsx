@@ -30,10 +30,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, Lock, Unlock, Info, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Loader2, Lock, Unlock, Info, ShieldCheck, AlertTriangle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AppDispatch } from '@/redux/store/store';
-import { setGuestPromotionAllowed } from '@/redux/slices/teamSlice';
+import { setGuestPromotionAllowed, removeMemberAvatar } from '@/redux/slices/teamSlice';
 import { RoleBadge, type MemberRole } from './RoleBadge';
 
 export interface EditableMember {
@@ -68,6 +68,7 @@ export default function EditTeamMemberModal({
     const [baseline, setBaseline] = useState<boolean>(false);
     const [allowed, setAllowed] = useState<boolean>(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [isRemovingAvatar, setIsRemovingAvatar] = useState(false);
 
     useEffect(() => {
         if (isOpen && member) {
@@ -84,6 +85,30 @@ export default function EditTeamMemberModal({
         member.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || '?';
 
     const isDirty = allowed !== baseline;
+
+    const handleRemoveAvatar = async () => {
+        if (!confirm(`Rimuovere la foto di ${member.name}?`)) return;
+        setIsRemovingAvatar(true);
+        try {
+            const result = await dispatch(removeMemberAvatar({ teamId, userId: member.id }));
+            if (removeMemberAvatar.rejected.match(result)) {
+                throw new Error((result.payload as string) || 'Errore rimozione foto');
+            }
+            toast({
+                title: 'Foto rimossa',
+                description: `La foto di ${member.name} è stata rimossa.`,
+            });
+            onClose();
+        } catch (e: any) {
+            toast({
+                title: 'Operazione non riuscita',
+                description: e?.message || 'Riprova più tardi.',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsRemovingAvatar(false);
+        }
+    };
 
     const handleSave = async () => {
         if (!member.isGuest || !isDirty) return;
@@ -139,7 +164,7 @@ export default function EditTeamMemberModal({
                                 {initials}
                             </AvatarFallback>
                         </Avatar>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                             <div className="font-semibold text-sm text-foreground flex items-center gap-2 flex-wrap">
                                 <span className="truncate">{member.name}</span>
                                 <RoleBadge role={member.role} />
@@ -148,6 +173,22 @@ export default function EditTeamMemberModal({
                                 <div className="text-[11px] text-muted-foreground truncate">{member.email}</div>
                             )}
                         </div>
+                        {member.avatarUrl && (
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-[11px] text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                                onClick={handleRemoveAvatar}
+                                disabled={isRemovingAvatar}
+                            >
+                                {isRemovingAvatar ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                    <><Trash2 className="w-3 h-3 mr-1" /> Rimuovi foto</>
+                                )}
+                            </Button>
+                        )}
                     </div>
 
                     {/* Sezione opzioni */}

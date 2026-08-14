@@ -4,8 +4,11 @@
  */
 
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import { api } from "../../lib/api";
+import { api, apiCall } from "../../lib/api";
 import { Team, CreateTeamRequest, JoinTeamRequest, UpdateTeamRequest } from "../../types/api";
+
+// Relativo di default: il proxy Vite (dev) o il rewrite di produzione instrada /api/v1 al backend corretto.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 interface TeamState {
   teams: Team[];
@@ -129,6 +132,63 @@ export const removeMember = createAsyncThunk(
       return response;
     } catch (error: any) {
       return rejectWithValue(error.message || 'Errore nella rimozione del membro');
+    }
+  }
+);
+
+// Upload/sostituzione stemma team (solo admin) — multipart, niente JSON.stringify
+export const uploadTeamAvatar = createAsyncThunk(
+  'teams/uploadAvatar',
+  async ({ teamId, blob }: { teamId: string; blob: Blob }, { rejectWithValue }) => {
+    try {
+      const formData = new FormData();
+      formData.append('avatar', blob);
+
+      const response = await fetch(`${API_BASE_URL}/teams/${teamId}/avatar`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        body: formData
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        return rejectWithValue(error.error || error.message || 'Upload stemma fallito');
+      }
+
+      const data = await response.json();
+      return data.team;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Errore upload stemma');
+    }
+  }
+);
+
+// Rimozione stemma team (solo admin)
+export const deleteTeamAvatar = createAsyncThunk(
+  'teams/deleteAvatar',
+  async (teamId: string, { rejectWithValue }) => {
+    try {
+      const response = await api.delete(`/teams/${teamId}/avatar`);
+      return response.team;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Errore rimozione stemma');
+    }
+  }
+);
+
+// 🔒 Admin di team rimuove la foto profilo di un membro (moderazione)
+export const removeMemberAvatar = createAsyncThunk(
+  'teams/removeMemberAvatar',
+  async ({ teamId, userId }: { teamId: string; userId: string }, { rejectWithValue, dispatch }) => {
+    try {
+      await apiCall(`/users/${userId}/avatar`, {
+        method: 'DELETE',
+        body: JSON.stringify({ teamId })
+      });
+      // Ricarica i dettagli del team per avere avatarUpdatedAt aggiornato
+      dispatch(fetchTeamById(teamId));
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Errore nella rimozione della foto del membro');
     }
   }
 );
@@ -374,6 +434,33 @@ const teamSlice = createSlice({
       })
       .addCase(removeMember.rejected, (state, action) => {
         state.isLoading = false;
+        state.error = action.payload as string;
+      })
+      // Upload/delete stemma team: aggiorna solo avatarUpdatedAt, senza sovrascrivere
+      // currentTeam intero (la risposta non ha memberIds popolati come fetchTeamById).
+      .addCase(uploadTeamAvatar.fulfilled, (state, action) => {
+        const updated = action.payload;
+        if (state.currentTeam && state.currentTeam._id === updated._id) {
+          (state.currentTeam as any).avatarUpdatedAt = updated.avatarUpdatedAt;
+        }
+        const idx = state.myTeams.findIndex(t => t._id === updated._id);
+        if (idx !== -1) (state.myTeams[idx] as any).avatarUpdatedAt = updated.avatarUpdatedAt;
+      })
+      .addCase(uploadTeamAvatar.rejected, (state, action) => {
+        state.error = action.payload as string;
+      })
+      .addCase(deleteTeamAvatar.fulfilled, (state, action) => {
+        const updated = action.payload;
+        if (state.currentTeam && state.currentTeam._id === updated._id) {
+          (state.currentTeam as any).avatarUpdatedAt = updated.avatarUpdatedAt;
+        }
+        const idx = state.myTeams.findIndex(t => t._id === updated._id);
+        if (idx !== -1) (state.myTeams[idx] as any).avatarUpdatedAt = updated.avatarUpdatedAt;
+      })
+      .addCase(deleteTeamAvatar.rejected, (state, action) => {
+        state.error = action.payload as string;
+      })
+      .addCase(removeMemberAvatar.rejected, (state, action) => {
         state.error = action.payload as string;
       })
       // 🔒 Aggiorna in-place il flag canPromoteToPlayer del guest dentro currentTeam.memberIds
