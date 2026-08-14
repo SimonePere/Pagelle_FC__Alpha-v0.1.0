@@ -21,8 +21,10 @@ const godRoutes = require('./god/routes/god');
 
 const app = express();
 
-// Security middleware
-app.use(helmet());
+// Security middleware: abilita cross-origin resource policy per consentire l'embed delle immagini avatar su domini differenti
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 
 // Trust proxy e Rate limiting - Solo in PRODUCTION
 if (process.env.NODE_ENV === 'production') {

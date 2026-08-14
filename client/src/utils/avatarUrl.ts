@@ -12,22 +12,19 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
  * Costruisce URL versionate per avatar utente
  * @param {Object|null|undefined} user - User object con optional { id, _id, profile: { avatarUpdatedAt } }
  * @returns {string|undefined} URL o undefined se nessun avatar
- * 
- * @example
- * userAvatarUrl(user) → "http://localhost:5000/api/v1/users/123/avatar?v=1692547200000"
- * userAvatarUrl(null) → undefined
  */
-export function userAvatarUrl(user?: { id?: string; _id?: string; profile?: { avatarUpdatedAt?: string | null } } | null): string | undefined {
+export function userAvatarUrl(user?: { id?: string; _id?: string; profile?: { avatarUpdatedAt?: string | null }; avatarUpdatedAt?: string | null } | null): string | undefined {
     if (!user) return undefined;
 
     const id = user.id || user._id;
-    const avatarUpdatedAt = user.profile?.avatarUpdatedAt;
+    const avatarUpdatedAt = user.profile?.avatarUpdatedAt || user.avatarUpdatedAt;
 
     // Se manca ID o avatar non è stato mai settato → undefined
     if (!id || !avatarUpdatedAt) return undefined;
 
     // Converti ISO string a timestamp in ms per cache-busting
     const versionTimestamp = new Date(avatarUpdatedAt).getTime();
+    if (isNaN(versionTimestamp)) return undefined;
 
     return `${API_BASE_URL}/users/${id}/avatar?v=${versionTimestamp}`;
 }
@@ -36,10 +33,6 @@ export function userAvatarUrl(user?: { id?: string; _id?: string; profile?: { av
  * Costruisce URL versionate per avatar team
  * @param {Object|null|undefined} team - Team object con optional { id, _id, avatarUpdatedAt }
  * @returns {string|undefined} URL o undefined se nessun avatar
- * 
- * @example
- * teamAvatarUrl(team) → "http://localhost:5000/api/v1/teams/456/avatar?v=1692547200000"
- * teamAvatarUrl(null) → undefined
  */
 export function teamAvatarUrl(team?: { id?: string; _id?: string; avatarUpdatedAt?: string | null } | null): string | undefined {
     if (!team) return undefined;
@@ -52,6 +45,7 @@ export function teamAvatarUrl(team?: { id?: string; _id?: string; avatarUpdatedA
 
     // Converti ISO string a timestamp in ms per cache-busting
     const versionTimestamp = new Date(avatarUpdatedAt).getTime();
+    if (isNaN(versionTimestamp)) return undefined;
 
     return `${API_BASE_URL}/teams/${id}/avatar?v=${versionTimestamp}`;
 }
@@ -60,21 +54,19 @@ export function teamAvatarUrl(team?: { id?: string; _id?: string; avatarUpdatedA
  * Costruisce URL versionate per avatar da oggetto leaderboard player
  * @param {Object|null|undefined} player - Leaderboard player object con { playerId, avatarUpdatedAt? }
  * @returns {string|undefined} URL o undefined se nessun avatar
- * 
- * @example
- * playerLeaderboardAvatarUrl(player) → "http://localhost:5000/api/v1/users/123/avatar?v=1692547200000"
  */
-export function playerLeaderboardAvatarUrl(player?: { playerId?: string; avatarUpdatedAt?: string | null } | null): string | undefined {
+export function playerLeaderboardAvatarUrl(player?: { playerId?: string; id?: string; _id?: string; avatarUpdatedAt?: string | null; profile?: { avatarUpdatedAt?: string | null } } | null): string | undefined {
     if (!player) return undefined;
 
-    const id = player.playerId;
-    const avatarUpdatedAt = player.avatarUpdatedAt;
+    const id = player.playerId || player.id || player._id;
+    const avatarUpdatedAt = player.avatarUpdatedAt || player.profile?.avatarUpdatedAt;
 
     // Se manca ID o avatar non è stato mai settato → undefined
     if (!id || !avatarUpdatedAt) return undefined;
 
     // Converti ISO string a timestamp in ms per cache-busting
     const versionTimestamp = new Date(avatarUpdatedAt).getTime();
+    if (isNaN(versionTimestamp)) return undefined;
 
     return `${API_BASE_URL}/users/${id}/avatar?v=${versionTimestamp}`;
 }

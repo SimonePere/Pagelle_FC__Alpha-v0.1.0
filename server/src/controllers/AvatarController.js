@@ -76,11 +76,13 @@ const getUserAvatar = async (req, res, next) => {
             });
         }
 
-        // Header cache immutable
+        // Header cache immutable + CORS / CORP headers per asset pubblici
         res.set({
             'Content-Type': avatarData.contentType,
             'Cache-Control': 'public, max-age=31536000, immutable',
-            'ETag': `"${avatarData.byteSize}"`
+            'ETag': `"${avatarData.byteSize}"`,
+            'Cross-Origin-Resource-Policy': 'cross-origin',
+            'Access-Control-Allow-Origin': '*'
         });
 
         res.send(avatarData.data);
@@ -223,11 +225,13 @@ const getTeamAvatar = async (req, res, next) => {
             });
         }
 
-        // Header cache immutable
+        // Header cache immutable + CORS / CORP headers per asset pubblici
         res.set({
             'Content-Type': avatarData.contentType,
             'Cache-Control': 'public, max-age=31536000, immutable',
-            'ETag': `"${avatarData.byteSize}"`
+            'ETag': `"${avatarData.byteSize}"`,
+            'Cross-Origin-Resource-Policy': 'cross-origin',
+            'Access-Control-Allow-Origin': '*'
         });
 
         res.send(avatarData.data);
