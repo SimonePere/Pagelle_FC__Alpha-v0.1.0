@@ -139,6 +139,9 @@ export function AvatarUploader({
 
             if (result.meta.requestStatus === 'fulfilled') {
                 toast.success(ownerType === 'team' ? 'Stemma caricato con successo' : 'Foto caricata con successo');
+                // Notifica tutti i listener che l'avatar è stato aggiornato
+                // (es. la leaderboard in Home ricaricherà i dati freschi)
+                window.dispatchEvent(new CustomEvent('avatar:updated', { detail: { ownerType } }));
                 onSuccess?.();
             } else {
                 throw new Error(result.payload as string);
@@ -179,6 +182,8 @@ export function AvatarUploader({
             if (result.meta.requestStatus === 'fulfilled') {
                 toast.success(ownerType === 'team' ? 'Stemma rimosso' : 'Foto rimossa');
                 setPreview(null);
+                // Notifica tutti i listener che l'avatar è stato rimosso
+                window.dispatchEvent(new CustomEvent('avatar:updated', { detail: { ownerType } }));
                 onSuccess?.();
             } else {
                 throw new Error(result.payload as string);

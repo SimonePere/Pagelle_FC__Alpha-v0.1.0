@@ -228,6 +228,19 @@ export const useHomeDashboard = (): UseHomeDashboardReturn => {
         }
     }, [activeLeaderboard, activeTeamId, selectedSeason]);
 
+    // Ricarica la leaderboard quando un avatar viene aggiornato o rimosso
+    // L'AvatarUploader emette 'avatar:updated' dopo ogni upload/delete riuscito.
+    useEffect(() => {
+        const handleAvatarUpdated = () => {
+            if (activeTeamId) {
+                loadLeaderboard(activeLeaderboard, activeTeamId);
+            }
+        };
+
+        window.addEventListener('avatar:updated', handleAvatarUpdated);
+        return () => window.removeEventListener('avatar:updated', handleAvatarUpdated);
+    }, [activeTeamId, activeLeaderboard]);
+
     // 🔗 Combined loading states
     const combinedLoading = {
         ...baseLoading,

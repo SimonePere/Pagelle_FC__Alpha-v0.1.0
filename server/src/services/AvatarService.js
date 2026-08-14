@@ -1,6 +1,7 @@
 const Avatar = require('../models/Avatar');
 const User = require('../models/User');
 const Team = require('../models/Team');
+const CacheService = require('./CacheService');
 
 /**
  * AvatarService — Gestisce il caricamento, recupero e rimozione degli avatar
@@ -56,17 +57,46 @@ class AvatarService {
         const now = new Date();
         let owner;
         if (ownerType === 'user') {
+            // Leggi i team dell'utente PRIMA dell'update (query separata)
+            // così findByIdAndUpdate può restituire il documento completo al client.
+            const userForTeams = await User.findById(ownerId).select('teams');
+            const teamIds = userForTeams?.teams || [];
+
             owner = await User.findByIdAndUpdate(
                 ownerId,
                 { 'profile.avatarUpdatedAt': now },
                 { new: true }
             );
+
+            // 5. Invalida cache leaderboard per tutti i team dell'utente
+            //    così il prossimo fetch includerà l'avatarUpdatedAt aggiornato.
+            try {
+                for (const teamId of teamIds) {
+                    await CacheService.invalidateLeaderboardsAfterVote(teamId.toString());
+                }
+                if (teamIds.length > 0) {
+                    console.log(`🖼️  Avatar aggiornato → cache leaderboard invalidata per ${teamIds.length} team(s)`);
+                }
+            } catch (cacheErr) {
+                // Non bloccante: se l'invalidazione fallisce, la cache scadrà naturalmente
+                console.warn('[AvatarService] Invalidazione cache leaderboard fallita (non bloccante):', cacheErr.message);
+            }
+
         } else if (ownerType === 'team') {
             owner = await Team.findByIdAndUpdate(
                 ownerId,
                 { avatarUpdatedAt: now },
                 { new: true }
             );
+
+            // 5. Invalida cache leaderboard del team
+            try {
+                await CacheService.invalidateLeaderboardsAfterVote(ownerId.toString());
+                console.log(`🖼️  Avatar team aggiornato → cache leaderboard invalidata per team ${ownerId}`);
+            } catch (cacheErr) {
+                console.warn('[AvatarService] Invalidazione cache leaderboard team fallita (non bloccante):', cacheErr.message);
+            }
+
         } else {
             const AppError = require('../utils/AppError');
             throw new AppError('Invalid ownerType', 400);
@@ -105,17 +135,44 @@ class AvatarService {
         // 2. Azzera avatarUpdatedAt sull'owner
         let owner;
         if (ownerType === 'user') {
+            // Leggi i team dell'utente PRIMA dell'update (query separata)
+            // così findByIdAndUpdate può restituire il documento completo al client.
+            const userForTeams = await User.findById(ownerId).select('teams');
+            const teamIds = userForTeams?.teams || [];
+
             owner = await User.findByIdAndUpdate(
                 ownerId,
                 { 'profile.avatarUpdatedAt': null },
                 { new: true }
             );
+
+            // 3. Invalida cache leaderboard per tutti i team dell'utente
+            try {
+                for (const teamId of teamIds) {
+                    await CacheService.invalidateLeaderboardsAfterVote(teamId.toString());
+                }
+                if (teamIds.length > 0) {
+                    console.log(`🗑️  Avatar rimosso → cache leaderboard invalidata per ${teamIds.length} team(s)`);
+                }
+            } catch (cacheErr) {
+                console.warn('[AvatarService] Invalidazione cache leaderboard fallita (non bloccante):', cacheErr.message);
+            }
+
         } else if (ownerType === 'team') {
             owner = await Team.findByIdAndUpdate(
                 ownerId,
                 { avatarUpdatedAt: null },
                 { new: true }
             );
+
+            // 3. Invalida cache leaderboard del team
+            try {
+                await CacheService.invalidateLeaderboardsAfterVote(ownerId.toString());
+                console.log(`🗑️  Avatar team rimosso → cache leaderboard invalidata per team ${ownerId}`);
+            } catch (cacheErr) {
+                console.warn('[AvatarService] Invalidazione cache leaderboard team fallita (non bloccante):', cacheErr.message);
+            }
+
         } else {
             const AppError = require('../utils/AppError');
             throw new AppError('Invalid ownerType', 400);
