@@ -2,10 +2,20 @@
  * API Simple Helper - Semplificato al massimo
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1';
+// In sviluppo usiamo un URL relativo.
+// Vite intercetta tutte le richieste /api e le inoltra al backend
+// configurato nel proxy di vite.config.ts.
+//
+// Se in futuro imposti VITE_API_BASE_URL, per esempio in produzione,
+// quella variabile avrà comunque la precedenza.
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 // Unica funzione per tutte le chiamate API
-export async function apiCall(endpoint: string, options: RequestInit = {}) {
+export async function apiCall(
+  endpoint: string,
+  options: RequestInit = {}
+) {
   const token = localStorage.getItem('token');
 
   // Aggiungi timeout di 30 secondi
@@ -16,10 +26,14 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
-        ...(token && { Authorization: `Bearer ${token}` }),
+        ...(token && {
+          Authorization: `Bearer ${token}`
+        }),
         ...options.headers
       },
+
       signal: controller.signal,
+
       ...options
     });
 
@@ -32,9 +46,16 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
 
       try {
         const errorData = JSON.parse(errorText);
-        errorMessage = errorData.message || errorData.error || 'API Error';
+
+        errorMessage =
+          errorData.message ||
+          errorData.error ||
+          'API Error';
+
       } catch {
-        errorMessage = errorText || `HTTP ${response.status}`;
+        errorMessage =
+          errorText ||
+          `HTTP ${response.status}`;
       }
 
       throw new Error(errorMessage);
@@ -43,6 +64,7 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
     const responseData = await response.json();
 
     return responseData;
+
   } catch (error: any) {
     clearTimeout(timeoutId);
 
@@ -56,20 +78,31 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
 
 // Helper specifici per comodità
 export const api = {
-  get: (endpoint: string) => apiCall(endpoint),
-  post: (endpoint: string, data?: any) => apiCall(endpoint, {
-    method: 'POST',
-    body: data ? JSON.stringify(data) : undefined
-  }),
-  put: (endpoint: string, data?: any) => apiCall(endpoint, {
-    method: 'PUT',
-    body: data ? JSON.stringify(data) : undefined
-  }),
-  patch: (endpoint: string, data?: any) => apiCall(endpoint, {
-    method: 'PATCH',
-    body: data ? JSON.stringify(data) : undefined
-  }),
-  delete: (endpoint: string) => apiCall(endpoint, { method: 'DELETE' })
+  get: (endpoint: string) =>
+    apiCall(endpoint),
+
+  post: (endpoint: string, data?: any) =>
+    apiCall(endpoint, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined
+    }),
+
+  put: (endpoint: string, data?: any) =>
+    apiCall(endpoint, {
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined
+    }),
+
+  patch: (endpoint: string, data?: any) =>
+    apiCall(endpoint, {
+      method: 'PATCH',
+      body: data ? JSON.stringify(data) : undefined
+    }),
+
+  delete: (endpoint: string) =>
+    apiCall(endpoint, {
+      method: 'DELETE'
+    })
 };
 
 export default api;

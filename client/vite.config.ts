@@ -10,19 +10,35 @@ export default defineConfig(({ mode }) => ({
     host: "0.0.0.0",
     port: 8080,
     allowedHosts: true,
+
+    proxy: {
+      "/api": {
+        target: "http://localhost:5000",
+        changeOrigin: true,
+      },
+    },
+
     hmr: {
       clientPort: 8080
     }
   },
+
   plugins: [
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: 'autoUpdate',
+
       devOptions: {
         enabled: true
       },
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+
+      includeAssets: [
+        'favicon.ico',
+        'apple-touch-icon.png',
+        'mask-icon.svg'
+      ],
+
       manifest: {
         name: 'Pagelle FC - Gestione Squadra',
         short_name: 'Pagelle FC',
@@ -30,6 +46,7 @@ export default defineConfig(({ mode }) => ({
         theme_color: '#000000',
         background_color: '#000000',
         display: 'standalone',
+
         icons: [
           {
             src: 'pwa-192x192.png',
@@ -43,17 +60,21 @@ export default defineConfig(({ mode }) => ({
           }
         ]
       },
+
       workbox: {
         skipWaiting: true,
         clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         maximumFileSizeToCacheInBytes: 3000000,
-        // Escludi /render-card dal fallback SPA del SW: deve sempre prendere la versione fresh
+
+        // Escludi /render-card dal fallback SPA del SW:
+        // deve sempre prendere la versione fresh
         // (usata da Puppeteer + preview, non vogliamo cache stale)
         navigateFallbackDenylist: [/^\/render-card/]
       }
     })
   ].filter(Boolean),
+
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
