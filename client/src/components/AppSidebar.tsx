@@ -18,9 +18,11 @@ import {
   SidebarMenuButton,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { NavLink } from "@/components/NavLink";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { userAvatarUrl } from "@/utils/avatarUrl";
 
 type NavItem = {
   title: string;
@@ -143,9 +145,12 @@ export function AppSidebar() {
               onClick={() => navigate('/profile')}
               title="Vai al Profilo"
             >
-              <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center">
-                <User className="w-4 h-4 text-accent" />
-              </div>
+              <Avatar className="w-8 h-8 rounded-lg">
+                <AvatarImage src={userAvatarUrl(user)} alt={user.name} />
+                <AvatarFallback className="bg-gradient-to-br from-primary/30 to-accent/30 text-foreground font-bold text-xs">
+                  {user.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
               {!isCollapsed && (
                 <div className="flex-1 animate-fade-in">
                   <p className="font-medium text-sidebar-foreground text-sm">

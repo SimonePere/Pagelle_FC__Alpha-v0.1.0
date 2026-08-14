@@ -2,6 +2,7 @@
 const LeaderboardService = require('../services/LeaderboardService');
 const CacheService = require("../services/CacheService");
 const SeasonService = require('../services/SeasonService');
+const { UserRepository } = require('../repositories');
 
 /**
  * LEADERBOARD CONTROLLER
@@ -40,6 +41,53 @@ function parseSeasonParam(req, res) {
     }
 }
 
+/**
+ * Arricchisce il result della classifica con avatarUpdatedAt di ogni giocatore.
+ * Usa batch-lookup su User per evitare N query in loop.
+ * Pattern identico a AwardService._buildCandidates.
+ * 
+ * @private
+ */
+async function enrichLeaderboardWithAvatars(result) {
+    if (!result || !result.data || result.data.length === 0) {
+        return result;
+    }
+
+    try {
+        // Estrai tutti i playerId dalla classifica
+        const playerIds = result.data
+            .filter(p => p.playerId)
+            .map(p => p.playerId);
+
+        if (playerIds.length === 0) {
+            return result;
+        }
+
+        // Batch lookup su User: query singola con $in
+        const userRepository = new UserRepository();
+        const users = await userRepository.findAll(
+            { _id: { $in: playerIds } },
+            { select: 'profile.avatarUpdatedAt' }
+        );
+
+        // Mappa per lookup O(1): chiave = id stringa (ObjectId.toString())
+        const userMap = new Map(users.map(u => [u._id.toString(), u]));
+
+        // Arricchisci ogni entry con avatarUpdatedAt
+        for (const player of result.data) {
+            const user = userMap.get(player.playerId.toString());
+            if (user && user.profile && user.profile.avatarUpdatedAt) {
+                player.avatarUpdatedAt = user.profile.avatarUpdatedAt;
+            }
+        }
+    } catch (err) {
+        // Non-bloccante: se il lookup fallisce, la classifica rimane comunque valida senza avatar
+        console.warn('[LeaderboardController] Avatar enrichment fallito:', err.message);
+    }
+
+    return result;
+}
+
 // === CLASSIFICA RATING (+ CACHE) ===
 exports.getRatingLeaderboard = async (req, res, next) => {
     try {
@@ -59,6 +107,7 @@ exports.getRatingLeaderboard = async (req, res, next) => {
 
         console.log(`🗄️ CLASSIFICA DA DATABASE: Rating team ${teamId} season=${seasonKey}...`);
         const result = await leaderboardService.getLeaderboard(teamId, 'rating', limit, seasonId);
+        await enrichLeaderboardWithAvatars(result);
 
         await CacheService.set(cacheKey, result, 30 * 60, [`team:${teamId}`, 'leaderboard', 'rating']);
 
@@ -88,6 +137,7 @@ exports.getGoalsLeaderboard = async (req, res, next) => {
 
         console.log(`🗄️ Cache MISS: Fetching goals leaderboard team ${teamId} season=${seasonKey}`);
         const result = await leaderboardService.getLeaderboard(teamId, 'goals', limit, seasonId);
+        await enrichLeaderboardWithAvatars(result);
 
         await CacheService.set(cacheKey, result, 30 * 60, [`team:${teamId}`, 'leaderboard', 'goals']);
 
@@ -117,6 +167,7 @@ exports.getAssistsLeaderboard = async (req, res, next) => {
 
         console.log(`🗄️ Cache MISS: Fetching assists leaderboard team ${teamId} season=${seasonKey}`);
         const result = await leaderboardService.getLeaderboard(teamId, 'assists', limit, seasonId);
+        await enrichLeaderboardWithAvatars(result);
 
         await CacheService.set(cacheKey, result, 30 * 60, [`team:${teamId}`, 'leaderboard', 'assists']);
 
@@ -148,6 +199,7 @@ exports.getPlayercardLeaderboard = async (req, res, next) => {
         }
 
         const result = await leaderboardService.getLeaderboard(teamId, 'playercard', limit, seasonId);
+        await enrichLeaderboardWithAvatars(result);
 
         await CacheService.set(cacheKey, result, 30 * 60, [`team:${teamId}`, 'leaderboard', 'playercard']);
         res.json(result);
@@ -182,6 +234,7 @@ exports.getStatsPerMatchLeaderboard = async (req, res, next) => {
         } else {
             result = await leaderboardService.getLeaderboard(teamId, 'goalPerMatch', limit, seasonId);
         }
+        await enrichLeaderboardWithAvatars(result);
 
         res.json(result);
 

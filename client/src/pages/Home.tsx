@@ -5,6 +5,7 @@ import { RootState, AppDispatch } from '@/redux/store/store';
 import { selectPendingVoteSessions } from '@/redux/slices/votingSlice';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Trophy, Medal, Target, TrendingUp, Crown, AlertCircle, Star, Goal, BarChart3, Hand, Users, Vote as VoteIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -21,6 +22,7 @@ import { OnboardingTutorial } from '@/components/OnboardingTutorial';
 import useHomeDashboard from '@/hooks/useHomeDashboard';
 import { WeatherWidget } from '@/components/WeatherWidget';
 import { isAdmin, isTeamAdmin } from '@/utils/permissions';
+import { userAvatarUrl, playerLeaderboardAvatarUrl } from '@/utils/avatarUrl';
 import SeasonSelector from '@/components/SeasonSelector';
 
 // Types now handled by useHomeDashboard hook
@@ -538,8 +540,13 @@ const Home = () => {
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: index * 0.1 }}
-                            className="flex items-center justify-between p-5 bg-secondary/40 rounded-xl transition-all duration-300 border border-border/50 relative overflow-hidden"
+                            className="flex items-center justify-between p-5 pt-10 bg-secondary/40 rounded-xl transition-all duration-300 border border-border/50 relative overflow-hidden"
                           >
+                            {/* Posizione classifica — stesso stile dello Storico */}
+                            <span className="absolute top-3 left-3 text-xs font-mono bg-secondary/40 px-2 py-1 rounded text-muted-foreground z-10">
+                              #{index + 1}
+                            </span>
+
                             {/* MVP Crown for top player */}
                             {index === 0 && (
                               <motion.div
@@ -555,28 +562,29 @@ const Home = () => {
                               {activeLeaderboard !== 'stats-per-match' && (
                                 <motion.div
                                   transition={{ duration: 0.5 }}
-                                  className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center font-display font-bold text-xl shadow-glow"
+                                  className="relative w-12 h-12"
                                 >
-                                  {getMedalIcon(index) || (
-                                    <span className="text-primary-foreground">{index + 1}</span>
+                                  <Avatar className="w-12 h-12 rounded-lg">
+                                    <AvatarImage src={playerLeaderboardAvatarUrl(player)} alt={player.playerName} />
+                                    <AvatarFallback className="bg-gradient-to-br from-primary/30 to-accent/30 text-foreground font-display font-bold text-sm">
+                                      {player.playerName?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  {/* Icona podio solo per i primi 3 — senza cerchio */}
+                                  {getMedalIcon(index) && (
+                                    <motion.div
+                                      initial={{ scale: 0 }}
+                                      animate={{ scale: 1 }}
+                                      transition={{ duration: 0.3 }}
+                                      className="absolute -bottom-2 -right-2 z-10"
+                                    >
+                                      {getMedalIcon(index)}
+                                    </motion.div>
                                   )}
                                 </motion.div>
                               )}
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
-                                  {activeLeaderboard === 'stats-per-match' && (
-                                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-muted/40 border border-border/50">
-                                      {index === 0 ? (
-                                        <Trophy className="w-3 h-3 text-primary" />
-                                      ) : index === 1 ? (
-                                        <Medal className="w-3 h-3 text-slate-300" />
-                                      ) : index === 2 ? (
-                                        <Medal className="w-3 h-3 text-amber-600" />
-                                      ) : (
-                                        <span className="text-[10px] font-bold text-muted-foreground">{index + 1}</span>
-                                      )}
-                                    </span>
-                                  )}
                                   <p className="font-display text-xl font-bold text-foreground">
                                     {player.playerName}
                                   </p>

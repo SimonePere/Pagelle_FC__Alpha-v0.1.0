@@ -55,3 +55,26 @@ export function teamAvatarUrl(team?: { id?: string; _id?: string; avatarUpdatedA
 
     return `${API_BASE_URL}/teams/${id}/avatar?v=${versionTimestamp}`;
 }
+
+/**
+ * Costruisce URL versionate per avatar da oggetto leaderboard player
+ * @param {Object|null|undefined} player - Leaderboard player object con { playerId, avatarUpdatedAt? }
+ * @returns {string|undefined} URL o undefined se nessun avatar
+ * 
+ * @example
+ * playerLeaderboardAvatarUrl(player) → "http://localhost:5000/api/v1/users/123/avatar?v=1692547200000"
+ */
+export function playerLeaderboardAvatarUrl(player?: { playerId?: string; avatarUpdatedAt?: string | null } | null): string | undefined {
+    if (!player) return undefined;
+
+    const id = player.playerId;
+    const avatarUpdatedAt = player.avatarUpdatedAt;
+
+    // Se manca ID o avatar non è stato mai settato → undefined
+    if (!id || !avatarUpdatedAt) return undefined;
+
+    // Converti ISO string a timestamp in ms per cache-busting
+    const versionTimestamp = new Date(avatarUpdatedAt).getTime();
+
+    return `${API_BASE_URL}/users/${id}/avatar?v=${versionTimestamp}`;
+}

@@ -62,9 +62,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   onClick={() => navigate('/profile')}
                   className="focus:outline-none"
                 >
-                  <Avatar className="w-9 h-9 border-2 border-primary/30">
+                  <Avatar className="w-9 h-9 rounded-lg border-2 border-primary/30">
                     <AvatarImage src={userAvatarUrl(user)} alt={user.name || ''} />
-                    <AvatarFallback className="bg-gradient-primary text-primary-foreground text-sm font-semibold">
+                    <AvatarFallback className="bg-gradient-to-br from-primary/30 to-accent/30 text-foreground font-bold text-xs">
                       {(user.name || '').substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -87,9 +87,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   onClick={() => navigate('/profile')}
                   className="focus:outline-none"
                 >
-                  <Avatar className="w-10 h-10 border-2 border-primary/30">
+                  <Avatar className="w-10 h-10 rounded-lg border-2 border-primary/30">
                     <AvatarImage src={userAvatarUrl(user)} alt={user.name || ''} />
-                    <AvatarFallback className="bg-gradient-primary text-primary-foreground text-sm font-semibold">
+                    <AvatarFallback className="bg-gradient-to-br from-primary/30 to-accent/30 text-foreground font-bold text-xs">
                       {(user.name || '').substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>

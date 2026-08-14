@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { AvatarUploader } from '@/components/AvatarUploader';
 
 import { useToast } from '@/hooks/use-toast';
 import { User, Lock, Calendar, Trophy, Check, X, Users, ShieldAlert } from 'lucide-react';
@@ -13,6 +14,7 @@ interface EditModalProps {
     type: 'user-profile' | 'user-password' | 'match';
     data?: any;
     onSave: (data: any) => Promise<{ success: boolean; error?: string } | void>;
+    onAvatarSuccess?: () => void;
     onReactivateUser?: (userId: string) => Promise<void>; // 🆕 Handler riattivazione
     // 🔒 Handler force-close votazione (admin only). Mostrato solo se passato
     //    e canForceCloseSession=true (sessione 'active').
@@ -50,7 +52,7 @@ function normalizeMatchDate(rawDate: any): string {
     }
 }
 
-const EditModal = ({ isOpen, onClose, type, data, onSave, onReactivateUser, onForceCloseSession, canForceCloseSession }: EditModalProps) => {
+const EditModal = ({ isOpen, onClose, type, data, onSave, onAvatarSuccess, onReactivateUser, onForceCloseSession, canForceCloseSession }: EditModalProps) => {
     const [loading, setLoading] = useState(false);
     const { toast } = useToast();
     // 🔒 Stato per la conferma inline del force-close (no Dialog annidato per
@@ -198,6 +200,13 @@ const EditModal = ({ isOpen, onClose, type, data, onSave, onReactivateUser, onFo
             case 'user-profile':
                 return (
                     <div className="space-y-4">
+                        <div className="space-y-2 pb-3 border-b border-border/50">
+                            <Label>Foto Profilo</Label>
+                            <AvatarUploader
+                                ownerType="user"
+                                onSuccess={onAvatarSuccess}
+                            />
+                        </div>
                         <div className="space-y-2">
                             <Label htmlFor="name">Nome</Label>
                             <Input

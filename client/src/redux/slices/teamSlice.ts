@@ -440,10 +440,10 @@ const teamSlice = createSlice({
       // currentTeam intero (la risposta non ha memberIds popolati come fetchTeamById).
       .addCase(uploadTeamAvatar.fulfilled, (state, action) => {
         const updated = action.payload;
-        if (state.currentTeam && state.currentTeam._id === updated._id) {
+        if (state.currentTeam && (state.currentTeam as any).id === updated.id) {
           (state.currentTeam as any).avatarUpdatedAt = updated.avatarUpdatedAt;
         }
-        const idx = state.myTeams.findIndex(t => t._id === updated._id);
+        const idx = state.myTeams.findIndex(t => (t as any).id === updated.id);
         if (idx !== -1) (state.myTeams[idx] as any).avatarUpdatedAt = updated.avatarUpdatedAt;
       })
       .addCase(uploadTeamAvatar.rejected, (state, action) => {
@@ -451,10 +451,10 @@ const teamSlice = createSlice({
       })
       .addCase(deleteTeamAvatar.fulfilled, (state, action) => {
         const updated = action.payload;
-        if (state.currentTeam && state.currentTeam._id === updated._id) {
+        if (state.currentTeam && (state.currentTeam as any).id === updated.id) {
           (state.currentTeam as any).avatarUpdatedAt = updated.avatarUpdatedAt;
         }
-        const idx = state.myTeams.findIndex(t => t._id === updated._id);
+        const idx = state.myTeams.findIndex(t => (t as any).id === updated.id);
         if (idx !== -1) (state.myTeams[idx] as any).avatarUpdatedAt = updated.avatarUpdatedAt;
       })
       .addCase(deleteTeamAvatar.rejected, (state, action) => {

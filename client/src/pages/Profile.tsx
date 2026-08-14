@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/redux/store/store';
-import { logout, loadEnrichedUserData, updateUserProfile, changeUserPassword, refreshUserData, uploadAvatar } from '@/redux/slices/authSlice';
+import { logout, loadEnrichedUserData, updateUserProfile, changeUserPassword, refreshUserData } from '@/redux/slices/authSlice';
 import {
   fetchPlayerCardSessions,
   createPlayerCardSession,
@@ -14,14 +14,13 @@ import {
 import { createTeam } from '@/redux/slices/teamSlice';
 import { PlayerCardNavigator } from '@/components/PlayerCardNavigator';
 import { DashboardLayout } from '@/components/DashboardLayout';
-import { AvatarUploader } from '@/components/AvatarUploader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { TrendingUp, Target, Users, Trophy, Award, TrendingDown, Star, LogOut, Goal, Hand, User as UserIcon, Lock, KeyRound, Settings, Crown, Camera } from 'lucide-react';
+import { TrendingUp, Target, Users, Trophy, Award, TrendingDown, Star, LogOut, Goal, Hand, User as UserIcon, Lock, KeyRound, Settings, Crown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Progress } from '@/components/ui/progress';
 import { RoleBadge, deriveMemberRole } from '@/components/RoleBadge';
@@ -98,10 +97,6 @@ const Profile = () => {
     worstRating: 0,     // TODO: Da backend
   });
   const [pendingMatches, setPendingMatches] = useState<Match[]>([]);
-
-  // Avatar upload state
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   // Stati per EditModal con debug
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -263,99 +258,6 @@ const Profile = () => {
   // Check User profile con playercard per mostrare subito la sua card
   const userPlayerCardSession = mappedSessions.find(s => s.targetId === user?.id);
 
-  // Avatar upload handler
-  const handleAvatarFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validazione MIME
-    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!allowedMimes.includes(file.type)) {
-      toast({ title: 'Errore', description: `Formato non supportato. Usa JPG, PNG o WebP.`, variant: 'destructive' });
-      return;
-    }
-
-    // Validazione dimensione pre-upload
-    if (file.size > 200 * 1024) {
-      toast({ title: 'Errore', description: `File troppo grande (max 200KB).`, variant: 'destructive' });
-      return;
-    }
-
-    setIsUploadingAvatar(true);
-    try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const img = new Image();
-        img.onload = async () => {
-          // Canvas resize 256×256 centrato
-          const canvas = document.createElement('canvas');
-          canvas.width = 256;
-          canvas.height = 256;
-          const ctx = canvas.getContext('2d');
-
-          if (!ctx) {
-            toast({ title: 'Errore', description: 'Canvas non disponibile', variant: 'destructive' });
-            setIsUploadingAvatar(false);
-            return;
-          }
-
-          const size = Math.min(img.width, img.height);
-          const x = (img.width - size) / 2;
-          const y = (img.height - size) / 2;
-
-          ctx.drawImage(img, x, y, size, size, 0, 0, 256, 256);
-
-          canvas.toBlob(
-            async (blob) => {
-              if (!blob) {
-                toast({ title: 'Errore', description: 'Resize fallito', variant: 'destructive' });
-                setIsUploadingAvatar(false);
-                return;
-              }
-
-              if (blob.size > 200 * 1024) {
-                toast({ title: 'Errore', description: `Immagine ancora troppo grande dopo resize`, variant: 'destructive' });
-                setIsUploadingAvatar(false);
-                return;
-              }
-
-              // Upload via Redux
-              try {
-                const result = await dispatch(uploadAvatar(blob));
-                if (uploadAvatar.fulfilled.match(result)) {
-                  toast({ title: 'Successo', description: 'Foto profilo caricata!' });
-                } else if (uploadAvatar.rejected.match(result)) {
-                  toast({ title: 'Errore', description: result.payload as string, variant: 'destructive' });
-                }
-              } catch (err: any) {
-                toast({ title: 'Errore', description: err.message, variant: 'destructive' });
-              } finally {
-                setIsUploadingAvatar(false);
-                // Reset input
-                if (fileInputRef.current) fileInputRef.current.value = '';
-              }
-            },
-            'image/webp',
-            0.8
-          );
-        };
-        img.onerror = () => {
-          toast({ title: 'Errore', description: 'Immagine non valida', variant: 'destructive' });
-          setIsUploadingAvatar(false);
-        };
-        img.src = e.target?.result as string;
-      };
-      reader.onerror = () => {
-        toast({ title: 'Errore', description: 'Impossibile leggere il file', variant: 'destructive' });
-        setIsUploadingAvatar(false);
-      };
-      reader.readAsDataURL(file);
-    } catch (err: any) {
-      toast({ title: 'Errore', description: err.message, variant: 'destructive' });
-      setIsUploadingAvatar(false);
-    }
-  };
-
   // Gestione EditModal
   const handleEditProfile = () => {
     setEditModalType('user-profile');
@@ -492,31 +394,11 @@ const Profile = () => {
                       >
                         <Avatar className="w-20 h-20 border-4 border-primary/30 shadow-glow">
                           <AvatarImage src={userAvatarUrl(user)} alt={user.name} />
-                          <AvatarFallback className="bg-gradient-primary text-primary-foreground font-display text-xl">
-                            {user.name.split(' ').map(n => n[0]).join('')}
+                          <AvatarFallback className="bg-gradient-to-br from-primary/30 to-accent/30 text-foreground font-display font-bold text-lg">
+                            {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        {!isGuest && (
-                          <motion.button
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={isUploadingAvatar}
-                            className="absolute bottom-0 right-0 bg-primary hover:bg-primary/90 disabled:opacity-50 rounded-full p-2 shadow-md transition-colors"
-                            whileHover={{ scale: 1.15 }}
-                            whileTap={{ scale: 0.95 }}
-                            title="Carica foto profilo"
-                          >
-                            <Camera className="w-4 h-4 text-primary-foreground" />
-                          </motion.button>
-                        )}
                       </motion.div>
-
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        hidden
-                        accept="image/jpeg,image/png,image/webp"
-                        onChange={handleAvatarFileSelect}
-                      />
 
                       <div className="flex-1 min-w-0">
                         <h1 className="font-display text-2xl font-bold text-foreground leading-tight">
@@ -570,18 +452,6 @@ const Profile = () => {
                           {user.name.split(' ').map(n => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
-                      {!isGuest && (
-                        <motion.button
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={isUploadingAvatar}
-                          className="absolute bottom-0 right-0 bg-primary hover:bg-primary/90 disabled:opacity-50 rounded-full p-3 shadow-md transition-colors"
-                          whileHover={{ scale: 1.15 }}
-                          whileTap={{ scale: 0.95 }}
-                          title="Carica foto profilo"
-                        >
-                          <Camera className="w-5 h-5 text-primary-foreground" />
-                        </motion.button>
-                      )}
                     </motion.div>
                     <div className="flex-1 space-y-4">
                       <div className="space-y-2">
@@ -934,11 +804,12 @@ const Profile = () => {
                               }`}
                           >
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center font-display font-bold shadow-elevation">
-                                <span className="text-primary-foreground">
-                                  {teammate.name.split(' ').map((n: string) => n[0]).join('')}
-                                </span>
-                              </div>
+                              <Avatar className="w-10 h-10 rounded-lg">
+                                <AvatarImage src={userAvatarUrl(teammate)} alt={teammate.name} />
+                                <AvatarFallback className="bg-gradient-primary text-primary-foreground font-display font-bold shadow-elevation">
+                                  {teammate.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                                </AvatarFallback>
+                              </Avatar>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <p className="font-semibold text-foreground truncate">
@@ -1047,6 +918,10 @@ const Profile = () => {
           birthdate: user?.birthdate || ''
         } : {}}
         onSave={handleModalSave}
+        onAvatarSuccess={() => {
+          dispatch(refreshUserData());
+          dispatch(loadEnrichedUserData());
+        }}
       />
     </DashboardLayout>
   );

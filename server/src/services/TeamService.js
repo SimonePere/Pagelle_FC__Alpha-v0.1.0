@@ -199,6 +199,7 @@ class TeamService {
                     stats: team.stats,
                     colors: team.colors,
                     avatar: team.avatar,
+                    avatarUpdatedAt: team.avatarUpdatedAt,
                     isActive: team.isActive,
                     isUserMember: isMember,
                     isUserAdmin: team.isAdmin(userId),

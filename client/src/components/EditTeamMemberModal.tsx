@@ -158,9 +158,9 @@ export default function EditTeamMemberModal({
                 <div className="px-4 pb-3 space-y-3">
                     {/* Header membro compatto */}
                     <div className="flex items-center gap-3 p-2.5 rounded-lg bg-secondary/40 border border-border/50">
-                        <Avatar className="w-9 h-9">
+                        <Avatar className="w-9 h-9 rounded-lg">
                             <AvatarImage src={member.avatarUrl} alt={member.name} />
-                            <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xs">
+                            <AvatarFallback className="bg-gradient-to-br from-primary/30 to-accent/30 text-foreground font-bold text-xs">
                                 {initials}
                             </AvatarFallback>
                         </Avatar>

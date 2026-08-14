@@ -231,20 +231,20 @@ export function AvatarUploader({
                     <Button
                         asChild
                         disabled={isLoading}
-                        variant="default"
+                        variant="outline"
                         size="sm"
                         className="cursor-pointer"
                     >
                         <span>
                             {isLoading ? (
                                 <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Uploading...
+                                    <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" />
+                                    <span className="hidden sm:inline">Uploading...</span>
                                 </>
                             ) : (
                                 <>
-                                    <Upload className="w-4 h-4 mr-2" />
-                                    Choose Photo
+                                    <Upload className="w-4 h-4 sm:mr-2" />
+                                    <span className="hidden sm:inline">Choose Photo</span>
                                 </>
                             )}
                         </span>
@@ -254,11 +254,11 @@ export function AvatarUploader({
                 <Button
                     onClick={handleDelete}
                     disabled={isLoading}
-                    variant="destructive"
+                    variant="outline"
                     size="sm"
                 >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Remove
+                    <Trash2 className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Remove</span>
                 </Button>
             </div>
 

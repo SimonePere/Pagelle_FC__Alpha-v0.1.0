@@ -309,9 +309,9 @@ export default function TeamPage() {
               <div className="space-y-2 overflow-hidden">
                 <Label className="flex items-center gap-2"><Image className="w-4 h-4" /> Stemma del team</Label>
                 <div className="flex items-center gap-3">
-                  <Avatar className="w-14 h-14 min-w-[3.5rem] rounded-lg border border-border flex-shrink-0">
+                  <Avatar className="w-14 h-14 min-w-[3.5rem] rounded-lg border-2 border-border flex-shrink-0">
                     <AvatarImage src={teamAvatarUrl(currentTeam as any)} alt="Stemma team" className="rounded-lg object-cover" />
-                    <AvatarFallback className="rounded-lg bg-secondary text-muted-foreground text-xs">
+                    <AvatarFallback className="bg-gradient-to-br from-primary/30 to-accent/30 text-foreground font-display font-bold text-sm">
                       {(currentTeam as any).name?.[0]?.toUpperCase() || '?'}
                     </AvatarFallback>
                   </Avatar>
@@ -428,10 +428,10 @@ export default function TeamPage() {
                       return (
                         <div key={memberId} className="flex items-center justify-between p-3 bg-secondary/40 rounded-lg border border-border/50">
                           <div className="flex items-center gap-3 min-w-0">
-                            <Avatar className="w-10 h-10">
+                            <Avatar className="w-10 h-10 rounded-lg">
                               <AvatarImage src={userAvatarUrl(m)} alt={m.name} />
-                              <AvatarFallback className="bg-gradient-primary text-primary-foreground">
-                                {m.name?.split(' ').map((n: string) => n[0]).join('') || '?'}
+                              <AvatarFallback className="bg-gradient-to-br from-primary/30 to-accent/30 text-foreground font-bold text-xs">
+                                {m.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || '?'}
                               </AvatarFallback>
                             </Avatar>
                             <div className="min-w-0">
