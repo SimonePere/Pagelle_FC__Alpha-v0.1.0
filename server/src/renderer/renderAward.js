@@ -88,17 +88,47 @@ async function renderAndUpload(award) {
 
     let page = null;
     try {
-        // Payload self-contained passato via query (no fetch lato browser)
-        const payloadJson = JSON.stringify({
+        console.info(`[Award] Avvio rendering id=${awardId} type=${award.type}`);
+
+        const browser = await getBrowser();
+        page = await browser.newPage();
+
+        // Disabilita Service Worker e cache per evitare reload asincroni di controllerchange / PWA
+        try {
+            await page.setBypassServiceWorker(true);
+            await page.setCacheEnabled(false);
+        } catch { /* ignore if not supported */ }
+
+        // Inietta i dati dell'Award direttamente nel contesto della finestra prima dell'esecuzione degli script
+        // e disabilita 'serviceWorker' in navigator per prevenire reload automatici (controllerchange)
+        await page.evaluateOnNewDocument((data) => {
+            window.__AWARD_DATA__ = data;
+            try {
+                // Mock no-op per il Service Worker: evita reload improvvisi senza lanciare TypeError
+                Object.defineProperty(navigator, 'serviceWorker', {
+                    get: () => ({
+                        addEventListener: () => { },
+                        removeEventListener: () => { },
+                        register: () => Promise.resolve({
+                            installing: null,
+                            waiting: null,
+                            active: null,
+                            addEventListener: () => { },
+                            removeEventListener: () => { },
+                        }),
+                        getRegistration: () => Promise.resolve(undefined),
+                        getRegistrations: () => Promise.resolve([]),
+                        ready: new Promise(() => { }),
+                        controller: null,
+                    }),
+                    configurable: true,
+                });
+            } catch { /* ignore */ }
+        }, {
             type: award.type,
             payload: award.payload,
             shareUrl,
         });
-        const payloadB64 = Buffer.from(payloadJson, 'utf8').toString('base64');
-        const url = `${frontendUrl}/render-card?payload=${encodeURIComponent(payloadB64)}`;
-
-        const browser = await getBrowser();
-        page = await browser.newPage();
 
         // Viewport esattamente come la card. deviceScaleFactor=1 perché vogliamo 1080×1920 reali.
         await page.setViewport({
@@ -107,15 +137,16 @@ async function renderAndUpload(award) {
             deviceScaleFactor: 1,
         });
 
-        await page.goto(url, { waitUntil: 'networkidle0', timeout: 20000 });
+        const url = `${frontendUrl}/render-card`;
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
 
-        // Aspetta il segnale di "render completo" emesso dal componente RenderCard
+        // Aspetta il segnale di "render completo" o di errore emesso dal componente RenderCard
         await page.waitForFunction(
-            () => window.__RENDER_READY__ === true,
+            () => window.__RENDER_READY__ === true || Boolean(window.__RENDER_ERROR__),
             { timeout: 15000 }
         );
 
-        // Controllo errore lato pagina
+        // Controllo eventuale errore emerso lato frontend React
         const pageError = await page.evaluate(() => window.__RENDER_ERROR__ || null);
         if (pageError) {
             throw new Error(`Errore pagina render: ${pageError}`);
@@ -164,8 +195,11 @@ async function renderAndUpload(award) {
             finalizedAt: new Date(),
         });
 
+        console.info(`[Award] Render completato con successo id=${awardId} type=${award.type} status=READY`);
+
         return urls;
     } catch (err) {
+        console.error(`[Award] Render fallito per id=${awardId}:`, err.message);
         // Marca FAILED e registra errore (non rilancia: è chiamato fire-and-forget)
         try {
             await Award.findByIdAndUpdate(awardId, {

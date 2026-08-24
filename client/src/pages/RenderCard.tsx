@@ -25,11 +25,16 @@ import HeroCard from '@/components/HeroCard';
 import { mapAwardToCard, type CardData } from '@/utils/awardMapping';
 import type { AwardType } from '@/types/award';
 
-// Dichiarazione type per la flag di ready (consumata da Puppeteer)
+// Dichiarazione type per la flag di ready e payload iniettato (consumati da Puppeteer)
 declare global {
     interface Window {
         __RENDER_READY__?: boolean;
         __RENDER_ERROR__?: string;
+        __AWARD_DATA__?: {
+            type: string;
+            payload: any;
+            shareUrl?: string;
+        };
     }
 }
 
@@ -43,12 +48,17 @@ export default function RenderCard() {
 
         async function load() {
             try {
+                // Modalità 0: payload iniettato direttamente da Puppeteer (evita limiti di lunghezza URL HTTP 431)
+                if (window.__AWARD_DATA__) {
+                    const { type, payload, shareUrl } = window.__AWARD_DATA__;
+                    const card = mapAwardToCard(type as AwardType, payload, shareUrl);
+                    if (!cancelled) setData(card);
+                    return;
+                }
+
                 // Modalità A: payload inline base64
                 const inlinePayload = params.get('payload');
                 if (inlinePayload) {
-                    // atob() ritorna una stringa di byte interpretati come latin1.
-                    // Per decodificare correttamente UTF-8 (accenti, ·, emoji) serve passare
-                    // attraverso Uint8Array + TextDecoder.
                     const binary = atob(inlinePayload);
                     const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
                     const jsonStr = new TextDecoder('utf-8').decode(bytes);
