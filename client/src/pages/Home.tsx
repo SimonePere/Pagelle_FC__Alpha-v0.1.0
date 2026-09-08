@@ -11,6 +11,7 @@ import { Trophy, Medal, Target, TrendingUp, Crown, AlertCircle, Star, Goal, BarC
 import { motion } from 'framer-motion';
 import { FakeNews } from '@/components/FakeNews';
 import { BadgesSection } from '@/components/BadgesSection';
+import PaginatedSwiper from '@/components/PaginatedSwiper';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,16 @@ import SeasonSelector from '@/components/SeasonSelector';
 
 // Types now handled by useHomeDashboard hook
 type LeaderboardType = 'rating' | 'goals' | 'assists' | 'playercard' | 'stats-per-match';
+
+/**
+ * Quanti giocatori mostrare per pagina nella classifica.
+ *
+ * Con squadre numerose la lista diventava lunghissima e le posizioni di coda
+ * si raggiungevano solo scrollando parecchio. Cambiando questo numero cambia
+ * il taglio delle pagine: 5 tiene la classifica dentro una schermata mobile,
+ * 10 riduce i cambi pagina su desktop.
+ */
+const LEADERBOARD_PAGE_SIZE = 5;
 
 const Home = () => {
   const { user, isGuest } = useSelector((state: RootState) => state.auth);
@@ -533,13 +544,25 @@ const Home = () => {
                         </p>
                       </motion.div>
                     ) : (
-                      <div className="space-y-3">
-                        {leaderboard.map((player, index) => (
+                      <PaginatedSwiper
+                        items={leaderboard}
+                        pageSize={LEADERBOARD_PAGE_SIZE}
+                        showArrows
+                        renderPage={(pageItems, pageIndex) => (
+                          <div className="space-y-3">
+                            {pageItems.map((player, localIndex) => {
+                              // Posizione REALE in classifica: senza questo, ogni
+                              // pagina ripartirebbe da #1 con tanto di corona e
+                              // medaglie. I ritardi delle animazioni restano invece
+                              // legati a localIndex, o a pagina 4 l'ultima riga
+                              // comparirebbe con due secondi di ritardo.
+                              const index = pageIndex * LEADERBOARD_PAGE_SIZE + localIndex;
+                              return (
                           <motion.div
                             key={player.playerId}
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.1 }}
+                            transition={{ delay: localIndex * 0.1 }}
                             className="flex items-center justify-between p-5 pt-10 bg-secondary/40 rounded-xl transition-all duration-300 border border-border/50 relative overflow-hidden"
                           >
                             {/* Posizione classifica — stesso stile dello Storico */}
@@ -620,7 +643,7 @@ const Home = () => {
                                   <motion.div
                                     initial={{ scale: 0 }}
                                     animate={{ scale: 1 }}
-                                    transition={{ delay: index * 0.1 + 0.2, type: "spring" }}
+                                    transition={{ delay: localIndex * 0.1 + 0.2, type: "spring" }}
                                     className="text-center min-w-[58px]"
                                   >
                                     <div className="text-[1.7rem] sm:text-[1.9rem] leading-none font-display font-bold text-primary transition-transform">
@@ -635,7 +658,7 @@ const Home = () => {
                                   <motion.div
                                     initial={{ scale: 0 }}
                                     animate={{ scale: 1 }}
-                                    transition={{ delay: index * 0.1 + 0.25, type: "spring" }}
+                                    transition={{ delay: localIndex * 0.1 + 0.25, type: "spring" }}
                                     className="text-center min-w-[58px]"
                                   >
                                     <div className="text-[1.7rem] sm:text-[1.9rem] leading-none font-display font-bold text-accent transition-transform">
@@ -651,7 +674,7 @@ const Home = () => {
                                 <motion.div
                                   initial={{ scale: 0 }}
                                   animate={{ scale: 1 }}
-                                  transition={{ delay: index * 0.1 + 0.2, type: "spring" }}
+                                  transition={{ delay: localIndex * 0.1 + 0.2, type: "spring" }}
                                   className="text-center"
                                 >
                                   <div className="text-4xl font-display font-bold text-primary transition-transform">
@@ -662,10 +685,13 @@ const Home = () => {
                                   </p>
                                 </motion.div>
                               )}
-                            </div>
-                          </motion.div>
-                        ))}
-                      </div>
+                                    </div>
+                                  </motion.div>
+                                );
+                            })}
+                          </div>
+                        )}
+                      />
                     )}
                   </TabsContent>
                 </Tabs>

@@ -21,7 +21,8 @@
  * di verità cross-device/cross-session: gli altri membri del team vedono il
  * reveal al prossimo focus/poll finché non lo aprono loro stessi.
  *
- * Disabilitato per: guest, non autenticati, pagine pubbliche `/c/:id` e auth.
+ * Disabilitato per: guest, visitatori in modalità demo, non autenticati,
+ * pagine pubbliche `/c/:id` e auth.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -41,6 +42,7 @@ export default function AwardRevealManager() {
 
     const isAuthenticated = useSelector((s: RootState) => s.auth.isAuthenticated);
     const isGuest = useSelector((s: RootState) => s.auth.isGuest);
+    const isDemo = useSelector((s: RootState) => s.auth.isDemo);
     const pendingAwards = useSelector((s: RootState) => s.awards.pendingAwards);
 
     const {
@@ -64,7 +66,19 @@ export default function AwardRevealManager() {
     const isOnAuthPage = location.pathname.startsWith('/login')
         || location.pathname.startsWith('/register')
         || location.pathname.startsWith('/promote-guest');
-    const enabled = isAuthenticated && !isGuest && !isOnPublicCard && !isOnAuthPage;
+    // 🎬 In modalità demo il cerimoniale è SPENTO, ma i trofei restano.
+    //
+    //    La policy normale è mostrare in coda tutti gli award non ancora
+    //    visti: giusto per un membro del team, che ne accumula qualcuno
+    //    saltando un paio di partite. Ma il visitatore della demo non ne ha
+    //    visto NESSUNO, quindi al primo ingresso si beccherebbe l'intera
+    //    bacheca uno dopo l'altro — confetti e fanfara compresi — senza
+    //    poter fare altro. Un muro, proprio nel momento in cui dovrebbe
+    //    farsi un'idea dell'app.
+    //
+    //    Le card restano visibili e sfogliabili nella bacheca /awards, dove
+    //    il visitatore le apre quando vuole lui.
+    const enabled = isAuthenticated && !isGuest && !isDemo && !isOnPublicCard && !isOnAuthPage;
 
     // Poll dei pending awards: anche se AppSidebar fa già lo stesso, lo replichiamo
     // qui per garantire la consegna del reveal a TUTTI i membri del team anche

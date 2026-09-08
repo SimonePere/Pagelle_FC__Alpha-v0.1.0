@@ -30,6 +30,10 @@ import PaginatedSwiper from '@/components/PaginatedSwiper';
 export default function TeamPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  // 🎬 In demo i dettagli del team sono in sola lettura: il visitatore entra
+  //    come capitano, quindi l'interfaccia gli mostrerebbe i campi editabili
+  //    e il pulsante di salvataggio — che poi non salverebbe nulla.
+  const isDemo = useSelector((state: RootState) => state.auth.isDemo);
   const dispatch = useDispatch<AppDispatch>();
 
   const { user } = useSelector((state: RootState) => state.auth);
@@ -295,15 +299,15 @@ export default function TeamPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Nome del team</Label>
-                <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+                <Input value={editName} onChange={(e) => setEditName(e.target.value)} disabled={isDemo} />
               </div>
               <div className="space-y-2">
                 <Label>Descrizione</Label>
-                <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="Breve descrizione del team" />
+                <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="Breve descrizione del team" disabled={isDemo} />
               </div>
               <div className="space-y-2">
                 <Label className="flex items-center gap-2"><MapPin className="w-4 h-4" /> Città fondazione</Label>
-                <Input value={editCity} onChange={(e) => setEditCity(e.target.value)} placeholder="Es: Roma, Milano, Napoli" />
+                <Input value={editCity} onChange={(e) => setEditCity(e.target.value)} placeholder="Es: Roma, Milano, Napoli" disabled={isDemo} />
                 <p className="text-xs text-muted-foreground">Usata per mostrare le previsioni meteo in Home e nella creazione partita.</p>
               </div>
               <div className="space-y-2 overflow-hidden">
@@ -315,7 +319,7 @@ export default function TeamPage() {
                       {(currentTeam as any).name?.[0]?.toUpperCase() || '?'}
                     </AvatarFallback>
                   </Avatar>
-                  {isTeamAdmin(user, currentTeam as any) && (
+                  {isTeamAdmin(user, currentTeam as any) && !isDemo && (
                     <AvatarUploader
                       ownerType="team"
                       teamId={teamId}
@@ -358,8 +362,14 @@ export default function TeamPage() {
                 </div>
               </div>
               */}
-              {isTeamAdmin(user, currentTeam as any) && (
+              {isTeamAdmin(user, currentTeam as any) && !isDemo && (
                 <Button onClick={handleSaveDetails} disabled={teamLoading}><Save className="w-4 h-4" /> Salva modifiche</Button>
+              )}
+
+              {isDemo && (
+                <p className="text-xs text-muted-foreground">
+                  In modalità demo i dettagli del team non sono modificabili.
+                </p>
               )}
             </CardContent>
           </Card>

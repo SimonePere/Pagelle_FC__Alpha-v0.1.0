@@ -8,6 +8,7 @@
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
+import PaginatedSwiper from '@/components/PaginatedSwiper';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -31,6 +32,16 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+
+/**
+ * Quanti elementi mostrare per pagina nelle due sezioni di questa scheda.
+ *
+ * Con rose numerose entrambe le liste diventavano lunghissime e per arrivare
+ * in fondo serviva parecchio scroll. Cambiare questi numeri cambia il taglio
+ * delle pagine, senza toccare altro.
+ */
+const FINAL_AVERAGES_PAGE_SIZE = 6;   // griglia a 3 colonne → 2 righe piene
+const INDIVIDUAL_VOTES_PAGE_SIZE = 4; // voci a fisarmonica, meglio poche per volta
 
 // 🎯 Props Interface per massima flessibilità
 interface VoteCardProps {
@@ -461,8 +472,13 @@ export const MatchDetailsCard: React.FC<VoteCardProps> = ({
               </div>
             ) : calculation?.playerResults && Object.keys(calculation.playerResults).length > 0 ? (
               /* ✅ Real data */
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Object.entries(calculation.playerResults).map(([playerId, result], idx) => (
+              <PaginatedSwiper
+                items={Object.entries(calculation.playerResults)}
+                pageSize={FINAL_AVERAGES_PAGE_SIZE}
+                showArrows
+                renderPage={(pageResults) => (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {pageResults.map(([playerId, result], idx) => (
                   <motion.div
                     key={playerId}
                     initial={{ opacity: 0, scale: 0.9 }}
@@ -487,9 +503,11 @@ export const MatchDetailsCard: React.FC<VoteCardProps> = ({
                         🎯 {result.assists}
                       </span>
                     </div>
-                  </motion.div>
-                ))}
-              </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              />
             ) : (
               /* 📭 Empty state */
               <div className="text-center py-8">
@@ -527,50 +545,62 @@ export const MatchDetailsCard: React.FC<VoteCardProps> = ({
                   </div>
                 </div>
               ) : submissions.length > 0 ? (
-                /* ✅ Real data - Dynamic AccordionItems */
-                submissions.map((submission) => (
-                  <AccordionItem
-                    key={submission.voter.id}
-                    value={submission.voter.id}
-                    className="border border-border/50 rounded-lg px-4"
-                  >
-                    <AccordionTrigger className="hover:no-underline">
-                      <div className="flex items-center justify-between w-full pr-4">
-                        <span className="font-display text-lg font-bold text-foreground">
-                          {submission.voter.name}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(submission.submissionInfo.submittedAt).toLocaleString('it-IT')}
-                        </span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="pt-4 pb-2">
-                      {/* Grid Voti Dati dal Votante */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {submission.playerVotes.map((vote) => (
-                          <div
-                            key={vote.player.id}
-                            className="p-4 border bg-secondary/30 rounded-lg border-border/30"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-medium text-foreground">
-                                {vote.player.name}
+                /* ✅ Real data — paginati.
+                   L'Accordion resta esterno: il context Radix attraversa i
+                   livelli, e così una voce aperta la si ritrova aperta
+                   tornando sulla sua pagina. */
+                <PaginatedSwiper
+                  items={submissions}
+                  pageSize={INDIVIDUAL_VOTES_PAGE_SIZE}
+                  showArrows
+                  renderPage={(pageSubmissions) => (
+                    <div className="w-full space-y-2">
+                      {pageSubmissions.map((submission) => (
+                        <AccordionItem
+                          key={submission.voter.id}
+                          value={submission.voter.id}
+                          className="border border-border/50 rounded-lg px-4"
+                        >
+                          <AccordionTrigger className="hover:no-underline">
+                            <div className="flex items-center justify-between w-full pr-4">
+                              <span className="font-display text-lg font-bold text-foreground">
+                                {submission.voter.name}
                               </span>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(submission.submissionInfo.submittedAt).toLocaleString('it-IT')}
+                              </span>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="pt-4 pb-2">
+                            {/* Grid Voti Dati dal Votante */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                              {submission.playerVotes.map((vote) => (
+                                <div
+                                  key={vote.player.id}
+                                  className="p-4 border bg-secondary/30 rounded-lg border-border/30"
+                                >
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="font-medium text-foreground">
+                                      {vote.player.name}
+                                    </span>
 
-                              <span className={`text-3xl font-display font-bold ${getRatingColor(vote.rating)}`}>
-                                {vote.rating.toFixed(2)}
-                              </span>
+                                    <span className={`text-3xl font-display font-bold ${getRatingColor(vote.rating)}`}>
+                                      {vote.rating.toFixed(2)}
+                                    </span>
+                                  </div>
+                                  <div className="flex gap-3 text-xs text-muted-foreground">
+                                    <span>⚽ {vote.goals}</span>
+                                    <span>🎯 {vote.assists}</span>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
-                            <div className="flex gap-3 text-xs text-muted-foreground">
-                              <span>⚽ {vote.goals}</span>
-                              <span>🎯 {vote.assists}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))
+                          </AccordionContent>
+                        </AccordionItem>
+                      ))}
+                    </div>
+                  )}
+                />
               ) : (
                 /* 📭 Empty state */
                 <div className="text-center py-8">
