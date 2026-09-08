@@ -21,7 +21,8 @@ const TestVote = lazy(() => import("./pages/TestPage.tsx")); // Pagina di test c
 // const TestAwards = lazy(() => import("./pages/TestAwards.tsx")); // [DISABILITATA] Anteprima componenti Pagelle FC Awards — sostituita dalla pagina /awards in produzione
 const Awards = lazy(() => import("./pages/Awards.tsx")); // Bacheca Awards del team attivo (protetta)
 const RenderCard = lazy(() => import("./pages/RenderCard.tsx")); // Pagina render-only per Puppeteer (server screenshot)
-const PublicCard = lazy(() => import("./pages/PublicCard.tsx")); // Pagina pubblica /c/:cardId (no auth, target di QR/share)
+const PublicCard = lazy(() => import("./pages/PublicCard.tsx"));
+const Demo = lazy(() => import("./pages/Demo.tsx")); // Ingresso pubblico alla modalità demo (no auth) // Pagina pubblica /c/:cardId (no auth, target di QR/share)
 
 // 🚀 STEP 2: Code splitting per pagine medie
 const Profile = lazy(() => import("./pages/Profile"));
@@ -191,6 +192,8 @@ const App = () => (
         <Routes>
           {/* Route pubbliche */}
           <Route path="/login" element={<Login />} />
+          {/* 🎬 Ingresso pubblico alla demo — URL condivisibile su social e QR */}
+          <Route path="/demo" element={<Suspense fallback={<PageSkeleton />}><Demo /></Suspense>} />
           <Route path="/join" element={<JoinByInvite />} />
           <Route path="/privacy" element={<Suspense fallback={<PageSkeleton />}><Privacy /></Suspense>} />
           <Route path="/terms" element={<Suspense fallback={<PageSkeleton />}><Terms /></Suspense>} />
@@ -299,7 +302,7 @@ const App = () => (
             path="/god-dashboard"
             element={
               <Suspense fallback={<PageSkeleton />}>
-                <ProtectedRouteRedux>
+                <ProtectedRouteRedux blockDemo>
                   <GodDashboard />
                 </ProtectedRouteRedux>
               </Suspense>

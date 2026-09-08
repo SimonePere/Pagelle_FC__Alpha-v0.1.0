@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Lock, User, Calendar as CalendarIcon, Users, Check, X } from 'lucide-react';
+import { Mail, Lock, User, Calendar as CalendarIcon, Users, Check, X, Eye } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { loginUser, registerUser, refreshUserData } from '@/redux/slices/authSlice';
 import { createTeam /*, joinTeam */ } from '@/redux/slices/teamSlice'; // [DISABILITATO] joinTeam – tab "Unisciti" rimossa temporaneamente
@@ -15,7 +15,13 @@ import { RootState, AppDispatch } from '@/redux/store/store';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Login = () => {
-  const [tab, setTab] = useState<'login' | 'signup'>('login');
+  // La CTA della barra demo rimanda qui con ?tab=signup: chi arriva dalla
+  // demo vuole creare il suo team, non fare login, e trovarsi sulla tab
+  // sbagliata sarebbe un attrito inutile proprio nel momento decisivo.
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState<'login' | 'signup'>(
+    searchParams.get('tab') === 'signup' ? 'signup' : 'login'
+  );
   // [DISABILITATO] Tab "Unisciti" rimossa temporaneamente – tenuto solo il flusso "Crea team"
   // const [signupMode, setSignupMode] = useState<'create' | 'join'>('create');
 
@@ -362,6 +368,33 @@ const Login = () => {
               </form>
             </TabsContent>
           </Tabs>
+
+          {/* 🎬 Accesso alla demo — l'alternativa per chi non vuole (ancora)
+              lasciare i propri dati. Volutamente secondaria rispetto alle due
+              tab: è una via d'assaggio, non l'azione principale. */}
+          <div className="pt-2">
+            <div className="relative py-3">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-card px-2 text-xs text-muted-foreground">oppure</span>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate('/demo')}
+              className="w-full h-11 gap-2 font-medium"
+            >
+              <Eye className="w-4 h-4" />
+              Guarda la demo
+            </Button>
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              Esplora l'app con una squadra di esempio, senza registrarti.
+            </p>
+          </div>
 
           <div className="text-center text-xs text-muted-foreground pt-4 border-t border-border space-x-3">
             <Link to="/privacy" className="hover:text-primary">Privacy</Link>

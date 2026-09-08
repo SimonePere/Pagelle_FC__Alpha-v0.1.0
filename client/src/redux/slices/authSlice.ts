@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { api } from "../../lib/api";
 import { User } from "../../types/api";
+import { isDemoActive, simulateWrite } from '../../lib/demoMode';
 
 interface AuthState {
   user: User | null;
@@ -8,6 +9,10 @@ interface AuthState {
   isAuthenticated: boolean;
   isGuest: boolean;
   guestMatchId: string | null;
+  /** Visitatore della squadra dimostrativa pubblica (JWT scope 'demo'). */
+  isDemo: boolean;
+  /** Team demo su cui è agganciata la sessione, letto dal JWT. */
+  demoTeamId: string | null;
   error: string | null;
 }
 
@@ -191,6 +196,34 @@ export const guestLogin = createAsyncThunk(
   }
 );
 
+/**
+ * 🎬 Accesso alla modalità demo.
+ *
+ * Non richiede credenziali: il backend restituisce un JWT con scope 'demo'
+ * agganciato al capitano della squadra dimostrativa. Le scritture sono
+ * respinte dal server (blockDemoWrites) e intercettate dal client prima
+ * ancora di partire (lib/demoMode.ts).
+ *
+ * Scrive anche `activeTeamId` in localStorage, altrimenti useActiveTeamId
+ * ripescherebbe il team di una sessione precedente.
+ */
+export const demoLogin = createAsyncThunk(
+  'auth/demoLogin',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.post('/auth/demo-login');
+      authHelpers.saveAuth(response.user, response.token);
+
+      const teamId = response.teamId || response.user?.teamIds?.[0] || null;
+      if (teamId) localStorage.setItem('activeTeamId', teamId);
+
+      return { user: response.user, teamId };
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Demo non disponibile al momento');
+    }
+  }
+);
+
 export const promoteGuestByInviteToken = createAsyncThunk(
   'auth/promoteGuestByInviteToken',
   async (data: { email: string; password: string; name: string; inviteToken: string }, { rejectWithValue }) => {
@@ -223,6 +256,14 @@ export const uploadAvatar = createAsyncThunk(
   'auth/uploadAvatar',
   async (blob: Blob, { rejectWithValue }) => {
     try {
+      // 🎬 Questa chiamata NON passa da apiCall — usa fetch diretto perché
+      //    invia FormData — quindi l'intercettore della modalità demo va
+      //    richiamato qui a mano, o l'upload arriverebbe al server.
+      if (isDemoActive()) {
+        simulateWrite('/users/me/avatar', 'POST');
+        return rejectWithValue('In demo la foto profilo non è modificabile');
+      }
+
       const formData = new FormData();
       formData.append('avatar', blob);
 
@@ -281,6 +322,8 @@ const initialState: AuthState = {
   isAuthenticated: false,
   isGuest: false,
   guestMatchId: null,
+  isDemo: false,
+  demoTeamId: null,
   error: null,
 };
 
@@ -300,6 +343,10 @@ const authSlice = createSlice({
             const payload = decodeJwtPayload(token);
             state.isGuest = payload?.scope === 'guest';
             state.guestMatchId = payload?.matchId || null;
+            // Lo scope demo sopravvive al refresh: il visitatore che ricarica
+            // la pagina resta dov'era invece di essere buttato fuori.
+            state.isDemo = payload?.scope === 'demo';
+            state.demoTeamId = payload?.teamId || null;
           }
         }
       } else {
@@ -314,9 +361,31 @@ const authSlice = createSlice({
       state.isLoading = false;
       state.isGuest = false;
       state.guestMatchId = null;
+      state.isDemo = false;
+      state.demoTeamId = null;
       state.error = null;
 
       authHelpers.clearAuth();
+    },
+
+    /**
+     * Uscita dalla modalità demo.
+     *
+     * Oltre a token e utente ripulisce `activeTeamId`: senza, chi esce dalla
+     * demo e si registra si ritroverebbe puntato al team dimostrativo invece
+     * che al proprio. Azzera anche lo stato locale delle azioni simulate.
+     */
+    exitDemo: (state) => {
+      state.user = null;
+      state.isAuthenticated = false;
+      state.isLoading = false;
+      state.isDemo = false;
+      state.demoTeamId = null;
+      state.error = null;
+
+      authHelpers.clearAuth();
+      localStorage.removeItem('activeTeamId');
+      try { sessionStorage.removeItem('demoTourState'); } catch { /* modalità privata */ }
     },
 
     setLoading: (state, action: PayloadAction<boolean>) => {
@@ -450,6 +519,26 @@ const authSlice = createSlice({
         state.error = action.payload as string;
       });
 
+    // Demo login
+    builder
+      .addCase(demoLogin.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(demoLogin.fulfilled, (state, action) => {
+        state.user = action.payload.user;
+        state.isAuthenticated = true;
+        state.isDemo = true;
+        state.demoTeamId = action.payload.teamId;
+        state.isGuest = false;
+        state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(demoLogin.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
+
     // Promote guest by invite token (converti in full user dal link di invito)
     builder
       .addCase(promoteGuestByInviteToken.pending, (state) => {
@@ -522,6 +611,6 @@ const authSlice = createSlice({
   },
 });
 
-export const { initializeAuth, logout, setLoading, clearError } = authSlice.actions;
+export const { initializeAuth, logout, exitDemo, setLoading, clearError } = authSlice.actions;
 export default authSlice.reducer;
 export type { User, AuthState };

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { BottomNav } from "@/components/BottomNav";
+import { DemoBanner } from "@/components/DemoBanner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Menu } from "lucide-react";
 import { motion } from "framer-motion";
@@ -97,6 +98,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               )}
             </div>
           </motion.header>
+
+          {/* Barra demo — stessa posizione del banner ospite, sotto l'header.
+              Non usa `fixed` per non coprire la BottomNav su mobile. */}
+          <DemoBanner />
 
           {/* Banner ospite — mobile + desktop, sotto l'header */}
           {isGuest && (

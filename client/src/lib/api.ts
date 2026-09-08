@@ -8,6 +8,8 @@
 //
 // Se in futuro imposti VITE_API_BASE_URL, per esempio in produzione,
 // quella variabile avrà comunque la precedenza.
+import { shouldIntercept, simulateWrite } from './demoMode';
+
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
@@ -17,6 +19,29 @@ export async function apiCall(
   options: RequestInit = {}
 ) {
   const token = localStorage.getItem('token');
+
+  // 🎬 Modalità demo: le scritture non partono nemmeno.
+  //
+  //    Il server le respingerebbe comunque (blockDemoWrites), ma un 403 in
+  //    faccia al visitatore ogni volta che prova a votare renderebbe la demo
+  //    una vetrina morta. Qui restituiamo una risposta verosimile, così
+  //    l'azione "riesce" nell'interfaccia senza toccare il database.
+  //
+  //    Le rotte di sessione (login, register, demo-login) NON vengono
+  //    intercettate: senza, il visitatore non potrebbe registrarsi.
+  //    Vedi lib/demoMode.ts
+  const method = (options.method || 'GET').toUpperCase();
+  if (shouldIntercept(endpoint, method)) {
+    let parsedBody: any = undefined;
+    try {
+      parsedBody = typeof options.body === 'string'
+        ? JSON.parse(options.body)
+        : options.body;
+    } catch {
+      parsedBody = options.body;
+    }
+    return simulateWrite(endpoint, method, parsedBody);
+  }
 
   // Aggiungi timeout di 30 secondi
   const controller = new AbortController();

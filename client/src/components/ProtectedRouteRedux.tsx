@@ -11,10 +11,17 @@ import { RootState } from '@/redux/store/store';
 
 interface ProtectedRouteProps {
   children: ReactNode;
+  /**
+   * Rotta preclusa ai visitatori in modalità demo.
+   * Usata per la God Dashboard: è la console del creatore, non fa parte di
+   * ciò che la demo mostra. Il backend la protegge già con requireGod, ma
+   * intercettarla qui evita di far vedere una pagina che poi fallisce.
+   */
+  blockDemo?: boolean;
 }
 
-export const ProtectedRouteRedux = ({ children }: ProtectedRouteProps) => {
-  const { user, isLoading, isAuthenticated } = useSelector((state: RootState) => state.auth);
+export const ProtectedRouteRedux = ({ children, blockDemo = false }: ProtectedRouteProps) => {
+  const { user, isLoading, isAuthenticated, isDemo } = useSelector((state: RootState) => state.auth);
 
   // Mostra loading mentre Redux si inizializza
   if (isLoading) {
@@ -28,6 +35,11 @@ export const ProtectedRouteRedux = ({ children }: ProtectedRouteProps) => {
   // Redirect a login se non autenticato con Redux
   if (!isAuthenticated || !user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Visitatore demo su una rotta a lui preclusa → torna alla home della demo
+  if (blockDemo && isDemo) {
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;
