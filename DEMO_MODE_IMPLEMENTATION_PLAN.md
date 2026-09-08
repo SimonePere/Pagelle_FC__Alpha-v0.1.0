@@ -1,7 +1,7 @@
 # 🎬 Modalità Demo — Piano di Implementazione
 
-> **Stato**: ✅ **FASE A COMPLETATA E VERIFICATA** su database di test — 21/21 test end-to-end passati
-> **Prossimo passo**: Fase B (client)
+> **Stato**: ✅ **FASI A e B COMPLETATE**, collaudate nel browser, 7 correzioni applicate dopo la prova
+> **Prossimo passo**: Fase C — tour guidato (§7). Punto di ripresa completo al §15.
 > **Data**: 8 settembre 2026 (revisione 3)
 > **Versione app**: Alpha v0.1.0
 > **Obiettivo**: permettere a chiunque, senza registrarsi, di esplorare Pagelle FC e provarne le funzioni principali
@@ -9,6 +9,9 @@
 ---
 
 ## 0. Stato dell'implementazione
+
+> 📍 **Riprendi da qui**: il **§15** in fondo è il punto di ripresa aggiornato — cosa esiste,
+> come farlo girare, cosa resta. Le sezioni intermedie spiegano il *perché* delle scelte.
 
 | Fase | Stato | Note |
 |---|---|---|
@@ -18,8 +21,9 @@
 | **A.4** Middleware blocco scritture | ✅ Fatto | 19 test unitari + 10 end-to-end, tutti passati |
 | **A.5** `requireScope` | ✅ Fatto | Messaggio neutro + **15 rotte di lettura** abilitate allo scope demo |
 | **A.6** Esclusione da job e query | ✅ Fatto | 3 cron + God Dashboard + lista team pubblici |
-| **B** Client | ⬜ Da fare | |
-| **C** Tour guidato | ⬜ Da fare | |
+| **B** Client | ✅ Fatto | Intercettore, barra demo, rotta /demo — 36 test sulla logica |
+| **Fix post-collaudo** | ✅ Fatto | 7 correzioni dopo la prova nel browser — vedi §15.4 |
+| **C** Tour guidato | ⬜ **Da fare** | Unica parte rimasta. Attenzione: la voce di menu esiste già ma non è collegata (§15.6) |
 
 **Esito della verifica sul DB di test** (`Pagelle-FC-test`, che conteneva già 2 team reali):
 
@@ -782,3 +786,159 @@ Modifiche introdotte dopo la revisione:
 ---
 
 *Piano redatto l'8 settembre 2026, alla terza revisione — da approvare prima dell'implementazione.*
+
+---
+
+# 15. Punto di ripresa — stato al 8 settembre 2026
+
+> Questa sezione è scritta per essere **letta per prima** da chi riprende il lavoro in una sessione nuova. Racconta cosa esiste già, cosa è cambiato rispetto al piano, e da dove ripartire. Le sezioni precedenti restano il riferimento sul *perché* delle scelte.
+
+## 15.1 Dove siamo
+
+| Fase | Stato |
+|---|---|
+| **A — Backend** | ✅ Completata, verificata su DB di test |
+| **B — Client** | ✅ Completata, provata dall'utente nel browser |
+| **Fix post-collaudo** | ✅ 7 correzioni applicate dopo la prova sul campo |
+| **C — Tour guidato** | ⬜ **Non iniziata** — è il prossimo passo |
+
+**Branch**: `feature/demo-mode` (5 commit, non ancora unito a `master`)
+
+```
+4559fe9  fix(demo): Ale admin, partita da votare, player card visibili, logo avatar
+3b04a2d  fix(demo): niente reveal in demo, dettagli team in sola lettura
+         feat(ui): paginazione su classifica e dettaglio partita
+068d9bd  feat(demo): modalità demo lato client — navigazione libera e azioni simulate
+2aaa13c  docs: raccolta delle incongruenze del codebase emerse durante la fase A
+a3c23ae  feat(demo): modalità demo lato server — accesso pubblico in sola lettura
+```
+
+## 15.2 Come far girare la demo adesso
+
+Il database di **test** è già popolato: non serve rifare il seed per provarla.
+
+```bash
+# Backend — NODE_ENV=test, dove vivono i dati demo
+cd server && NODE_ENV=test npm run dev
+
+# Client
+cd client && npm run dev
+```
+
+Poi si apre `/demo`, oppure si clicca **"Guarda la demo"** su `/login`.
+
+**Per ripopolare** (il seed è idempotente, ricostruisce da zero i soli dati demo):
+
+```bash
+cd server
+NODE_ENV=test npm run seed:demo           # dry-run: mostra cosa farebbe, non scrive
+NODE_ENV=test npm run seed:demo:confirm   # esegue davvero
+```
+
+⚠️ Ogni seed **rigenera gli id**: team, utenti e partite cambiano id a ogni esecuzione. Nessun test o documento deve dipendere da un id fisso.
+
+## 15.3 Cosa è stato costruito
+
+### File nuovi
+
+| File | Ruolo |
+|---|---|
+| `server/src/middleware/blockDemoWrites.js` | Respinge ogni scrittura con scope demo. Decodifica il JWT da sé, quindi copre anche rotte che non usano `auth` |
+| `server/src/utils/seedDemoData.js` | Popola la squadra dimostrativa. Dry-run di default, `--confirm` per scrivere |
+| `client/src/lib/demoMode.ts` | Intercetta le scritture prima che partano e restituisce risposte simulate |
+| `client/src/components/DemoBanner.tsx` | Barra demo con CTA e toast delle azioni simulate |
+| `client/src/pages/Demo.tsx` | Ingresso pubblico `/demo` |
+
+### Modifiche principali
+
+- **15 modelli** hanno il campo `isDemo` (tutti tranne `Season`)
+- `POST /api/v1/auth/demo-login` — pubblica, rate-limited, JWT 24h con `scope: 'demo'`
+- **15 rotte di lettura** accettano lo scope demo in `requireScope`
+- Team demo escluso da: 3 cron, ~20 metriche della God Dashboard, elenco team pubblici
+- `requireTeamAdmin` non applica il bypass admin ai token demo
+- `authSlice` ha `isDemo`, `demoTeamId`, il thunk `demoLogin` e l'action `exitDemo`
+
+## 15.4 Le sette correzioni dopo il collaudo
+
+L'utente ha provato la demo nel browser e sono emerse cose che nessun test automatico avrebbe trovato.
+
+### Dal primo giro di prova
+
+**1. Il cerimoniale degli award seppelliva il visitatore.**
+La policy normale mostra in coda tutti i trofei non ancora visti — sensata per un membro del team, che ne accumula qualcuno saltando due partite. Ma il visitatore non ne ha visto **nessuno**: al primo ingresso partivano **7 reveal consecutivi** con confetti e fanfara, senza poter fare altro. Ora `AwardRevealManager` è spento in demo; le card restano sfogliabili in `/awards`.
+
+**2. I dettagli del team erano editabili ma non salvabili.**
+Il visitatore entra come amministratore, quindi vedeva nome, descrizione e città modificabili più il pulsante "Salva modifiche" — che poi non salvava. Ora i campi sono disabilitati e il pulsante sparisce.
+
+**3. Paginazione su classifica e dettaglio partita** *(non riguarda la demo: vale per tutta l'app)*
+Riusato `PaginatedSwiper`, già presente in Profilo e Team, con costanti configurabili in cima ai file: `LEADERBOARD_PAGE_SIZE` (5), `FINAL_AVERAGES_PAGE_SIZE` (6), `INDIVIDUAL_VOTES_PAGE_SIZE` (4).
+
+> ⚠️ **Da ricordare se si tocca la classifica**: l'indice serve a due cose diverse. Posizione, corona e medaglie usano quello **globale** (`pageIndex * pageSize + localIndex`), o ogni pagina ripartirebbe da #1 con la corona duplicata. I ritardi delle animazioni usano quello **locale**, o a pagina 3 l'ultima riga comparirebbe con oltre un secondo di ritardo.
+
+### Dal secondo giro di prova
+
+**4. Ale non poteva creare partite.**
+Non un errore del seed, ma una regola del codebase: `requireRole.js` definisce `captain: ['captain', 'player']` — **un capitano non eredita i poteri di admin** — e il client controlla `role === 'admin'`. Il visitatore leggeva *"Solo gli amministratori possono creare partite"* proprio dove doveva provare la feature. Ale è ora `admin`.
+
+**5. Il bypass admin andava chiuso per la demo.**
+Conseguenza del punto 4: `requireTeamAdmin` lascia passare gli admin globali senza controllare l'appartenenza, quindi un token demo avrebbe potuto leggere lista ospiti e roster di **qualunque** team conoscendone l'id. Ora quel bypass non vale per i token demo.
+
+**6. La partita aperta non aspettava il visitatore.**
+Era di 10 giocatori con voti mancanti a caso, e Ale non era tra quelli: non c'era nulla da votare. Ora sono **5 giocatori, Ale incluso, e manca solo il suo voto**. Appena vota, la sessione si chiude e compaiono le medie finali — il ciclo completo che la demo deve raccontare.
+
+**7. Nessuno vedeva la propria player card.**
+Il seed escludeva il target dagli `eligibleVoters` della sua sessione, ma `getUserPlayerCardSessions` filtra proprio su quel campo. La card **esisteva nel database**, ma il navigator non la trovava e sembrava non fosse mai stata creata. Succedeva a tutti e 12, si notava su Ale perché è l'identità del visitatore. L'app reale passa `team.memberIds` con `allowSelfVoting: true`: il seed ora fa lo stesso.
+
+**Più il logo**: foto profilo di Ale e stemma della squadra. Gli altri 11 restano con le iniziali, come un team vero appena creato.
+
+## 15.5 Cose scoperte solo eseguendo il codice
+
+Non erano nel piano e sono costate tempo: chi riprende farebbe bene a conoscerle.
+
+**Gli hook `post('save')` generano documenti senza i metadati del chiamante.**
+`VoteResult` e `PlayerCardResult` ricalcolano `PlayerLeaderboardStats`. Ottimo — i numeri sono identici a quelli di un team vero — ma quegli hook non conoscono la demo e **non propagano `isDemo`**. Al primo seed sono rimaste 12 righe orfane, invisibili alla pulizia successiva. Risolto marcando i derivati **prima** di cancellare e **dopo** aver creato (`markDerivedDocsAsDemo`).
+
+**Il middleware ha dovuto avere una whitelist**, contro quanto diceva il piano. `POST /auth/register` è una scrittura: senza esenzione, chi cliccava "Crea il tuo team" con il token demo ancora in `localStorage` riceveva `403` proprio nel momento della conversione. Le tre rotte di sessione (`login`, `register`, `demo-login`) sono esentate, con test contro l'aggiramento (`/auth/register-x` viene bloccato).
+
+**Due dettagli di schema**: la regex email di `User` accetta solo TLD di 2-3 caratteri (niente `.local`, da cui `@demo.pagellefc.app`), e `eligibleVoters` è un array di `ObjectId`, non di oggetti `{userId}`.
+
+**Il seed non deve creare stagioni**: sono un calendario globale, come i mesi dell'anno. Verifica che `2025-26` e `2026-27` esistano e ci data dentro le partite del team demo. Se mancano: `node scripts/seed-seasons.js`.
+
+## 15.6 Quello che resta da fare
+
+### Fase C — Tour guidato
+
+È l'unica parte del piano non ancora affrontata. Le specifiche sono al **§7**.
+
+⚠️ **Da sapere prima di iniziare**: la voce di menu **"Rivedi il tour guidato"** nella barra demo **esiste già** e emette l'evento `DEMO_TOUR_RESTART_EVENT` (esportato da `DemoBanner.tsx`), ma **nessuno lo ascolta**. Cliccarla oggi non fa nulla. Il componente `DemoTour` che deve ascoltarlo va ancora scritto.
+
+### Prima del rilascio in produzione
+
+- [ ] Backup con `npm run db:backup`, poi seed sul database di produzione
+- [ ] Verificare che le stagioni globali esistano anche lì
+- [ ] Link a `/demo` nel `README.md` e nella bio social (§13.2)
+- [ ] Generare le PNG condivisibili degli award con `scripts/trigger-award.js` — il seed non le produce. In app le card si vedono comunque, perché `PodiumCard` e `HeroCard` sono renderizzate lato client: servono solo per la condivisione esterna
+- [ ] Provare la demo come PWA installata
+
+### Fuori scope, ma emerso lavorando
+
+Nove problemi del codebase sono documentati in **[CODEBASE_ISSUES_AND_FIXES.md](CODEBASE_ISSUES_AND_FIXES.md)**, con prove misurate dove ho potuto verificarle. Nessuno è stato corretto. I due più urgenti:
+
+- `npm run seed` punta a un file inesistente ed è documentato nel README
+- `NewsRepository.getTeamAggregateStats` restituisce 0 giocatori invece di 12, per un casting mancante
+
+E uno di autorizzazione, emerso verificando la sicurezza del ruolo admin (§3.6 di quel documento): **`GET /teams/:id` e `GET /leaderboards/:teamId/*` non controllano l'appartenenza al team**. Chiunque abbia un account può leggere dati e classifica di qualunque squadra conoscendone l'id. Misurato con tre token diversi — giocatore semplice, admin, demo — con risultati identici: è preesistente e non dipende dalla demo. Il controllo giusto esiste già in `validateTeamAccess` ed è applicato a una rotta su tre.
+
+## 15.7 Cosa non è mai stato verificato
+
+Onestà su cosa la sessione di lavoro non ha potuto coprire.
+
+**Non ho un browser**: tutta la verifica visiva è passata dall'utente. Restano da guardare almeno:
+
+- come stanno le frecce di paginazione dentro la card della classifica **su mobile**, dove lo spazio è poco
+- la barra demo su schermi stretti, che non deve coprire la `BottomNav`
+- il flusso di voto completo dal vivo: cinque slider, invio, chiusura sessione, comparsa delle medie
+
+**Il seed non è mai girato in produzione**: solo su `Pagelle-FC-test`, dove ha creato ~500 documenti senza toccare i due team reali presenti (conteggi identici prima e dopo, verificati).
+
+**Le award card non hanno immagini PNG**: si generano con la pipeline Puppeteer esistente.
