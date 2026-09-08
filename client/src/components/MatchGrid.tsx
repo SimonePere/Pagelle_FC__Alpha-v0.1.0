@@ -20,7 +20,7 @@ import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import useEnrichedMatches from '@/hooks/useEnrichedMatches';
 import { useActiveSeason } from '@/hooks/useActiveSeason';
-import SeasonSelector from '@/components/SeasonSelector';
+import SeasonSelector, { SeasonHintBanner } from '@/components/SeasonSelector';
 import { useActiveTeamId } from '@/hooks/useActiveTeamId';
 import { fetchTeamMatches } from '@/redux/slices/matchSlice';
 import { AppDispatch } from '@/redux/store/store';
@@ -323,6 +323,14 @@ const MatchGrid: React.FC<MatchGridProps> = ({ showStats = true, onCreateMatch }
             </div>
           )}
 
+          {/* Il messaggio sulla stagione sta qui, sopra la riga: dentro i
+              controlli imponeva alla riga la propria larghezza e sbordava */}
+          <SeasonHintBanner
+            seasons={seasons}
+            selectedSeason={selectedSeason}
+            showSelector={showSelector}
+          />
+
           {/* Controlli di filtro e ordinamento */}
           <div className="flex items-center gap-3 p-4 bg-secondary/20 rounded-lg">
 
@@ -336,6 +344,7 @@ const MatchGrid: React.FC<MatchGridProps> = ({ showStats = true, onCreateMatch }
                   onSeasonChange={handleSeasonChange}
                   showSelector={showSelector}
                   showAllOption
+                  showBanner={false}
                 />
               </div>
             )}
