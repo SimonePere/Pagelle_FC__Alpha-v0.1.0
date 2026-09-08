@@ -20,6 +20,16 @@ const matchNotificationSchema = new mongoose.Schema({
   read: {
     type: Boolean,
     default: false
+  },
+
+  // === MODALITÀ DEMO ===
+  // Notifica di una partita della squadra dimostrativa pubblica.
+  // Questa collection non ha teamId: si aggancia via userId + matchId.
+  // Vedi Team.isDemo e DEMO_MODE_IMPLEMENTATION_PLAN.md §3.9
+  isDemo: {
+      type: Boolean,
+      default: false,
+      index: true
   }
 }, {
   timestamps: true,

@@ -242,6 +242,33 @@ const guestLogin = async (req, res) => {
 };
 
 /**
+// @desc    Login modalità demo — accesso pubblico alla squadra dimostrativa
+// @route   POST /api/v1/auth/demo-login
+// @access  Public (rate-limited)
+*/
+const demoLogin = async (req, res) => {
+  console.log('\n🎬 === DEMO LOGIN ===');
+
+  try {
+    const result = await authService.demoLogin();
+
+    console.log('✅ Visitatore demo autenticato come:', result.user.name);
+    console.log('🎬 === FINE DEMO LOGIN ===\n');
+
+    res.json({
+      success: true,
+      token: result.token,
+      user: result.user,
+      teamId: result.teamId
+    });
+  } catch (error) {
+    console.log('❌ ERRORE DEMO LOGIN:', error.message);
+    const status = error.statusCode || 500;
+    res.status(status).json({ error: error.message });
+  }
+};
+
+/**
 // @desc    Merge guest → utente reale (registrazione con storico intatto)
 // @route   POST /api/v1/auth/promote-guest-by-invite-token
 // @access  Public
@@ -293,6 +320,7 @@ module.exports = {
   changePassword,
   validateInvite,
   guestLogin,
+  demoLogin,
   promoteGuestByInviteToken,
   promoteGuestById
 };

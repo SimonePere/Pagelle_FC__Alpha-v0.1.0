@@ -54,7 +54,11 @@ async function runMonthlyMVPGeneration() {
     console.log(`\n🏆 [CRON monthly-mvp] Generazione MONTHLY_MVP per ${monthStr}`);
 
     try {
-        const teams = await Team.find({ awardsEnabled: true }).select('_id name').lean();
+        // isDemo: { $ne: true } esclude la squadra dimostrativa, il cui contenuto
+        // resta quello curato dal seed. Il $ne (invece di `false`) copre anche i
+        // team creati prima che il campo esistesse — vedi il commento storico su
+        // awardsEnabled in fondo a questo file.
+        const teams = await Team.find({ awardsEnabled: true, isDemo: { $ne: true } }).select('_id name').lean();
         let created = 0;
         let skipped = 0;
         let errors = 0;
@@ -123,14 +127,17 @@ async function runSeasonAwardsGeneration() {
         const [teamsForBallon, teamsForGolden, teamsForGoldenTot] = await Promise.all([
             Team.find({
                 awardsEnabled: true,
+                isDemo: { $ne: true },
                 seasonEndDate: { $gte: ballonWindow.start, $lte: ballonWindow.end }
             }).select('_id name seasonEndDate').lean(),
             Team.find({
                 awardsEnabled: true,
+                isDemo: { $ne: true },
                 seasonEndDate: { $gte: goldenWindow.start, $lte: goldenWindow.end }
             }).select('_id name seasonEndDate').lean(),
             Team.find({
                 awardsEnabled: true,
+                isDemo: { $ne: true },
                 seasonEndDate: { $gte: goldenTotWindow.start, $lte: goldenTotWindow.end }
             }).select('_id name seasonEndDate').lean(),
         ]);

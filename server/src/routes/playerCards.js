@@ -42,14 +42,14 @@ router.post('/sessions', auth, requireScope('full'), requireRole('admin'), creat
  * @access  Private
  * @query   ?status=active|completed&limit=20
  */
-router.get('/sessions', auth, requireScope('full'), getUserPlayerCardSessions);
+router.get('/sessions', auth, requireScope('full', 'demo'), getUserPlayerCardSessions);
 
 /**
  * @desc    Get specific PlayerCard session by ID
  * @route   GET /api/v1/player-cards/sessions/:id
  * @access  Private
  */
-router.get('/sessions/:id', auth, requireScope('full'), getPlayerCardSession);
+router.get('/sessions/:id', auth, requireScope('full', 'demo'), getPlayerCardSession);
 
 // === PLAYER CARD VOTING ===
 
@@ -78,7 +78,7 @@ router.post('/sessions/:id/vote', auth, requireScope('full'), submitPlayerCardVo
  * @route   GET /api/v1/player-cards/sessions/:id/calculation
  * @access  Private
  */
-router.get('/sessions/:id/calculation', auth, requireScope('full'), getPlayerCardCalculation);
+router.get('/sessions/:id/calculation', auth, requireScope('full', 'demo'), getPlayerCardCalculation);
 
 /**
  * @desc    Complete PlayerCard session and save official results
@@ -94,7 +94,7 @@ router.post('/sessions/:id/complete', auth, requireScope('full'), requireRole('a
  * @access  Private (team members only)
  * @query   ?limit=10 (optional limit for results)
  */
-router.get('/results/user/:userId', auth, requireScope('full'), getPlayerCardResults);
+router.get('/results/user/:userId', auth, requireScope('full', 'demo'), getPlayerCardResults);
 
 
 

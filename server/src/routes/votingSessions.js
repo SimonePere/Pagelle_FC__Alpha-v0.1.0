@@ -19,24 +19,24 @@ router.post('/', auth, requireScope('full'), votingSessionController.createVotin
 // @route   GET /api/v1/voting-sessions
 // @desc    Get voting sessions for current user
 // @access  Private
-router.get('/', auth, requireScope('full', 'guest'), votingSessionController.getUserVotingSessions);
+router.get('/', auth, requireScope('full', 'guest', 'demo'), votingSessionController.getUserVotingSessions);
 
 // --- Sub-resource routes FIRST (before /:id catch-all) ---
 
 // @route   GET /api/v1/voting-sessions/:id/my-vote
 // @desc    Get current user's active vote for a session
 // @access  Private
-router.get('/:id/my-vote', auth, requireScope('full', 'guest'), votingSessionController.getMyVote);
+router.get('/:id/my-vote', auth, requireScope('full', 'guest', 'demo'), votingSessionController.getMyVote);
 
 // @route   GET /api/v1/voting-sessions/:id/calculation
 // @desc    Calculate and get voting results
 // @access  Private
-router.get('/:id/calculation', auth, requireScope('full', 'guest'), votingSessionController.getVotingCalculation);
+router.get('/:id/calculation', auth, requireScope('full', 'guest', 'demo'), votingSessionController.getVotingCalculation);
 
 // @route   GET /api/v1/voting-sessions/:id/submissions
 // @desc    Get all individual vote submissions for a session
 // @access  Private (guest vede solo sessioni completate)
-router.get('/:id/submissions', auth, requireScope('full', 'guest'), votingSessionController.getSessionSubmissions);
+router.get('/:id/submissions', auth, requireScope('full', 'guest', 'demo'), votingSessionController.getSessionSubmissions);
 
 // @route   POST /api/v1/voting-sessions/:id/vote
 // @desc    Submit vote for a voting session
@@ -76,6 +76,6 @@ router.post(
 // @route   GET /api/v1/voting-sessions/:id
 // @desc    Get specific voting session details
 // @access  Private
-router.get('/:id', auth, requireScope('full', 'guest'), votingSessionController.getVotingSession);
+router.get('/:id', auth, requireScope('full', 'guest', 'demo'), votingSessionController.getVotingSession);
 
 module.exports = router;

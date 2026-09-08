@@ -217,6 +217,18 @@ const VotingSessionSchema = new mongoose.Schema({
     participationRate: { type: Number, default: 0 },
     averageTimeToVote: { type: Number, default: 0 },
     lastActivity: { type: Date }
+  },
+
+  // === MODALITÀ DEMO ===
+  // Sessione di voto della squadra dimostrativa pubblica.
+  // ⚠️ La sessione demo aperta nasce con `deadline: null` ed è esclusa dal cron
+  //    closeExpiredVotingSessions, altrimenti verrebbe chiusa d'ufficio e la
+  //    demo perderebbe la sua funzione principale.
+  // Vedi Team.isDemo e DEMO_MODE_IMPLEMENTATION_PLAN.md §3.2 e §3.9
+  isDemo: {
+    type: Boolean,
+    default: false,
+    index: true
   }
 
 }, {

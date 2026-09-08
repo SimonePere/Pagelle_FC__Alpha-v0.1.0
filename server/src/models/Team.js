@@ -143,6 +143,28 @@ const teamSchema = new mongoose.Schema(
     awardsEnabled: {
       type: Boolean,
       default: true // default: true; admin può disabilitare la feature per il team
+    },
+
+    // === MODALITÀ DEMO ===
+    // Marca il team come squadra dimostrativa pubblica, visitabile senza account.
+    //
+    // Il flag è propagato su TUTTI i documenti collegati (Match, VotingSession,
+    // VoteResult, Award, News, ...) anche se sarebbe deducibile dal teamId.
+    // La ridondanza è voluta: rende ogni cancellazione del seed demo un
+    // `deleteMany({ isDemo: true })`, che nel caso peggiore non cancella nulla
+    // invece di collassare su un filtro vuoto e svuotare la collection.
+    //
+    // ⚠️ Le esclusioni si scrivono SEMPRE `{ isDemo: { $ne: true } }` e MAI
+    //    `{ isDemo: false }`: i documenti creati prima di questo campo non lo
+    //    hanno affatto, e un filtro booleano stretto non li matcherebbe.
+    //    Stesso incidente già avvenuto con `awardsEnabled` — vedi il commento
+    //    storico in jobs/generatePeriodicAwards.js.
+    //
+    // Vedi DEMO_MODE_IMPLEMENTATION_PLAN.md §3.9
+    isDemo: {
+      type: Boolean,
+      default: false,
+      index: true
     }
   },
   {

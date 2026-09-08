@@ -105,7 +105,9 @@ async function runSeasonRollover() {
             const Team = require('../models/Team');
             const NewsService = require('../services/NewsService');
             const newsService = new NewsService();
-            const teams = await Team.find({}).select('_id').lean();
+            // La squadra demo è esclusa dal rollover: le sue news fanno parte del
+            // contenuto dimostrativo e non vanno azzerate a fine stagione.
+            const teams = await Team.find({ isDemo: { $ne: true } }).select('_id').lean();
             for (const team of teams) {
                 await newsService.resetNewsForSeasonEnd(team._id, active.seasonId);
             }

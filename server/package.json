@@ -15,7 +15,9 @@
     "db:backup": "set NODE_ENV=test && node migrate-db.js backup",
     "db:restore": "set NODE_ENV=production && node migrate-db.js restore",
     "db:migrate": "set NODE_ENV=test && node migrate-db.js migrate",
-    "db:list": "node migrate-db.js list"
+    "db:list": "node migrate-db.js list",
+    "seed:demo": "node src/utils/seedDemoData.js",
+    "seed:demo:confirm": "node src/utils/seedDemoData.js --confirm"
   },
   "keywords": [],
   "author": "",

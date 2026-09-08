@@ -127,7 +127,18 @@ const awardSchema = new mongoose.Schema({
 
     // === ERROR TRACKING ===
     generationAttempts: { type: Number, default: 0 },
-    lastError: { type: String, default: null }
+    lastError: { type: String, default: null },
+
+    // === MODALITÀ DEMO ===
+    // Trofeo della squadra dimostrativa pubblica.
+    // I cron di generazione award escludono i team demo: il contenuto della
+    // bacheca demo resta quello curato dal seed.
+    // Vedi Team.isDemo e DEMO_MODE_IMPLEMENTATION_PLAN.md §3.9
+    isDemo: {
+        type: Boolean,
+        default: false,
+        index: true
+    }
 }, {
     timestamps: true,
     toJSON: {

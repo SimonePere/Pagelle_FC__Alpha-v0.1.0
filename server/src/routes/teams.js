@@ -24,15 +24,15 @@ router.get('/', teamController.getAllTeams);
 // =============================================
 
 router.post('/', auth, requireScope('full'), teamController.createTeam);
-router.get('/my-teams', auth, requireScope('full', 'guest'), teamController.getMyTeams);
+router.get('/my-teams', auth, requireScope('full', 'guest', 'demo'), teamController.getMyTeams);
 router.post('/join', auth, requireScope('full'), teamController.joinTeam);
-router.get('/:id', auth, requireScope('full', 'guest'), teamController.getTeam);
+router.get('/:id', auth, requireScope('full', 'guest', 'demo'), teamController.getTeam);
 router.put('/:id', auth, requireScope('full'), requireTeamAdmin(), teamController.updateTeam);
 router.delete('/:id/leave', auth, requireScope('full'), teamController.leaveTeam);
 router.delete('/:id/members/:userId', auth, requireScope('full'), requireTeamAdmin(), teamController.removeMember);
 
 // 🔒 Gestione guest del team (solo team-admin o admin globale)
-router.get('/:id/guests', auth, requireScope('full'), requireTeamAdmin(), teamController.listTeamGuests);
+router.get('/:id/guests', auth, requireScope('full', 'demo'), requireTeamAdmin(), teamController.listTeamGuests);
 router.patch('/:id/guests/:userId/promotion', auth, requireScope('full'), requireTeamAdmin(), teamController.setGuestPromotionAllowed);
 
 // ===== AVATAR ROUTES =====

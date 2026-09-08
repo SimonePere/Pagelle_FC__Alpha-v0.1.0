@@ -116,6 +116,15 @@ const playerLeaderboardStatsSchema = new mongoose.Schema({
         type: Number,
         default: 1,
         min: [1, 'Data version deve essere almeno 1']
+    },
+
+    // === MODALITÀ DEMO ===
+    // Statistiche di classifica della squadra dimostrativa pubblica.
+    // Vedi Team.isDemo e DEMO_MODE_IMPLEMENTATION_PLAN.md §3.9
+    isDemo: {
+        type: Boolean,
+        default: false,
+        index: true
     }
 
 }, {

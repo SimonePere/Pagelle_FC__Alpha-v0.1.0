@@ -19,6 +19,10 @@ const inviteRoutes = require('./routes/invite');
 const seasonRoutes = require('./routes/seasons');
 const godRoutes = require('./god/routes/god');
 
+// Middleware modalità demo: respinge ogni scrittura fatta con un JWT scope 'demo'.
+// Vedi DEMO_MODE_IMPLEMENTATION_PLAN.md §A.4
+const blockDemoWrites = require('./middleware/blockDemoWrites');
+
 const app = express();
 
 // Security middleware: abilita cross-origin resource policy per consentire l'embed delle immagini avatar su domini differenti
@@ -44,6 +48,18 @@ if (process.env.NODE_ENV === 'production') {
     skip: (req) => process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test'
   });
   app.use('/api', limiter);
+
+  // Limiter più stretto sulla rotta demo: è pubblica e rilascia un JWT senza
+  // credenziali, quindi merita una soglia sua invece di condividere quella globale.
+  const demoLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: {
+      error: 'Troppi accessi alla demo da questo IP. Riprova tra qualche minuto.'
+    },
+    skip: (req) => process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test'
+  });
+  app.use('/api/v1/auth/demo-login', demoLimiter);
 }
 
 // CORS configuration
@@ -86,6 +102,10 @@ app.use(
     fallthrough: true,
   })
 );
+
+// 🎬 Barriera modalità demo — PRIMA di ogni route API.
+//    Decodifica da sé il JWT, quindi copre anche rotte che non usano `auth`.
+app.use('/api/v1', blockDemoWrites);
 
 // API Routes
 app.use('/api/v1/auth', authRoutes);

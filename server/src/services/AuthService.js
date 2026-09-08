@@ -48,9 +48,13 @@ class AuthService {
      * @returns {string} JWT token
      */
     generateToken(userId, extraPayload = {}) {
-        const expiresIn = extraPayload.scope === 'guest'
-            ? '48h'
-            : (process.env.JWT_EXPIRES_IN || '7d');
+        // Gli scope ristretti hanno vite proprie: il guest 48h (il tempo di votare
+        // la sua partita), il visitatore demo 24h — abbastanza da sopravvivere a un
+        // refresh o al rientro in giornata, non tanto da somigliare a un account vero.
+        const SCOPE_TTL = { guest: '48h', demo: '24h' };
+        const expiresIn = SCOPE_TTL[extraPayload.scope]
+            || process.env.JWT_EXPIRES_IN
+            || '7d';
         return jwt.sign(
             { id: userId, ...extraPayload },
             process.env.JWT_SECRET,
@@ -882,6 +886,68 @@ class AuthService {
      * @param {string} data.name - Nome (opzionale, usa quello esistente se non passato)
      * @returns {Promise<Object>} JWT full + dati utente
      */
+    /**
+     * 🎬 Login modalità demo — autentica un visitatore senza credenziali.
+     *
+     * Restituisce un JWT con scope 'demo' legato al capitano della squadra
+     * dimostrativa. Il visitatore entra come admin del team demo, così nessuna
+     * funzione dell'app resta nascosta dietro un permesso mancante.
+     *
+     * SOLA LETTURA: le scritture sono respinte a monte dal middleware
+     * blockDemoWrites, che non si fida del client. Qui non serve altro.
+     *
+     * La forma della risposta è identica a quella di login(), così il client
+     * riusa lo stesso percorso senza casi speciali.
+     *
+     * @returns {Promise<Object>} { token, user, teamId }
+     * @throws {AppError} 503 se la demo non è stata ancora popolata dal seed
+     */
+    async demoLogin() {
+        const demoTeam = await this.teamRepository.findOne({ isDemo: true });
+        if (!demoTeam) {
+            throw new AppError(
+                'La demo non è al momento disponibile. Riprova più tardi.',
+                503
+            );
+        }
+
+        // Il visitatore entra come capitano: è admin del team, quindi vede
+        // anche creazione partita, gestione rosa e apertura votazioni.
+        const captainId = demoTeam.adminIds?.[0] || demoTeam.createdBy;
+        const demoUser = await this.userRepository.findOne({
+            _id: captainId,
+            isDemo: true
+        });
+
+        if (!demoUser) {
+            throw new AppError(
+                'La demo non è configurata correttamente: capitano non trovato.',
+                503
+            );
+        }
+
+        const token = this.generateToken(demoUser._id, {
+            scope: 'demo',
+            teamId: demoTeam._id.toString()
+        });
+
+        return {
+            token,
+            teamId: demoTeam._id.toString(),
+            user: {
+                id: demoUser._id,
+                name: demoUser.name,
+                email: demoUser.email,
+                role: demoUser.role,
+                isDemo: true,
+                scope: 'demo',
+                teamIds: demoUser.teamIds,
+                teamName: demoTeam.name,
+                profile: demoUser.profile
+            }
+        };
+    }
+
     async promoteGuestById({ userId, email, password, name }) {
         return this.promoteGuest({
             lookup: { by: 'id', value: userId },

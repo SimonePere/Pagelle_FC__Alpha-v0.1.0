@@ -60,6 +60,15 @@ const NewsSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
         index: true
+    },
+
+    // === MODALITÀ DEMO ===
+    // Notizia della squadra dimostrativa pubblica.
+    // Vedi Team.isDemo e DEMO_MODE_IMPLEMENTATION_PLAN.md §3.9
+    isDemo: {
+        type: Boolean,
+        default: false,
+        index: true
     }
 });
 

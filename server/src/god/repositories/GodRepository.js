@@ -8,6 +8,21 @@ const PlayerCardSubmission = require('../../models/PlayerCardSubmission');
 const Award = require('../../models/Award');
 const KpiSnapshot = require('../../god/models/KpiSnapshot');
 
+/**
+ * Esclusione della squadra dimostrativa da OGNI metrica della God Dashboard.
+ *
+ * I dati demo sono contenuto vetrina, non attività reale degli utenti: se
+ * finissero nei KPI gonfierebbero partite, voti e award con numeri inventati,
+ * rendendo la dashboard inutile proprio per ciò a cui serve.
+ *
+ * Si usa { $ne: true } e non { isDemo: false } perché i documenti creati prima
+ * dell'introduzione del campo non lo hanno affatto, e un filtro booleano
+ * stretto li escluderebbe per errore.
+ *
+ * Vedi DEMO_MODE_IMPLEMENTATION_PLAN.md §A.6
+ */
+const NOT_DEMO = { isDemo: { $ne: true } };
+
 class GodRepository {
 
     // ─── Snapshot KPI ────────────────────────────────────────────────────────
@@ -26,27 +41,27 @@ class GodRepository {
 
     // ─── Conteggi base ───────────────────────────────────────────────────────
 
-    async countUsers(filter = {}) { return User.countDocuments(filter); }
-    async countTeams(filter = {}) { return Team.countDocuments(filter); }
-    async countMatches(filter = {}) { return Match.countDocuments(filter); }
-    async countVotingSessions(filter = {}) { return VotingSession.countDocuments(filter); }
-    async countVoteSubmissions(filter = {}) { return VoteSubmission.countDocuments(filter); }
-    async countPlayerCardSubmissions(filter = {}) { return PlayerCardSubmission.countDocuments(filter); }
-    async countAwards(filter = {}) { return Award.countDocuments(filter); }
+    async countUsers(filter = {}) { return User.countDocuments({ ...filter, ...NOT_DEMO }); }
+    async countTeams(filter = {}) { return Team.countDocuments({ ...filter, ...NOT_DEMO }); }
+    async countMatches(filter = {}) { return Match.countDocuments({ ...filter, ...NOT_DEMO }); }
+    async countVotingSessions(filter = {}) { return VotingSession.countDocuments({ ...filter, ...NOT_DEMO }); }
+    async countVoteSubmissions(filter = {}) { return VoteSubmission.countDocuments({ ...filter, ...NOT_DEMO }); }
+    async countPlayerCardSubmissions(filter = {}) { return PlayerCardSubmission.countDocuments({ ...filter, ...NOT_DEMO }); }
+    async countAwards(filter = {}) { return Award.countDocuments({ ...filter, ...NOT_DEMO }); }
 
     // ─── Utenti ──────────────────────────────────────────────────────────────
 
     // Utenti con isGuest=true presenti nel DB oggi
     async countGuestUsers() {
-        return User.countDocuments({ isGuest: true });
+        return User.countDocuments({ isGuest: true, ...NOT_DEMO });
     }
 
     // Proxy "attivi": distinct voterIds su entrambi i tipi di submission nell'arco di 7 giorni
     async countActiveUsers7d() {
         const since = new Date(Date.now() - 7 * 86400000);
         const [voteVoters, cardVoters] = await Promise.all([
-            VoteSubmission.distinct('voterId', { createdAt: { $gte: since } }),
-            PlayerCardSubmission.distinct('voterId', { createdAt: { $gte: since } }),
+            VoteSubmission.distinct('voterId', { createdAt: { $gte: since }, ...NOT_DEMO }),
+            PlayerCardSubmission.distinct('voterId', { createdAt: { $gte: since }, ...NOT_DEMO }),
         ]);
         const unique = new Set([...voteVoters.map(String), ...cardVoters.map(String)]);
         return unique.size;
@@ -56,7 +71,7 @@ class GodRepository {
 
     // Sessioni match_rating attive in questo momento
     async countOpenVotingSessions() {
-        return VotingSession.countDocuments({ status: 'active', type: 'match_rating' });
+        return VotingSession.countDocuments({ status: 'active', type: 'match_rating', ...NOT_DEMO });
     }
 
     // ─── Gameplay (gol, assist, voto medio) ──────────────────────────────────
@@ -68,7 +83,7 @@ class GodRepository {
     // (che è sempre stato calcolato correttamente). Filtrato per createdAt → range-aware.
     async aggregateGameplayStats({ start, end }) {
         const [result] = await VoteResult.aggregate([
-            { $match: { createdAt: { $gte: start, $lte: end } } },
+            { $match: { createdAt: { $gte: start, $lte: end }, ...NOT_DEMO } },
             {
                 $facet: {
                     // Somma gol/assist scorrendo la Map matchRatingResults per-giocatore
@@ -113,7 +128,7 @@ class GodRepository {
     // stessa fonte-verità dei gol/assist. Filtrato per createdAt → range-aware.
     async aggregateBadgesCount({ start, end }) {
         const groups = await VoteResult.aggregate([
-            { $match: { createdAt: { $gte: start, $lte: end } } },
+            { $match: { createdAt: { $gte: start, $lte: end }, ...NOT_DEMO } },
             { $project: { players: { $objectToArray: '$matchRatingResults' } } },
             { $unwind: '$players' },
             { $unwind: '$players.v.badges' },
@@ -135,7 +150,7 @@ class GodRepository {
     // Aggrega $sum su Award.stats.* e conta quanti PENDING nel range dato
     async aggregateAwardStats({ start, end }) {
         const [result] = await Award.aggregate([
-            { $match: { generatedAt: { $gte: start, $lte: end } } },
+            { $match: { generatedAt: { $gte: start, $lte: end }, ...NOT_DEMO } },
             {
                 $group: {
                     _id: null,
@@ -165,14 +180,14 @@ class GodRepository {
     // Metriche aggregate di engagement per votazioni nel range dato
     async aggregateVotingEngagement({ start, end }) {
         const [sessions, submissions, completed] = await Promise.all([
-            VotingSession.countDocuments({ type: 'match_rating', createdAt: { $gte: start, $lte: end } }),
-            VoteSubmission.countDocuments({ createdAt: { $gte: start, $lte: end } }),
-            VotingSession.countDocuments({ type: 'match_rating', status: 'completed', createdAt: { $gte: start, $lte: end } }),
+            VotingSession.countDocuments({ type: 'match_rating', createdAt: { $gte: start, $lte: end }, ...NOT_DEMO }),
+            VoteSubmission.countDocuments({ createdAt: { $gte: start, $lte: end }, ...NOT_DEMO }),
+            VotingSession.countDocuments({ type: 'match_rating', status: 'completed', createdAt: { $gte: start, $lte: end }, ...NOT_DEMO }),
         ]);
 
         // participationRate media: aggregazione su summary.participationRate delle sessioni completate
         const [participationResult] = await VotingSession.aggregate([
-            { $match: { type: 'match_rating', status: 'completed', createdAt: { $gte: start, $lte: end } } },
+            { $match: { type: 'match_rating', status: 'completed', createdAt: { $gte: start, $lte: end }, ...NOT_DEMO } },
             { $group: { _id: null, avgParticipation: { $avg: '$summary.participationRate' } } },
         ]);
 
@@ -192,9 +207,9 @@ class GodRepository {
     // Metriche aggregate di engagement per player cards nel range dato
     async aggregatePlayerCardEngagement({ start, end }) {
         const [sessions, submissions, completed] = await Promise.all([
-            VotingSession.countDocuments({ type: 'player_card_rating', createdAt: { $gte: start, $lte: end } }),
-            PlayerCardSubmission.countDocuments({ createdAt: { $gte: start, $lte: end } }),
-            VotingSession.countDocuments({ type: 'player_card_rating', status: 'completed', createdAt: { $gte: start, $lte: end } }),
+            VotingSession.countDocuments({ type: 'player_card_rating', createdAt: { $gte: start, $lte: end }, ...NOT_DEMO }),
+            PlayerCardSubmission.countDocuments({ createdAt: { $gte: start, $lte: end }, ...NOT_DEMO }),
+            VotingSession.countDocuments({ type: 'player_card_rating', status: 'completed', createdAt: { $gte: start, $lte: end }, ...NOT_DEMO }),
         ]);
         return {
             sessionsCreated: sessions,
@@ -208,7 +223,9 @@ class GodRepository {
     // Top N team per numero di partite create nel range dato
     // Match.teamId è String, quindi usa $toObjectId per il lookup su Team
     async getTopTeams({ limit = 5, start, end } = {}) {
-        const matchFilter = (start && end) ? { createdAt: { $gte: start, $lte: end } } : {};
+        const matchFilter = (start && end)
+            ? { createdAt: { $gte: start, $lte: end }, ...NOT_DEMO }
+            : { ...NOT_DEMO };
         return Match.aggregate([
             { $match: matchFilter },
             { $group: { _id: '$teamId', matchCount: { $sum: 1 } } },
@@ -250,17 +267,17 @@ class GodRepository {
 
         const [matchRows, voteRows, cardRows] = await Promise.all([
             Match.aggregate([
-                { $match: { createdAt: { $gte: start, $lte: end } } },
+                { $match: { createdAt: { $gte: start, $lte: end }, ...NOT_DEMO } },
                 bucketStage('$createdAt'),
                 { $sort: { _id: 1 } },
             ]),
             VoteSubmission.aggregate([
-                { $match: { createdAt: { $gte: start, $lte: end } } },
+                { $match: { createdAt: { $gte: start, $lte: end }, ...NOT_DEMO } },
                 bucketStage('$createdAt'),
                 { $sort: { _id: 1 } },
             ]),
             PlayerCardSubmission.aggregate([
-                { $match: { createdAt: { $gte: start, $lte: end } } },
+                { $match: { createdAt: { $gte: start, $lte: end }, ...NOT_DEMO } },
                 bucketStage('$createdAt'),
                 { $sort: { _id: 1 } },
             ]),

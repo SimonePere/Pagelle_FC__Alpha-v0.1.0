@@ -245,7 +245,18 @@ const PlayerCardSubmissionSchema = new mongoose.Schema({
     validationErrors: [{
         field: String,
         message: String
-    }]
+    }],
+
+    // === MODALITÀ DEMO ===
+    // Valutazione player card della squadra dimostrativa pubblica.
+    // Questa collection non ha teamId: senza il flag andrebbe ripulita
+    // risalendo agli id delle sessioni demo.
+    // Vedi Team.isDemo e DEMO_MODE_IMPLEMENTATION_PLAN.md §3.9
+    isDemo: {
+        type: Boolean,
+        default: false,
+        index: true
+    }
 
 }, {
     timestamps: true,

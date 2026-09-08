@@ -172,6 +172,17 @@ const userSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+
+  // === MODALITÀ DEMO ===
+  // Giocatore appartenente alla squadra dimostrativa pubblica.
+  // Non è un guest: ha email e password reali (segnaposto interni), così in UI
+  // è indistinguibile da un utente vero e non mostra il badge "Ospite".
+  // Vedi Team.isDemo e DEMO_MODE_IMPLEMENTATION_PLAN.md §3.9
+  isDemo: {
+    type: Boolean,
+    default: false,
+    index: true
   }
 }, {
   timestamps: true,

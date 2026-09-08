@@ -34,6 +34,11 @@ router.put('/password', auth, authController.changePassword);
 // @access  Public
 router.post('/guest-login', authController.guestLogin);
 
+// @route   POST /api/v1/auth/demo-login
+// @desc    Autentica un visitatore nella squadra demo → JWT scope demo
+// @access  Public (rate limiter dedicato in app.js)
+router.post('/demo-login', authController.demoLogin);
+
 // @route   POST /api/v1/auth/promote-guest-by-invite-token
 // @desc    Converte guest in utente reale (storico intatto, stesso _id)
 // @access  Public

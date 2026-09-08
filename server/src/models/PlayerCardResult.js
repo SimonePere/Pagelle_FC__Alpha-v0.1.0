@@ -470,7 +470,16 @@ const PlayerCardResultSchema = new mongoose.Schema({
         default: 1
     },
 
-    recalculatedAt: { type: Date }
+    recalculatedAt: { type: Date },
+
+    // === MODALITÀ DEMO ===
+    // Player card calcolata della squadra dimostrativa pubblica.
+    // Vedi Team.isDemo e DEMO_MODE_IMPLEMENTATION_PLAN.md §3.9
+    isDemo: {
+        type: Boolean,
+        default: false,
+        index: true
+    }
 
 }, {
     timestamps: true,

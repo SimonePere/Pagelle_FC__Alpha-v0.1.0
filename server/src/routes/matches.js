@@ -20,14 +20,14 @@ const requireMatchAdmin = require('../middleware/requireMatchAdmin');
 router.post('/', auth, requireScope('full'), requireRole('admin'), matchController.createMatch);
 router.put('/:id', auth, requireScope('full'), requireRole('admin'), matchController.updateMatch);
 router.delete('/:id', auth, requireScope('full'), requireRole('admin'), matchController.deleteMatch);
-router.get('/team/:teamId', auth, requireScope('full', 'guest'), matchController.getTeamMatches);
-router.get('/:id', auth, requireScope('full', 'guest'), matchController.getMatch);
+router.get('/team/:teamId', auth, requireScope('full', 'guest', 'demo'), matchController.getTeamMatches);
+router.get('/:id', auth, requireScope('full', 'guest', 'demo'), matchController.getMatch);
 router.patch('/:id/activate', auth, requireScope('full'), requireRole('admin'), matchController.activateMatch);
 router.patch('/:id/complete', auth, requireScope('full'), requireRole('admin'), matchController.completeMatch);
 router.post('/:matchId/reactivate-voter/:userId', auth, requireScope('full'), requireRole('admin'), matchController.reactivateVoter);
 
 // === GESTIONE ROSTER POST-CREAZIONE ===
-router.get('/:id/roster-editable', auth, requireScope('full'), requireMatchAdmin, matchController.getRosterEditable);
+router.get('/:id/roster-editable', auth, requireScope('full', 'demo'), requireMatchAdmin, matchController.getRosterEditable);
 router.post('/:id/players', auth, requireScope('full'), requireMatchAdmin, matchController.addRegisteredPlayer);
 router.post('/:id/guest-players', auth, requireScope('full'), requireMatchAdmin, matchController.addGuestPlayerToMatch);
 router.delete('/:id/players/:playerId', auth, requireScope('full'), requireMatchAdmin, matchController.removePlayerFromMatch);

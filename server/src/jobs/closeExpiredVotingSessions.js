@@ -25,6 +25,16 @@
  *   UptimeRobot ci pinga ogni 5 min su Render → il processo non va mai in
  *   sleep → il cron resta vivo.
  *
+ * MODALITÀ DEMO
+ *   La sessione di voto della squadra dimostrativa deve restare aperta per
+ *   sempre: è il cuore di ciò che la demo mostra. Se questo job la chiudesse,
+ *   il visitatore troverebbe una demo monca e nessuno se ne accorgerebbe.
+ *   Doppia protezione, volutamente ridondante:
+ *     1. la sessione demo nasce con deadline: null, che la query già scarta
+ *        grazie a { $exists: true, $ne: null }
+ *     2. il filtro isDemo: { $ne: true } qui sotto, che la esclude comunque
+ *   Basta che una delle due regga. Vedi DEMO_MODE_IMPLEMENTATION_PLAN.md §3.2
+ *
  * ROBUSTEZZA
  *   - Errori su una singola sessione NON fermano il job: log + continue.
  *   - Idempotenza: closeWithAbstainedPending gestisce già 'noop_already_closed'
@@ -58,7 +68,8 @@ async function runCloseExpiredVotingSessions() {
         // Query indicizzata sull'index { deadline: 1, status: 1 }
         const expired = await VotingSession.find({
             status: 'active',
-            deadline: { $exists: true, $ne: null, $lt: new Date() }
+            deadline: { $exists: true, $ne: null, $lt: new Date() },
+            isDemo: { $ne: true }
         }).select('_id title type deadline').lean();
 
         if (expired.length === 0) {

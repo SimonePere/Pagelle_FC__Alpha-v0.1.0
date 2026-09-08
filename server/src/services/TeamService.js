@@ -109,7 +109,10 @@ class TeamService {
             // Build query for public teams only
             const query = {
                 'settings.isPrivate': { $ne: true }, // Non privati (inclusi undefined)
-                isActive: true
+                isActive: true,
+                // La squadra dimostrativa non compare nell'elenco pubblico: ci si
+                // entra solo dalla rotta /demo, non trovandola tra i team veri.
+                isDemo: { $ne: true }
             };
 
             // Add search filter if provided

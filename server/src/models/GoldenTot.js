@@ -60,6 +60,15 @@ const goldenTotSchema = new mongoose.Schema({
     appliedAt: {
         type: Date,
         default: Date.now
+    },
+
+    // === MODALITÀ DEMO ===
+    // Bonus Golden TOT della squadra dimostrativa pubblica.
+    // Vedi Team.isDemo e DEMO_MODE_IMPLEMENTATION_PLAN.md §3.9
+    isDemo: {
+        type: Boolean,
+        default: false,
+        index: true
     }
 }, {
     timestamps: true

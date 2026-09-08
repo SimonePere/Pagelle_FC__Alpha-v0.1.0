@@ -81,6 +81,17 @@ const matchSchema = new mongoose.Schema({
       type: Number,
       default: 0
     }
+  },
+
+  // === MODALITÀ DEMO ===
+  // Partita appartenente alla squadra dimostrativa pubblica.
+  // ⚠️ Nota: qui `teamId` è String (non ObjectId come altrove), quindi il seed
+  //    deve scriverlo con String(demoTeamId) o il filtro non matcha in silenzio.
+  // Vedi Team.isDemo e DEMO_MODE_IMPLEMENTATION_PLAN.md §3.9 e §3.10
+  isDemo: {
+    type: Boolean,
+    default: false,
+    index: true
   }
 }, {
   timestamps: true,

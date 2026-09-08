@@ -108,6 +108,15 @@ const playerSeasonStatsSchema = new mongoose.Schema({
     updatedAt: {
         type: Date,
         default: Date.now
+    },
+
+    // === MODALITÀ DEMO ===
+    // Statistiche stagionali della squadra dimostrativa pubblica.
+    // Vedi Team.isDemo e DEMO_MODE_IMPLEMENTATION_PLAN.md §3.9
+    isDemo: {
+        type: Boolean,
+        default: false,
+        index: true
     }
 }, {
     timestamps: true,

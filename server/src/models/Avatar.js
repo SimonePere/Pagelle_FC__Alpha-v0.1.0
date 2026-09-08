@@ -39,6 +39,16 @@ const avatarSchema = new mongoose.Schema({
         required: [true, 'Avatar byteSize is required'],
         min: [1, 'Avatar must have at least 1 byte'],
         max: [200000, 'Avatar cannot exceed 200KB']
+    },
+
+    // === MODALITÀ DEMO ===
+    // Avatar di un giocatore della squadra dimostrativa pubblica.
+    // Questa collection non ha teamId: si aggancia via ownerId.
+    // Vedi Team.isDemo e DEMO_MODE_IMPLEMENTATION_PLAN.md §3.9
+    isDemo: {
+        type: Boolean,
+        default: false,
+        index: true
     }
 }, {
     timestamps: true,

@@ -146,7 +146,18 @@ const VoteSubmissionSchema = new mongoose.Schema({
   validationErrors: [{
     field: String,
     message: String
-  }]
+  }],
+
+  // === MODALITÀ DEMO ===
+  // Voto appartenente alla squadra dimostrativa pubblica.
+  // Questa collection non ha teamId: senza questo flag andrebbe ripulita
+  // risalendo agli id delle sessioni demo.
+  // Vedi Team.isDemo e DEMO_MODE_IMPLEMENTATION_PLAN.md §3.9
+  isDemo: {
+    type: Boolean,
+    default: false,
+    index: true
+  }
 
 }, {
   timestamps: true,
