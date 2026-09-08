@@ -40,6 +40,8 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const path = require('path');
 
 const Team = require('../models/Team');
 const User = require('../models/User');
@@ -89,7 +91,7 @@ const EMAIL_DOMAIN = '@demo.pagellefc.app';
 const PLAYERS = [
     { name: 'Simo', position: 'POR', foot: 'right', skill: 0.72, consistency: 0.80, captain: false },
     { name: 'Teo', position: 'POR', foot: 'right', skill: 0.58, consistency: 0.55, captain: false },
-    { name: 'Ale', position: 'DIF', foot: 'left', skill: 0.70, consistency: 0.85, captain: true },
+    { name: 'Ale', position: 'DIF', foot: 'left', skill: 0.70, consistency: 0.85, captain: true },   // 👤 identità del visitatore
     { name: 'Gabri', position: 'DIF', foot: 'right', skill: 0.64, consistency: 0.70, captain: false },
     { name: 'Nico', position: 'DIF', foot: 'right', skill: 0.60, consistency: 0.60, captain: false },
     { name: 'Manu', position: 'DIF', foot: 'left', skill: 0.55, consistency: 0.50, captain: false },
@@ -337,7 +339,18 @@ async function createTeamAndPlayers(seasons) {
             birthdate: `19${intBetween(80, 99)}-${String(intBetween(1, 12)).padStart(2, '0')}-${String(intBetween(1, 28)).padStart(2, '0')}`,
             teamIds: [teamId],
             teamName: TEAM_NAME,
-            role: p.captain ? 'captain' : 'player',
+            // ⚠️ 'admin' e non 'captain'.
+            //    La gerarchia dei ruoli in requireRole.js dice
+            //    captain: ['captain', 'player'] — quindi un capitano NON eredita
+            //    i poteri di admin e non può creare partite. Anche il client
+            //    controlla `role === 'admin'` (utils/permissions.ts).
+            //    Con 'captain' il visitatore vedeva 'Solo gli amministratori
+            //    possono creare partite' proprio dove doveva provare la feature.
+            //
+            //    Non apre falle: le scritture restano bloccate da
+            //    blockDemoWrites, e requireTeamAdmin non applica il bypass
+            //    admin ai token demo.
+            role: p.captain ? 'admin' : 'player',
             profile: {
                 position: p.position,
                 preferredFoot: p.foot,
@@ -380,6 +393,69 @@ async function createTeamAndPlayers(seasons) {
     console.log(`   Capitano:    ${captain.name} — è l'identità in cui entra il visitatore`);
 
     return { team, users, captain };
+}
+
+/**
+ * Mette il logo di Pagelle FC come foto profilo del capitano e come stemma
+ * della squadra demo.
+ *
+ * PERCHÉ SOLO LORO DUE
+ *   Gli altri 11 giocatori restano senza foto, con le iniziali su gradiente:
+ *   è come si presenta un team vero appena creato, e mostrarlo è onesto.
+ *   Il capitano e la squadra portano invece il logo perché sono l'identità
+ *   in cui il visitatore si trova, e vedere il marchio dell'app al posto di
+ *   una sigla anonima rende subito chiaro dove si è.
+ *
+ * SE IL LOGO NON C'È
+ *   Il file vive nel client, che in produzione può stare su un'altra macchina.
+ *   In quel caso si salta con un avviso: la demo funziona lo stesso, con le
+ *   iniziali ovunque. Non vale la pena far fallire un seed per un'immagine.
+ */
+async function applyLogoAvatars(ctx) {
+    console.log('');
+    console.log('🖼️  FASE 3b — Logo come avatar di capitano e squadra');
+
+    if (DRY_RUN) {
+        console.log('   [dry-run] applicherebbe il logo a capitano e squadra');
+        return;
+    }
+
+    const logoPath = path.resolve(__dirname, '..', '..', '..', 'client', 'public', 'FLAT_BG_W.png');
+
+    if (!fs.existsSync(logoPath)) {
+        console.log('   ⚠️  Logo non trovato in ' + logoPath);
+        console.log('      Salto: capitano e squadra useranno le iniziali.');
+        return;
+    }
+
+    const data = fs.readFileSync(logoPath);
+
+    // Stesso limite applicato da AvatarService.setAvatar
+    const MAX_BYTES = 200000;
+    if (data.length > MAX_BYTES) {
+        console.log('   ⚠️  Logo troppo grande (' + data.length + ' byte, max ' + MAX_BYTES + '). Salto.');
+        return;
+    }
+
+    const now = new Date();
+    const { team, captain } = ctx;
+
+    for (const [ownerId, ownerType, label] of [
+        [captain.id, 'user', 'capitano ' + captain.name],
+        [team._id, 'team', 'squadra ' + team.name],
+    ]) {
+        await Avatar.findOneAndUpdate(
+            { ownerId, ownerType },
+            { data, contentType: 'image/png', byteSize: data.length, isDemo: true },
+            { upsert: true, new: true, runValidators: true }
+        );
+        console.log('   ' + label.padEnd(28) + Math.round(data.length / 1024) + ' KB');
+    }
+
+    // avatarUpdatedAt è ciò che il client guarda per sapere se una foto
+    // esiste: senza, l'avatar resta invisibile anche se il Buffer è salvato.
+    await User.updateOne({ _id: captain.id }, { 'profile.avatarUpdatedAt': now });
+    await Team.updateOne({ _id: team._id }, { avatarUpdatedAt: now });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -455,9 +531,17 @@ async function createMatchesAndVotes(ctx, seasons) {
         const dateStr = date.toISOString().slice(0, 10);
         const seasonId = svc.resolveSeasonId(dateStr);
 
-        // 10 dei 12 giocatori per partita: chi salta cambia ogni volta, così le
-        // presenze non sono tutte uguali e la pagina Statistiche ha di che dire.
-        const roster = shuffled(users).slice(0, 10);
+        // Partite concluse: 10 dei 12 giocatori, chi salta cambia ogni volta,
+        // così le presenze non sono tutte uguali e la pagina Statistiche ha di
+        // che dire.
+        //
+        // Ultima partita (quella con la votazione aperta): solo 5 giocatori,
+        // capitano incluso. È la partita che il visitatore deve votare, e una
+        // schermata con 5 slider si compila in un minuto — con 10 diventa un
+        // compito, e il momento più bello della demo si trasforma in fatica.
+        const roster = isLast
+            ? [captain, ...shuffled(users.filter(u => !u.id.equals(captain.id))).slice(0, 4)]
+            : shuffled(users).slice(0, 10);
 
         const teamGoals = intBetween(2, 9);
         const opponentGoals = intBetween(1, 8);
@@ -539,9 +623,11 @@ async function createMatchesAndVotes(ctx, seasons) {
                 }
             }
 
-            // Nella sessione ancora aperta lasciamo qualche voto mancante, così
-            // il visitatore trova una votazione realmente in corso.
-            if (isLast && rnd() > 0.5) continue;
+            // Nella sessione aperta hanno votato TUTTI tranne il capitano: il
+            // visitatore entra e trova esattamente una cosa da fare, il proprio
+            // voto. Appena lo dà, la partita si chiude e vede comparire le medie
+            // finali — che è il ciclo completo che la demo deve raccontare.
+            if (isLast && voter.id.equals(captain.id)) continue;
 
             await VoteSubmission.create({
                 votingSessionId: session._id,
@@ -711,8 +797,17 @@ async function createPlayerCards(ctx) {
             teamId: team._id,
             title: `Player Card — ${target.name}`,
             createdBy: captain.id,
-            eligibleVoters: users.filter(u => !u.id.equals(target.id)).map(u => u.id),
-            requiredVotes: users.length - 1,
+            // Tutti i membri, TARGET COMPRESO — come fa createPlayerCardSession
+            // in produzione, che passa `team.memberIds` con allowSelfVoting: true.
+            //
+            // Escludendo il target, getUserPlayerCardSessions (che filtra proprio
+            // su eligibleVoters) non restituiva a un giocatore la sessione della
+            // SUA card: il navigator non la trovava e sembrava che la card non
+            // fosse mai stata creata. Succedeva a tutti e 12, ma si notava su Ale
+            // perché è l'identità del visitatore.
+            eligibleVoters: users.map(u => u.id),
+            allowSelfVoting: true,
+            requiredVotes: users.length,
             status: 'completed',
             deadline: null,
             isDemo: true,
@@ -1200,6 +1295,7 @@ async function main() {
         return;
     }
 
+    await applyLogoAvatars(ctx);
     const matchData = await createMatchesAndVotes(ctx, seasons);
     const cards = await createPlayerCards(ctx);
     await createStats(ctx, matchData, cards, seasons);

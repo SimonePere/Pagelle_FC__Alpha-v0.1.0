@@ -37,7 +37,17 @@ const requireTeamAdmin = ({ paramName = 'id' } = {}) => async (req, res, next) =
         req.team = team;
 
         // 1) Admin globale → bypass
-        if (req.user?.role === 'admin' || req.user?.role === 'god') {
+        //    ATTENZIONE: il bypass NON vale in modalita demo. Il visitatore
+        //    della squadra dimostrativa ha role 'admin' perche gli serve per
+        //    vedere le funzioni da amministratore, che altrimenti l'interfaccia
+        //    gli nasconderebbe. Ma quel ruolo non deve diventare un
+        //    passe-partout sui team veri: senza questa riga un token demo
+        //    potrebbe leggere la lista ospiti o il roster di QUALUNQUE team,
+        //    conoscendone l'id.
+        //    Il controllo di appartenenza qui sotto resta valido anche per lui
+        //    e lo confina alla sola squadra demo, di cui e davvero admin.
+        const isDemoToken = req.user?.scope === 'demo';
+        if (!isDemoToken && (req.user?.role === 'admin' || req.user?.role === 'god')) {
             return next();
         }
 

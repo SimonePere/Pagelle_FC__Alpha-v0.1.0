@@ -334,6 +334,56 @@ La rotta che lo usa è commentata a [riga 286-295](client/src/App.tsx#L286-L295)
 
 **Come sistemarlo**: rimuovere import e blocco commentato. Se la pagina serve ancora come banco di prova, il posto giusto è un branch, non un commento in `App.tsx`.
 
+## 3.6 🟠 Qualunque utente autenticato legge i dati di qualunque team
+
+**Dove**: `GET /api/v1/teams/:id` e `GET /api/v1/leaderboards/:teamId/*`
+
+**Cosa**: le due rotte richiedono un token valido ma **non verificano che chi
+chiede sia membro del team richiesto**. Conoscendo un `teamId` — che viaggia in
+chiaro negli URL — un utente qualsiasi può leggere nome, descrizione, città,
+statistiche e classifica completa (nomi, medie, gol, assist) di una squadra a cui
+non appartiene.
+
+**La prova**, misurata su un team reale con tre token diversi, nessuno dei quali
+appartiene a quel team:
+
+| Endpoint | giocatore semplice | admin | visitatore demo |
+|---|---|---|---|
+| `GET /teams/:id` | 200 | 200 | 200 |
+| `GET /leaderboards/:id/rating` | 200 | 200 | 200 |
+| `GET /matches/team/:id` | 500 | 500 | 500 |
+
+**Le tre colonne identiche dicono la cosa importante**: non dipende dal ruolo né
+dallo scope. È il comportamento normale dell'app per chiunque abbia un account.
+
+**Il contrasto interno al codebase**: `GET /matches/team/:id` invece controlla
+l'appartenenza, via `validateTeamAccess` ([`MatchService.js:505-516`](server/src/services/MatchService.js#L505-L516)),
+che fa esattamente la verifica giusta:
+
+```js
+if (!team.isMember(userId)) {
+    throw new AppError('Access denied', 403);
+}
+```
+
+Quindi il controllo esiste già, scritto bene, ed è applicato a una rotta su tre.
+
+**Un difetto secondario**: quel diniego arriva come **500**, non come 403. L'errore
+viene sollevato correttamente ma qualcosa lungo la catena lo degrada a errore
+generico, quindi il client non può distinguere "non hai accesso" da "il server è
+rotto".
+
+**Come sistemarlo**: applicare `validateTeamAccess` (o un middleware equivalente,
+sul modello di `requireTeamAdmin` ma per la sola appartenenza) anche a
+`getTeam` e alle rotte leaderboard. E verificare perché l'`AppError(403)` diventa
+un 500.
+
+> 📌 **Nota sulla modalità demo**: il visitatore ha `role: 'admin'` per poter
+> vedere le funzioni da amministratore. Questo **non peggiora** la situazione —
+> la tabella qui sopra mostra colonne identiche — e il bypass admin di
+> `requireTeamAdmin` è stato comunque chiuso per i token demo, così quel ruolo
+> non diventa un passe-partout sulle rotte che invece il controllo ce l'hanno.
+
 ---
 
 # Riepilogo, in ordine di quanto conviene affrontarli
@@ -342,6 +392,7 @@ La rotta che lo usa è commentata a [riga 286-295](client/src/App.tsx#L286-L295)
 |---|---|---|---|---|
 | **3.2** | `npm run seed` rotto | 🔴 | Minuti | È nel README: chiunque segua la guida sbatte contro un errore |
 | **3.1** | News di classifica a zero | 🔴 | ~1h | Va prima verificato il tipo lungo la catena di chiamata |
+| **3.6** | Chiunque legge i dati di qualunque team | 🟠 | ~2h | Il controllo giusto esiste già in `validateTeamAccess`: va esteso a due rotte |
 | **3.3** | `useAppData` legge il team sbagliato | 🟠 | Minuti | Tre righe, e il bug colpisce chi ha più team |
 | **2.2** | Email con TLD lunghi rifiutate | 🟡 | Minuti | Un carattere di regex; blocca registrazioni legittime |
 | **1.1 + 1.3 + 1.4** | Le classifiche | 🟠 | ~2h | Vanno insieme. Valutare prima se *rimuovere* invece di correggere |
