@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Suspense, lazy } from "react";
 import { ProtectedRouteRedux } from "./components/ProtectedRouteRedux";
 import AwardRevealManager from "@/components/AwardRevealManager";
+import DemoTour from "@/components/DemoTour";
 import { Skeleton } from "@/components/ui/skeleton";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -312,6 +313,9 @@ const App = () => (
         </Routes>
         {/* Overlay cerimoniale per nuovi trofei (mount globale, gestisce da sé visibilità) */}
         <AwardRevealManager />
+        {/* 🎬 Schermate di benvenuto della demo (mount globale, come
+            AwardRevealManager: si mostra da se' solo con scope demo) */}
+        <DemoTour />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

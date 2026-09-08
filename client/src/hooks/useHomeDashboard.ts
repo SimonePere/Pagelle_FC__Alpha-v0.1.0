@@ -98,7 +98,7 @@ interface UseHomeDashboardReturn {
 }
 
 export const useHomeDashboard = (): UseHomeDashboardReturn => {
-    const { user } = useSelector((state: RootState) => state.auth);
+    const { user, isDemo } = useSelector((state: RootState) => state.auth);
     const dispatch = useDispatch<AppDispatch>();
     const { activeTeamId } = useActiveTeamId();
     const { seasons, selectedSeason, setSelectedSeason, showSelector } = useActiveSeason();
@@ -212,14 +212,21 @@ export const useHomeDashboard = (): UseHomeDashboardReturn => {
     }, [user?.id, dispatch]);
 
     // 🎯 Onboarding check effect
+    //
+    // In modalità demo l'onboarding non parte: il visitatore ha già il suo
+    // accompagnamento, il tour guidato (DemoTour.tsx), che naviga fra le pagine
+    // invece di limitarsi a tre slide. Senza questa esclusione i due overlay si
+    // aprirebbero sovrapposti al primo ingresso — e l'id di Ale cambia a ogni
+    // ri-seed, quindi la chiave `onboarding_<id>` non lo eviterebbe mai.
     useEffect(() => {
+        if (isDemo) return;
         if (user) {
             const hasSeenOnboarding = localStorage.getItem(`onboarding_${user._id}`);
             if (!hasSeenOnboarding) {
                 setShowOnboarding(true);
             }
         }
-    }, [user?.id]);
+    }, [user?.id, isDemo]);
 
     // Auto-load leaderboard quando cambia tab, team o stagione selezionata
     useEffect(() => {

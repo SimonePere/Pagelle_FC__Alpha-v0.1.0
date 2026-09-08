@@ -23,6 +23,7 @@ import { RootState, AppDispatch } from '@/redux/store/store';
 import { exitDemo } from '@/redux/slices/authSlice';
 import { useToast } from '@/hooks/use-toast';
 import { DEMO_ACTION_EVENT, type DemoActionEvent } from '@/lib/demoMode';
+import { DEMO_TOUR_ENABLED, DEMO_TOUR_RESTART_EVENT } from '@/data/demo-tour-steps';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -30,7 +31,9 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-export const DEMO_TOUR_RESTART_EVENT = 'pagellefc:demo-tour-restart';
+// L'evento e' definito insieme al tour, che ne e' il proprietario: qui viene
+// solo ri-esportato per non rompere gli import gia' esistenti.
+export { DEMO_TOUR_RESTART_EVENT };
 
 export function DemoBanner() {
     const isDemo = useSelector((state: RootState) => state.auth.isDemo);
@@ -105,10 +108,14 @@ export function DemoBanner() {
                             <span className="sr-only">Altre opzioni della demo</span>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={handleRestartTour} className="gap-2 text-xs">
-                                <RotateCcw className="h-3.5 w-3.5" />
-                                Rivedi il tour guidato
-                            </DropdownMenuItem>
+                            {/* A tour spento la voce sparisce, invece di restare
+                                li' a emettere un evento che nessuno ascolta */}
+                            {DEMO_TOUR_ENABLED && (
+                                <DropdownMenuItem onClick={handleRestartTour} className="gap-2 text-xs">
+                                    <RotateCcw className="h-3.5 w-3.5" />
+                                    Rivedi il tour guidato
+                                </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem onClick={handleExit} className="gap-2 text-xs">
                                 <LogOut className="h-3.5 w-3.5" />
                                 Esci dalla demo
