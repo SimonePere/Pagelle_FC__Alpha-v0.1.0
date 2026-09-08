@@ -12,7 +12,7 @@
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248.svg)](https://www.mongodb.com)
 [![React](https://img.shields.io/badge/React-18+-61DAFB.svg)](https://reactjs.org)
 
-[🚀 Inizia](#-installazione) • [🎯 Features](#-funzionalità-principali) • [📖 Documentazione](#-documentazione) • [🗺️ Roadmap](#-roadmap)
+[🎬 Prova la demo](#-modalità-demo--provala-senza-registrarti) • [🚀 Inizia](#-installazione) • [🎯 Features](#-funzionalità-principali) • [📖 Documentazione](#-documentazione) • [🗺️ Roadmap](#-roadmap)
 
 </div>
 
@@ -60,6 +60,14 @@ Il tutto con un'interfaccia moderna, responsive e pensata per essere utilizzata 
 - **Merge automatico**: se l'ospite si registra in futuro, tutto lo storico (voti, partite, medie) viene trasferito automaticamente al nuovo account — l'ID User è lo stesso
 - **Badge "Ospite"** visibile nella lista giocatori e nei dettagli partita
 - **Zero refactoring**: l'ospite è un `User` reale nel DB con flag `isGuest: true`, compatibile con tutte le query esistenti
+
+### 🎬 **Modalità Demo — provala senza registrarti**
+- **Un clic, nessun account**: la rotta pubblica `/demo` (o il pulsante "Guarda la demo" su `/login`) fa entrare chiunque in una squadra dimostrativa completa
+- **Dati veri, non finti**: il team demo vive nel database come tutti gli altri, con 2 stagioni, 12 giocatori e ~25 partite — quindi classifiche, grafici, carte e award card sono quelli reali, non mock da tenere allineati
+- **Sola lettura garantita dal server**: un middleware risponde `403 DEMO_READ_ONLY` a ogni scrittura, anche a chi ci provasse dalla console del browser
+- **Ma l'esperienza resta interattiva**: il client intercetta le scritture prima che partano, aggiorna la UI e mostra un toast — il visitatore vota davvero e vede il risultato
+- **Isolamento totale**: il flag `isDemo` esclude la squadra da cron, classifiche globali, team pubblici e KPI della God Dashboard, e nessun utente reale la incontra mai
+- **Tour di benvenuto** in cinque schermate, attivabile o disattivabile da una costante (`DEMO_TOUR_ENABLED`)
 
 ### 🏆 **Pagelle FC Awards — Card celebrative pixel-perfect**
 - **4 tipi di trofeo**: `MATCH_RECAP` (a fine voti partita), `MONTHLY_MVP` (cron 1° del mese), `BALLON_DOR` e `GOLDEN_BOOT` (cron a fine stagione)
@@ -168,13 +176,25 @@ JWT_SECRET=your-super-secret-jwt-key-change-this
 CLIENT_URL_DEV=http://localhost:8080
 ```
 
-### Seed Database (Opzionale)
+### Seed della squadra demo (opzionale)
+
+Popola la squadra dimostrativa usata dalla modalità demo. È idempotente:
+rilanciandolo ricostruisce da zero i soli dati demo, senza toccare nient'altro.
 
 ```bash
-# Popola il database con dati di test
 cd server
-npm run seed:test
+npm run seed:demo           # dry-run: mostra cosa farebbe, non scrive nulla
+npm run seed:demo:confirm   # esegue davvero
+
+# Su un database diverso da quello di produzione:
+NODE_ENV=test npm run seed:demo:confirm
 ```
+
+> ⚠️ Senza `NODE_ENV` lo script punta al database di **produzione**. Il dry-run
+> di default stampa il target prima di qualunque scrittura: leggilo.
+
+Richiede che le stagioni del calendario globale esistano già; se mancano,
+`node scripts/seed-seasons.js`.
 
 ## 🎮 Utilizzo
 
@@ -241,6 +261,7 @@ Il backend espone API RESTful complete:
 - [x] **WEB APP PWA**: Versione scaricabile iOS/Android
 - [x] **External Player (Guest User)**: Ospiti senza registrazione con link invito personale, JWT scope limitato e merge automatico storico alla registrazione
 - [x] **UI semplificata**: registrazione solo "Crea Team", dialog modali coerenti, modale elimina/logout, social links, Buy Me a Coffee
+- [x] **Modalità Demo**: rotta pubblica `/demo`, squadra dimostrativa isolata nel DB, scrittura bloccata dal server e simulata dal client, tour di benvenuto
 
 ### 🔮 **Pianificato (v1.2.0+)**
 - [ ] **Dashboard Comparazioni**: Analisi avanzate giocatori
@@ -256,8 +277,7 @@ Il backend espone API RESTful complete:
 # Backend
 npm run dev          # Sviluppo con hot-reload
 npm run prod         # Produzione
-npm run seed         # Popola database
-npm run db:backup    # Backup database
+npm run seed:demo    # Squadra demo (dry-run; :confirm per eseguire)
 
 # Frontend  
 npm run dev          # Sviluppo

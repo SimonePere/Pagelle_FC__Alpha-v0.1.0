@@ -12,7 +12,7 @@
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248.svg)](https://www.mongodb.com)
 [![React](https://img.shields.io/badge/React-18+-61DAFB.svg)](https://reactjs.org)
 
-[🚀 Get Started](#-installation) • [🎯 Features](#-key-features) • [📖 Documentation](#-documentation) • [🗺️ Roadmap](#-roadmap)
+[🎬 Try the demo](#-demo-mode--try-it-without-signing-up) • [🚀 Get Started](#-installation) • [🎯 Features](#-key-features) • [📖 Documentation](#-documentation) • [🗺️ Roadmap](#-roadmap)
 
 </div>
 
@@ -59,6 +59,14 @@ All with a modern, responsive interface designed to be easily used by players of
 - **Scoped JWT**: guests get a temporary token (48h) with read-only permissions
 - **Automatic merge**: if the guest registers in the future, all history (votes, matches, averages) is automatically transferred to the new account
 - **Guest badge** visible in player lists and match details
+
+### 🎬 **Demo Mode — try it without signing up**
+- **One click, no account**: the public `/demo` route (or the "Guarda la demo" button on `/login`) drops anyone into a complete sample team
+- **Real data, not fixtures**: the demo team lives in the database like any other, with 2 seasons, 12 players and ~25 matches — so leaderboards, charts, player cards and award cards are the real ones, with no mocks to keep in sync
+- **Read-only enforced by the server**: a middleware answers `403 DEMO_READ_ONLY` to every write, even from the browser console
+- **Still interactive**: the client intercepts writes before they leave, updates the UI and shows a toast — the visitor really votes and sees the result
+- **Fully isolated**: the `isDemo` flag keeps the team out of cron jobs, global leaderboards, public team lists and God Dashboard KPIs, so no real user ever meets it
+- **Five-screen welcome tour**, switched on or off from a single constant (`DEMO_TOUR_ENABLED`)
 
 ### �👥 **Team Management**
 - **Member management**: Invites, roles and granular permissions
@@ -152,13 +160,25 @@ JWT_SECRET=your-super-secret-jwt-key-change-this
 CLIENT_URL_DEV=http://localhost:8080
 ```
 
-### Seed Database (Optional)
+### Demo team seed (optional)
+
+Populates the sample team used by demo mode. It is idempotent: running it again
+rebuilds the demo data from scratch and touches nothing else.
 
 ```bash
-# Populate database with test data
 cd server
-npm run seed:test
+npm run seed:demo           # dry-run: prints what it would do, writes nothing
+npm run seed:demo:confirm   # actually runs
+
+# Against a database other than production:
+NODE_ENV=test npm run seed:demo:confirm
 ```
+
+> ⚠️ With no `NODE_ENV` the script targets the **production** database. The
+> default dry-run prints the target before any write: read it.
+
+It requires the global season calendar to exist already; if it doesn't,
+run `node scripts/seed-seasons.js`.
 
 ## 🎮 Usage
 
@@ -223,6 +243,7 @@ The backend exposes complete RESTful APIs:
 - [x] **Goalkeeper Attributes**: Role specialization
 - [x] **PWA WEB APP**: Downloadable iOS/Android version
 - [x] **External Player (Guest User)**: Guests without registration, personal invite link, scoped JWT and automatic history merge on registration
+- [x] **Demo Mode**: public `/demo` route, isolated sample team in the DB, writes blocked server-side and simulated client-side, welcome tour
 
 ### 🔮 **Planned (v1.2.0+)**
 - [ ] **Comparison Dashboard**: Advanced player analytics
@@ -238,8 +259,7 @@ The backend exposes complete RESTful APIs:
 # Backend
 npm run dev          # Development with hot-reload
 npm run prod         # Production
-npm run seed         # Populate database
-npm run db:backup    # Database backup
+npm run seed:demo    # Demo team (dry-run; :confirm to execute)
 
 # Frontend  
 npm run dev          # Development

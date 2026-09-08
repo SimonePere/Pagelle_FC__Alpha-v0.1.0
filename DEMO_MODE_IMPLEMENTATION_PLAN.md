@@ -1,8 +1,8 @@
 # 🎬 Modalità Demo — Piano di Implementazione
 
-> **Stato**: ✅ **FASI A e B COMPLETATE**, collaudate nel browser, 7 correzioni applicate dopo la prova
-> **Prossimo passo**: Fase C — tour guidato (§7). Punto di ripresa completo al §15.
-> **Data**: 8 settembre 2026 (revisione 3)
+> **Stato**: ✅ **FASI A, B e C COMPLETATE** — implementazione conclusa lato codice
+> **Prossimo passo**: seed sul database di produzione e rilascio (§15.6). Punto di ripresa completo al §15.
+> **Data**: 8 settembre 2026 (revisione 4)
 > **Versione app**: Alpha v0.1.0
 > **Obiettivo**: permettere a chiunque, senza registrarsi, di esplorare Pagelle FC e provarne le funzioni principali
 
@@ -22,8 +22,10 @@
 | **A.5** `requireScope` | ✅ Fatto | Messaggio neutro + **15 rotte di lettura** abilitate allo scope demo |
 | **A.6** Esclusione da job e query | ✅ Fatto | 3 cron + God Dashboard + lista team pubblici |
 | **B** Client | ✅ Fatto | Intercettore, barra demo, rotta /demo — 36 test sulla logica |
-| **Fix post-collaudo** | ✅ Fatto | 7 correzioni dopo la prova nel browser — vedi §15.4 |
-| **C** Tour guidato | ⬜ **Da fare** | Unica parte rimasta. Attenzione: la voce di menu esiste già ma non è collegata (§15.6) |
+| **Fix post-collaudo** | ✅ Fatto | 8 correzioni dopo la prova nel browser — vedi §15.4 |
+| **C** Tour guidato | ✅ Fatto | 5 schermate modali, non 8 step con navigazione: vedi §7 per il perché |
+| **Documentazione** | ✅ Fatto | Sezione demo in `README.md`, `README_EN.md` e `SYSTEM_ARCHITECTURE_GUIDE.md` |
+| **Rilascio in produzione** | ⬜ **Da fare** | Seed sul DB di prod, PNG degli award, link pubblico — §15.6 |
 
 **Esito della verifica sul DB di test** (`Pagelle-FC-test`, che conteneva già 2 team reali):
 
@@ -555,30 +557,39 @@ Così si mostra la feature — che è un buon argomento di vendita — senza apr
 
 ---
 
-## 7. FASE C — Tour guidato
+## 7. FASE C — Tour di benvenuto ✅
 
-> Obiettivo: chi non conosce l'app non si perde e arriva alle parti migliori.
+> Obiettivo: chi non conosce l'app capisce in un minuto cosa sta guardando.
 
-**File**: nuovo `client/src/components/DemoTour.tsx`, più `client/src/data/demo-tour-steps.ts`
+**File**: `client/src/components/DemoTour.tsx` e `client/src/data/demo-tour-steps.ts`
 
-L'[`OnboardingTutorial`](client/src/components/OnboardingTutorial.tsx) esistente resta com'è, per gli utenti registrati. Il tour demo è un componente distinto, perché fa una cosa che quello non fa: **naviga davvero tra le pagine**.
+L'[`OnboardingTutorial`](client/src/components/OnboardingTutorial.tsx) esistente resta com'è per gli utenti registrati; il tour demo è un componente distinto perché racconta un'altra cosa a un altro pubblico — non l'app a chi si è appena iscritto, ma Pagelle FC a chi non sa ancora cosa sia.
 
-Ogni step porta il visitatore su una rotta, evidenzia un elemento con un tooltip e attende. Sequenza proposta:
+### Com'è finito, e perché diverso dal piano
 
-| # | Rotta | Cosa evidenzia | Messaggio |
-|---|---|---|---|
-| 1 | — | Modale di benvenuto | Cos'è Pagelle FC, in due frasi |
-| 2 | `/` | Dashboard e prossima partita | "Qui vedi la vita del tuo team" |
-| 3 | `/player-cards` | Carta con radar chart | "Ogni giocatore ha la sua carta, votata dai compagni" |
-| 4 | `/player-cards` | Badge Golden TOT `+3` | "Chi vince il Pallone d'Oro parte avvantaggiato la stagione dopo" |
-| 5 | `/vote` | Slider di voto | **"Provaci: vota un compagno"** — step interattivo |
-| 6 | `/stats` | Grafici e selettore stagione | "Ogni prestazione diventa un numero" |
-| 7 | `/awards` | Bacheca trofei | "E i momenti migliori diventano card da condividere" |
-| 8 | — | Modale finale | CTA: `Crea il tuo team` |
+Il piano prevedeva **8 step che navigavano fra le pagine** evidenziando elementi con un riflettore. Quella versione è stata scritta, provata e poi **sostituita da una più semplice**: cinque schermate modali al centro, sulla forma dell'`OnboardingTutorial`, senza navigazione automatica e senza ancoraggi al DOM delle pagine.
 
-Requisiti: sempre saltabile, indicatore di avanzamento, riavviabile dalla barra demo, e uno stato in `sessionStorage` così non riparte a ogni cambio pagina.
+La ragione è che la versione ancorata comprava poco a caro prezzo. Serviva un selettore CSS in tre pagine (`data-tour="..."`), un polling per aspettare che l'elemento comparisse dopo il caricamento della rotta, la matematica per posizionare il riquadro senza uscire dallo schermo, e una regola per non riportare indietro di forza il visitatore che navigava per conto suo. Ognuno di quei pezzi è una cosa che si rompe quando il layout cambia — e il layout cambia. La versione modale non ha nessuno di quei pezzi: 158 righe contro 340, e le tre pagine tornano intatte.
 
-Lo step 5 è il momento chiave della demo: è dove il visitatore passa da spettatore a partecipante. Vale la pena curarlo più degli altri.
+| # | Schermata | Messaggio |
+|---|---|---|
+| 1 | Benvenuto | Cos'è Pagelle FC in due frasi, e che nulla verrà salvato |
+| 2 | **Il voto** | Dove trovare la partita da votare e cosa succede dopo l'invio |
+| 3 | Player card | I voti diventano una carta, il Pallone d'Oro porta un bonus |
+| 4 | Awards | I trofei si generano da soli e diventano card condivisibili |
+| 5 | Chiusura | `Esplora la demo` — chiude e restituisce l'app |
+
+**Il voto è la seconda schermata, non la quinta.** Nel piano arrivava dopo quattro tappe di sola lettura, ma è l'unica cosa che il visitatore deve *fare*: carte e trofei funzionano meglio come risposta alla domanda che il voto solleva da sé — *e adesso che fine fa quel voto?*.
+
+**L'ultima schermata non spinge alla registrazione.** Nel piano la CTA finale portava a `/login?tab=signup`, cioè buttava fuori dalla demo chi era appena entrato per vederla. Ora chiude e basta: l'invito a creare il team resta comunque sempre a portata di mano, è il pulsante fisso della barra demo.
+
+### Dettagli utili a chi ci torna
+
+- **Interruttore**: `DEMO_TOUR_ENABLED` in [`demo-tour-steps.ts`](client/src/data/demo-tour-steps.ts). A `false` il tour non parte **e** la voce "Rivedi il tour guidato" sparisce dal menu della barra, invece di restare a emettere un evento che nessuno ascolta.
+- **Riavvio**: `DEMO_TOUR_RESTART_EVENT`, definito nel file dei dati (il tour è il proprietario del contratto) e ri-esportato da `DemoBanner` per compatibilità.
+- **Stato**: `sessionStorage`, non `localStorage` — chi riapre la demo domani rivede il tour, chi cambia pagina adesso no.
+- **Montaggio**: in `App.tsx` accanto ad `AwardRevealManager`, non in `DashboardLayout`: si mostra da sé solo con scope demo.
+- **`OnboardingTutorial` escluso in demo** ([`useHomeDashboard.ts`](client/src/hooks/useHomeDashboard.ts)): partiva anche al visitatore e i due overlay si sarebbero sovrapposti al primo ingresso. La chiave `onboarding_<userId>` non lo avrebbe evitato, perché l'id di Ale cambia a ogni ri-seed.
 
 ---
 
@@ -785,7 +796,18 @@ Modifiche introdotte dopo la revisione:
 
 ---
 
-*Piano redatto l'8 settembre 2026, alla terza revisione — da approvare prima dell'implementazione.*
+**Revisione 4** — a implementazione conclusa:
+
+| § | Correzione |
+|---|---|
+| Testata, 0, 15.1 | Fase C completata: l'implementazione è chiusa, resta il rilascio |
+| 7 | **Riscritta.** Il tour è 5 schermate modali, non 8 step con navigazione e riflettore: quella versione è stata scritta, provata e sostituita perché comprava poco a caro prezzo. Documentati il perché, l'interruttore e le differenze dal piano |
+| 15.4 | Ottava correzione post-collaudo: il banner della stagione che sbordava nello Storico |
+| 15.6 | Checklist di rilascio aggiornata, con la nota che `npm run db:backup` non esiste e non verrà sistemato |
+
+---
+
+*Piano redatto l'8 settembre 2026, alla quarta revisione — implementazione conclusa, rilascio in corso.*
 
 ---
 
@@ -799,8 +821,10 @@ Modifiche introdotte dopo la revisione:
 |---|---|
 | **A — Backend** | ✅ Completata, verificata su DB di test |
 | **B — Client** | ✅ Completata, provata dall'utente nel browser |
-| **Fix post-collaudo** | ✅ 7 correzioni applicate dopo la prova sul campo |
-| **C — Tour guidato** | ⬜ **Non iniziata** — è il prossimo passo |
+| **Fix post-collaudo** | ✅ 8 correzioni applicate dopo la prova sul campo |
+| **C — Tour di benvenuto** | ✅ Completata — 5 schermate modali, vedi §7 |
+| **Documentazione** | ✅ README (IT/EN) e guida di architettura |
+| **Rilascio** | ⬜ **Da fare** — seed in produzione e link pubblico |
 
 **Branch**: `feature/demo-mode` (5 commit, non ancora unito a `master`)
 
@@ -889,6 +913,12 @@ Era di 10 giocatori con voti mancanti a caso, e Ale non era tra quelli: non c'er
 **7. Nessuno vedeva la propria player card.**
 Il seed escludeva il target dagli `eligibleVoters` della sua sessione, ma `getUserPlayerCardSessions` filtra proprio su quel campo. La card **esisteva nel database**, ma il navigator non la trovava e sembrava non fosse mai stata creata. Succedeva a tutti e 12, si notava su Ale perché è l'identità del visitatore. L'app reale passa `team.memberIds` con `allowSelfVoting: true`: il seed ora fa lo stesso.
 
+### Dal terzo giro di prova
+
+**8. Il banner della stagione sbordava dallo schermo nello Storico.** *(non riguarda la demo: vale per tutta l'app)*
+Il messaggio *"Stai vedendo la stagione corrente"* usciva dal viewport, ma **solo** in quella pagina. Non era un difetto del banner: in [`MatchGrid`](client/src/components/MatchGrid.tsx) il `SeasonSelector` vive dentro una riga orizzontale di filtri con `shrink-0`, e il banner — essendo suo figlio — imponeva alla riga la propria larghezza naturale senza poter rientrare. In Home e Awards lo stesso componente sta in un blocco verticale, il testo va a capo e non si nota nulla.
+Risolto separando le due cose: il messaggio è ora `SeasonHintBanner`, esportato a parte; il selettore lo include da sé come prima (`showBanner`, default `true`, quindi Home e Awards non cambiano), mentre lo Storico passa `showBanner={false}` e lo rende sopra la riga, dove c'è larghezza. Stessa chiave `season_banner_dismissed` condivisa fra le pagine.
+
 **Più il logo**: foto profilo di Ale e stemma della squadra. Gli altri 11 restano con le iniziali, come un team vero appena creato.
 
 ## 15.5 Cose scoperte solo eseguendo il codice
@@ -906,19 +936,27 @@ Non erano nel piano e sono costate tempo: chi riprende farebbe bene a conoscerle
 
 ## 15.6 Quello che resta da fare
 
-### Fase C — Tour guidato
-
-È l'unica parte del piano non ancora affrontata. Le specifiche sono al **§7**.
-
-⚠️ **Da sapere prima di iniziare**: la voce di menu **"Rivedi il tour guidato"** nella barra demo **esiste già** e emette l'evento `DEMO_TOUR_RESTART_EVENT` (esportato da `DemoBanner.tsx`), ma **nessuno lo ascolta**. Cliccarla oggi non fa nulla. Il componente `DemoTour` che deve ascoltarlo va ancora scritto.
+L'implementazione è conclusa: A, B e C sono fatte e documentate. Resta il rilascio.
 
 ### Prima del rilascio in produzione
 
-- [ ] Backup con `npm run db:backup`, poi seed sul database di produzione
-- [ ] Verificare che le stagioni globali esistano anche lì
-- [ ] Link a `/demo` nel `README.md` e nella bio social (§13.2)
+- [x] Backup del database di produzione — fatto dall'utente
+- [x] Verificato che le stagioni globali esistano anche in produzione
+- [x] **Seed sul database di produzione** — eseguito l'8 settembre 2026 su `Pagelle-FC-prod`. Team `I Bomber (Demo)`, id `6aa0342f90dba7361b079151`, capitano Ale (`admin`). 25 partite (15 in `2025-26`, 10 in `2026-27`), 12 player card, 7 award, 6 news, 1 sessione di voto aperta con `deadline: null`, 4 voti su 5 già presenti — manca solo quello di Ale, com'era previsto. Verifica di coerenza del flag `isDemo`: tutte le collection a 100%.
+      **Conteggi dei dati reali identici prima e dopo**: 3 team, 7 utenti, 25 partite, 52 voti, 4 award, 2 news, 2 GoldenTot. Il seed ha solo aggiunto.
 - [ ] Generare le PNG condivisibili degli award con `scripts/trigger-award.js` — il seed non le produce. In app le card si vedono comunque, perché `PodiumCard` e `HeroCard` sono renderizzate lato client: servono solo per la condivisione esterna
+- [ ] URL pubblico della demo nella riga di navigazione dei README e nella bio social (§13.2). Oggi c'è un'ancora interna: nel repo non risulta un dominio di produzione confermato
+- [ ] Merge di `feature/demo-mode` su `master`
 - [ ] Provare la demo come PWA installata
+
+> ⚠️ **`npm run db:backup` non esiste davvero.** Punta a `server/migrate-db.js`, file
+> assente, come i suoi tre fratelli `db:restore`, `db:migrate` e `db:list` — e come
+> `seed`/`seed:test`, che puntano all'inesistente `seedData.js`. Lo strumento vivo per
+> i backup è [`scripts/universal-db-manager.js`](server/scripts/universal-db-manager.js),
+> interattivo, che scrive in `server/db-backups/`. Decisione presa: **gli script rotti
+> restano tali**, non servono; sono documentati in
+> [CODEBASE_ISSUES_AND_FIXES.md](CODEBASE_ISSUES_AND_FIXES.md) §3.2 e non sono più
+> citati nei README.
 
 ### Fuori scope, ma emerso lavorando
 
@@ -939,6 +977,8 @@ Onestà su cosa la sessione di lavoro non ha potuto coprire.
 - la barra demo su schermi stretti, che non deve coprire la `BottomNav`
 - il flusso di voto completo dal vivo: cinque slider, invio, chiusura sessione, comparsa delle medie
 
-**Il seed non è mai girato in produzione**: solo su `Pagelle-FC-test`, dove ha creato ~500 documenti senza toccare i due team reali presenti (conteggi identici prima e dopo, verificati).
+**Il seed è ora girato anche in produzione** (8 settembre 2026), con lo stesso esito già visto sul database di test: nessun dato reale toccato, conteggi identici prima e dopo. Resta non verificata *dal browser* la demo servita dalla produzione.
+
+**Il calendario delle stagioni in produzione è disallineato** — scoperto durante il seed, e indipendente dalla demo. `2025-26` risulta ancora `status: 'active'` benché sia finita il 30 giugno 2026, e `2026-27` è `upcoming` pur essendo iniziata: il `seasonRolloverJob` non ha mai girato in produzione. Non blocca la demo, perché sia il seed sia il backend risolvono `current` **per data** (`resolveSeasonId`), quindi i dati recenti e la votazione aperta si vedono. L'effetto visibile è che il `SeasonSelector` mostra l'etichetta della stagione con `status: 'active'` — cioè `2025/26` — mentre i dati mostrati sono di `2026-27`. Si sana eseguendo il rollover (`POST /api/v1/seasons/rollover`), che però archivia la stagione per **tutti** i team reali e ne azzera le news: è una decisione di esercizio, non un passo del rilascio della demo.
 
 **Le award card non hanno immagini PNG**: si generano con la pipeline Puppeteer esistente.

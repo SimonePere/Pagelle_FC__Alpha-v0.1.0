@@ -3,14 +3,15 @@
 ## 📋 **OVERVIEW**
 
 **Data Creazione:** 18 Dicembre 2025  
-**Ultimo Aggiornamento:** 11 Maggio 2026  
-**Versione Sistema:** v0.1.0 Alpha — External Player + Guest JWT + UI Refinements  
+**Ultimo Aggiornamento:** 8 Settembre 2026  
+**Versione Sistema:** v0.1.0 Alpha — External Player + Guest JWT + Modalità Demo + UI Refinements  
 **Architettura:** Service Layer + Repository Pattern + Cache Layer + Adapter Pattern  
 
 Questa guida spiega **come funziona tutto il sistema Pagelle FC** nella versione Alpha v0.1.0:
 
 🆕 **EXTERNAL PLAYER (Guest User)** — Ospiti senza registrazione con link invito personale e JWT scope-based  
-🆕 **JWT SCOPE SYSTEM** — Token `"guest"` con permessi limitati, separati dagli utenti registrati  
+🆕 **JWT SCOPE SYSTEM** — Token `"guest"` e `"demo"` con permessi limitati, separati dagli utenti registrati  
+🆕 **MODALITÀ DEMO** — Squadra dimostrativa reale visitabile senza account, in sola lettura garantita dal server  
 🆕 **NEWS SYSTEM** — Sistema intelligente di generazione notizie automatiche  
 🆕 **CACHE SERVICE** — Layer di caching con Adapter Pattern (Memory/Redis)  
 🆕 **MATCH NOTIFICATIONS** — Sistema notifiche per eventi match  
@@ -108,6 +109,9 @@ Il token JWT ora include un campo `scope` per differenziare i permessi:
 
 // Ospite (guest User)
 { userId, scope: "guest", exp: 48h }
+
+// Visitatore della demo pubblica
+{ userId, teamId: <team demo>, scope: "demo", exp: 24h }
 ```
 
 Il middleware `requireScope.js` verifica lo scope prima di ogni route sensibile:
@@ -118,6 +122,126 @@ router.post('/matches', requireScope('full'), matchController.create);
 // Ospiti possono accedere ai dettagli partita
 router.get('/matches/:id', requireMatchAccess, matchController.getById);
 ```
+
+---
+
+### **🎬 MODALITÀ DEMO — l'app visitabile senza registrarsi**
+
+Chi arriva su Pagelle FC senza account trovava un muro: `/login`. La modalità
+demo lo abbatte facendo entrare chiunque, in un clic, in una squadra
+dimostrativa **reale** — non un mock.
+
+**Architettura scelta: team reale nel DB + terzo scope JWT**
+Il team demo è un `Team` come tutti gli altri, con i suoi utenti, partite, voti
+e award. Nessuna copia parallela dell'app, nessun set di fixtures da riallineare
+a ogni modifica delle API: il visitatore vede esattamente il software che gira
+per gli utenti veri, con i calcoli derivati, i grafici e le award card renderizzate
+da Puppeteer che funzionano davvero.
+
+**Flusso completo:**
+```
+[Visitatore] apre /demo (o clicca "Guarda la demo" su /login)
+    ↓
+POST /api/v1/auth/demo-login   (pubblica, rate-limited)
+    ↓
+AuthService risolve il team con isDemo: true e il suo capitano (Ale, admin)
+    ↓
+JWT emesso con { userId, teamId, scope: "demo", exp: 24h } → localStorage
+    ↓
+    ├─ LETTURE (GET) → passano al backend invariate → dati reali del team demo
+    │
+    └─ SCRITTURE (POST/PUT/PATCH/DELETE)
+           ↓
+       intercettate in client/src/lib/api.ts PRIMA della fetch
+           ↓
+       risposta simulata + toast "sei in demo" → la UI si aggiorna davvero
+           ↓
+       (se qualcosa sfugge al client)
+           ↓
+       middleware blockDemoWrites → 403 DEMO_READ_ONLY
+```
+
+**Le due barriere sono indipendenti.** Il client intercetta per dare una bella
+esperienza, il server blocca per garantire la sicurezza. Se il client fallisce,
+il server tiene; se il server fosse permissivo, il client eviterebbe comunque la
+chiamata. Nessuna delle due si fida dell'altra.
+
+**Permessi (scope: "demo"):**
+- ✅ Legge tutto il perimetro: home, storico, player card, statistiche, team, votazioni, awards
+- ✅ Percorre i flussi interattivi — vota, crea una partita, genera un link invito — con risposte simulate
+- ❌ Qualunque scrittura reale (`403 DEMO_READ_ONLY`), incluso l'upload avatar, che bypassa `apiCall`
+- ❌ Rotte `god`, sempre e comunque
+- ❌ Bypass admin di `requireTeamAdmin`: il visitatore entra come admin del team demo, ma quel ruolo non diventa un passe-partout sugli altri team
+
+Fanno eccezione tre rotte di sessione — `login`, `register`, `demo-login` —
+esentate dal blocco: `POST /auth/register` è una scrittura, e senza esenzione chi
+clicca "Crea il tuo team" con il token demo ancora in `localStorage` riceverebbe
+un `403` proprio nel momento della conversione, cioè lo scopo di tutta la demo.
+
+**🔒 ISOLAMENTO DEI DATI — il flag `isDemo`**
+
+Il campo `isDemo: Boolean` è propagato su **15 modelli** (tutti tranne `Season`,
+che è calendario globale condiviso). È tecnicamente ridondante — l'informazione
+sarebbe deducibile risalendo il `teamId` — ma è deliberato, e serve a due cose.
+
+*Rendere le cancellazioni del seed incapaci di fare danni.* Ogni pulizia è
+`deleteMany({ isDemo: true })`, che nel caso peggiore non cancella nulla. Un
+filtro costruito sul `teamId` invece degenera: Mongoose **rimuove le chiavi
+`undefined` dai filtri**, quindi `deleteMany({ teamId: undefined })` non cancella
+zero documenti, diventa `deleteMany({})` e svuota l'intera collection.
+
+*Tenere la demo fuori da tutto ciò che è globale.* Le esclusioni usano sempre
+`{ isDemo: { $ne: true } }` e mai `{ isDemo: false }`: la prima forma copre anche
+i documenti storici, che il campo non ce l'hanno affatto.
+
+| Dove | Perché |
+|---|---|
+| `closeExpiredVotingSessions` | Chiuderebbe la sessione di voto della demo, che è la sua funzione più importante (la sessione nasce anche con `deadline: null`, cintura e bretelle) |
+| `generatePeriodicAwards`, `seasonRolloverJob` | Genererebbero award nuovi, alterando il contenuto curato |
+| `TeamService.getAllPublicTeams` | Il team demo comparirebbe fra i team pubblici |
+| `GodRepository` (~20 metriche) | I dati demo gonfierebbero i KPI reali |
+
+> ⚠️ **Trappola nota**: gli hook `post('save')` di `VoteResult` e
+> `PlayerCardResult` ricalcolano `PlayerLeaderboardStats` ma **non propagano
+> `isDemo`** — non conoscono il chiamante. Al primo seed sono rimaste 12 righe
+> orfane, invisibili alla pulizia successiva. Vale in generale: *qualunque
+> metadato custom non si propaga ai documenti che gli hook generano per conto
+> proprio*, va applicato a valle con un `updateMany` (`markDerivedDocsAsDemo`).
+
+**Nuovi file:**
+```
+server/src/middleware/blockDemoWrites.js   — blocca ogni scrittura con scope demo
+server/src/utils/seedDemoData.js           — popola la squadra demo (dry-run di default)
+client/src/lib/demoMode.ts                 — intercetta le scritture e simula le risposte
+client/src/components/DemoBanner.tsx       — barra fissa, CTA e toast delle azioni simulate
+client/src/components/DemoTour.tsx         — cinque schermate di benvenuto
+client/src/data/demo-tour-steps.ts         — testi del tour + interruttore DEMO_TOUR_ENABLED
+client/src/pages/Demo.tsx                  — ingresso pubblico /demo
+```
+
+**Modifiche ai file esistenti:**
+- **15 modelli**: campo `isDemo` (tutti tranne `Season`)
+- `AuthController/AuthService`: `demoLogin()`, JWT con scope demo
+- `requireScope.js`: 15 rotte di lettura abilitate allo scope demo, messaggio d'errore neutro
+- `app.js`: montaggio di `blockDemoWrites` + rate limiter dedicato
+- I 3 cron, `TeamService` e `GodRepository`: esclusione `{ isDemo: { $ne: true } }`
+- `authSlice.ts`: stato `isDemo`/`demoTeamId`, thunk `demoLogin`, action `exitDemo`
+- `api.ts`: intercettore delle scritture
+- `AwardRevealManager`: spento in demo — al primo ingresso partivano 7 reveal consecutivi
+
+**Comandi:**
+```bash
+cd server
+npm run seed:demo           # dry-run: stampa i conteggi, non scrive
+npm run seed:demo:confirm   # esegue
+```
+
+> Senza `NODE_ENV` lo script punta al database di **produzione**: il dry-run
+> stampa il target prima di qualunque scrittura. Ogni seed rigenera gli id, quindi
+> nessun test o documento deve dipendere da un id fisso.
+
+Il piano completo, con le decisioni e i vincoli emersi dall'analisi del codice,
+è in **[DEMO_MODE_IMPLEMENTATION_PLAN.md](DEMO_MODE_IMPLEMENTATION_PLAN.md)**.
 
 ---
 
@@ -1561,6 +1685,10 @@ npm run dev
 # Backend Development
 cd server  
 npm run dev
+
+# Modalità Demo 🆕
+npm run seed:demo           # dry-run: stampa i conteggi, non scrive
+npm run seed:demo:confirm   # esegue (senza NODE_ENV → database di PRODUZIONE)
 ```
 
 ---
