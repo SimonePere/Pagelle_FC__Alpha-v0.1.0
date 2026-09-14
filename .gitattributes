@@ -1,0 +1,15 @@
+# Normalizza tutti i file di testo a LF, indipendentemente dal sistema operativo
+# usato per il checkout/commit (evita diff "fantasma" da CRLF/LF quando si
+# copia il progetto tra Windows/Linux/Mac o si usano editor diversi).
+* text=auto eol=lf
+
+# File binari: nessuna conversione di fine riga
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
