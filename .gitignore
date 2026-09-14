@@ -177,3 +177,12 @@ server/debug-utils/player-stats-summary.js
 server/debug-utils/regenerate-leaderboard-cache.js
 server/debug-utils/copy-prod-data.js
 server/debug-utils/restore-backup.js
+
+# Capacitor / Play Store docs (local only)
+CAPACITOR_PLAYSTORE_GUIDE.md
+CAPACITOR_QUICKSTART.md
+CAPACITOR_RISPOSTE_E_DECISIONI.md
+
+# Codebase issues & demo mode planning docs (local only)
+CODEBASE_ISSUES_AND_FIXES.md
+DEMO_MODE_IMPLEMENTATION_PLAN.md
