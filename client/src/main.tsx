@@ -1,6 +1,7 @@
 "use client";
 import { createRoot } from "react-dom/client";
 import { ThemeProvider } from "next-themes";
+import { Capacitor } from "@capacitor/core";
 import App from "./App.tsx";
 import "./index.css";
 import { Provider } from "react-redux";
@@ -10,7 +11,8 @@ import { initializeAuth } from "./redux/slices/authSlice.ts";
 store.dispatch(initializeAuth());
 
 // 🔄 Ricarica automatica quando un nuovo Service Worker prende il controllo
-if ('serviceWorker' in navigator) {
+// In app native (Capacitor) non serve la gestione SW del browser e può creare reload loop.
+if (!Capacitor.isNativePlatform() && 'serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     window.location.reload();
   });

@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === "development" && componentTagger(),
-    VitePWA({
+    !mode.startsWith("capacitor") && VitePWA({
       registerType: 'autoUpdate',
 
       devOptions: {

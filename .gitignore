@@ -182,6 +182,9 @@ server/debug-utils/restore-backup.js
 CAPACITOR_PLAYSTORE_GUIDE.md
 CAPACITOR_QUICKSTART.md
 CAPACITOR_RISPOSTE_E_DECISIONI.md
+CONFIGURAZIONE_MINIMA_ANDROID.md
+GUIDA_DEBUG_USB_FISICO.artifact.md
+GUIDA_SETUP_LOCALE_EMULATORE.artifact.md
 
 # Codebase issues & demo mode planning docs (local only)
 CODEBASE_ISSUES_AND_FIXES.md
