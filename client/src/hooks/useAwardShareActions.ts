@@ -9,10 +9,23 @@
 
 import { useCallback } from 'react';
 import { useDispatch } from 'react-redux';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 import { useToast } from '@/hooks/use-toast';
 import { trackAwardShare } from '@/redux/slices/awardsSlice';
 import { getAwardTitle } from '@/utils/awardMapping';
 import type { Award } from '@/types/award';
+
+// blob → base64 senza prefisso "data:...,"
+function blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(String(reader.result).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
 
 type Channel = 'whatsapp' | 'instagram' | 'telegram' | 'copyLink' | 'download';
 
@@ -35,14 +48,36 @@ export function useAwardShareActions() {
         return award.shareUrl || `${window.location.origin}/c/${award.id}`;
     }, []);
 
-    const shareWhatsApp = useCallback((award: Award) => {
+    // Foglio di condivisione nativo (mostra WhatsApp, Telegram, Instagram, ecc.
+    // già installati) invece di aprire la pagina web dentro il WebView.
+    const nativeShare = useCallback(async (award: Award) => {
+        const url = resolveShareUrl(award);
+        await Share.share({
+            title: 'Pagelle FC',
+            text: `${getAwardTitle(award.type, award.payload)} — guarda su Pagelle FC`,
+            url,
+            dialogTitle: 'Condividi la card',
+        });
+    }, [resolveShareUrl]);
+
+    const shareWhatsApp = useCallback(async (award: Award) => {
+        if (Capacitor.isNativePlatform()) {
+            await nativeShare(award);
+            track(award.id, 'whatsapp');
+            return;
+        }
         const url = resolveShareUrl(award);
         const text = `${getAwardTitle(award.type, award.payload)} — guarda su Pagelle FC: ${url}`;
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
         track(award.id, 'whatsapp');
-    }, [resolveShareUrl, track]);
+    }, [resolveShareUrl, nativeShare, track]);
 
-    const shareTelegram = useCallback((award: Award) => {
+    const shareTelegram = useCallback(async (award: Award) => {
+        if (Capacitor.isNativePlatform()) {
+            await nativeShare(award);
+            track(award.id, 'telegram');
+            return;
+        }
         const url = resolveShareUrl(award);
         const text = `${getAwardTitle(award.type, award.payload)} — guarda su Pagelle FC`;
         window.open(
@@ -50,7 +85,7 @@ export function useAwardShareActions() {
             '_blank',
         );
         track(award.id, 'telegram');
-    }, [resolveShareUrl, track]);
+    }, [resolveShareUrl, nativeShare, track]);
 
     const shareInstagram = useCallback((award: Award) => {
         // Instagram NON espone un share-to-story URL su web. Su mobile esiste un
@@ -102,6 +137,24 @@ export function useAwardShareActions() {
             const ext = detectImageExt(blob.type);
             const fallbackName = buildFallbackFilename(award, variant, ext);
             const filename = parseFilenameFromDisposition(contentDisposition) || fallbackName;
+
+            if (Capacitor.isNativePlatform()) {
+                const base64 = await blobToBase64(blob);
+                const written = await Filesystem.writeFile({
+                    path: filename,
+                    data: base64,
+                    directory: Directory.Cache,
+                });
+                await Share.share({
+                    title: 'Pagelle FC',
+                    text: 'La mia card Pagelle FC',
+                    url: written.uri,
+                    dialogTitle: 'Salva o condividi la card',
+                });
+                track(award.id, 'download');
+                toast({ title: '✓ Pronto per la condivisione' });
+                return;
+            }
 
             const blobUrl = URL.createObjectURL(blob);
             const a = document.createElement('a');

@@ -3,10 +3,15 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
+import { Capacitor } from "@capacitor/core";
+import { App as CapApp } from "@capacitor/app";
+import { StatusBar, Style } from "@capacitor/status-bar";
+import { SplashScreen } from "@capacitor/splash-screen";
 import { ProtectedRouteRedux } from "./components/ProtectedRouteRedux";
 import AwardRevealManager from "@/components/AwardRevealManager";
 import DemoTour from "@/components/DemoTour";
+import DeepLinkHandler from "@/components/DeepLinkHandler";
 import { Skeleton } from "@/components/ui/skeleton";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -184,7 +189,26 @@ const ProfilePageSkeleton = () => {
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    StatusBar.setStyle({ style: Style.Dark });
+    StatusBar.setBackgroundColor({ color: '#000000' });
+    SplashScreen.hide();
+
+    // Tasto "indietro" Android: naviga indietro nella history, esce solo dalla home.
+    const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
+      if (canGoBack) window.history.back();
+      else CapApp.exitApp();
+    });
+
+    return () => {
+      backButtonListener.then((listener) => listener.remove());
+    };
+  }, []);
+
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -311,6 +335,8 @@ const App = () => (
           />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        {/* Intercetta i link Android App Links aperti mentre l'app è già avviata */}
+        <DeepLinkHandler />
         {/* Overlay cerimoniale per nuovi trofei (mount globale, gestisce da sé visibilità) */}
         <AwardRevealManager />
         {/* 🎬 Schermate di benvenuto della demo (mount globale, come
@@ -319,6 +345,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

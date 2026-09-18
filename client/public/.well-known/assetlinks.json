@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "it.pagellefc.app",
+      "sha256_cert_fingerprints": [
+        "D4:3C:F0:66:3F:04:69:E0:12:89:54:13:AB:F9:D1:89:56:29:6E:18:0C:EA:33:66:CA:1A:E6:41:8B:78:AB:CF"
+      ]
+    }
+  }
+]

@@ -103,10 +103,12 @@ export default function Privacy() {
 
           <h2 className="text-2xl font-bold text-foreground mt-8">9. Conservazione</h2>
           <p className="text-muted-foreground">
-            Conserviamo i dati per tutta la durata del tuo account. Puoi eliminare l'account in qualsiasi momento dalla pagina
-            <strong> Profilo</strong>: la cancellazione comporta la rimozione dei tuoi dati personali (diritto all'oblio). Copie
-            tecniche residue nei backup vengono sovrascritte nei normali cicli di ripristino. I dati puramente statistici e
-            aggregati, che non ti identificano, possono essere conservati anche successivamente.
+            Conserviamo i dati per tutta la durata del tuo account. Puoi richiedere la cancellazione del tuo account in
+            qualsiasi momento scrivendo a{' '}
+            <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary underline">{CONTACT_EMAIL}</a>: la cancellazione
+            comporta la rimozione dei tuoi dati personali (diritto all'oblio). Copie tecniche residue nei backup vengono
+            sovrascritte nei normali cicli di ripristino. I dati puramente statistici e aggregati, che non ti identificano,
+            possono essere conservati anche successivamente.
           </p>
 
           <h2 className="text-2xl font-bold text-foreground mt-8">10. Minori</h2>
